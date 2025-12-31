@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { BiSolidHome } from "react-icons/bi";
-import { MdOutlineBarChart } from "react-icons/md";
+import { MdOutlineBarChart, MdOutlineInventory2 } from "react-icons/md";
 import { TbDeviceMobileDollar } from "react-icons/tb";
 import { HiWrenchScrewdriver } from "react-icons/hi2";
 import { FaMoneyCheckDollar } from "react-icons/fa6";
@@ -97,17 +97,15 @@ const LeftSideBar: React.FC = () => {
       {/* SIDE LEFT BAR TOP SECTION */}
       <div className="z-10 overflow-y-auto custom-scrollbar">
         <Link href="/customer">
-          <div className=" flex gap-2 mb-12 px-3 py-2">
+          <div className=" flex gap-2 mb-12 px-0 py-2">
             <Image
-              src="/images/orizonIcon.svg"
+              src="/images/fine-engineering-logo.jpeg"
               alt="Description of image"
-              width={0}
-              height={0}
-              className=" w-11 h-auto"
+              width={500}
+              height={500}
+              className=" w-full h-auto"
             />
-            <p className=" text-[25px] leading-normal font-bold uppercase text-primary-600">
-              Orizon
-            </p>
+    
           </div>
         </Link>
         {/* MENU WITH ICONS */}
@@ -123,7 +121,18 @@ const LeftSideBar: React.FC = () => {
             <p className="">Dashboard</p>
           </div>
         </Link>
-
+        <Link href="/inventory">
+          <div
+            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
+              pathname === "/inventory"
+                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+                : ""
+            }`}
+          >
+            <MdOutlineInventory2 className=" w-6 h-6   " />
+            <p className="">Inventory</p>
+          </div>
+        </Link>
         <Link href="/transaction">
           <div
             className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${

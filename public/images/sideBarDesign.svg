@@ -1,9 +1,19 @@
-<svg width="369" height="369" viewBox="0 0 369 369" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path opacity="0.2" d="M0 369L369 0V369H0Z" fill="url(#paint0_linear_1059_19558)"/>
+<svg width="369" height="369" viewBox="0 0 369 369" fill="url(#primaryShadesGradient)" xmlns="http://www.w3.org/2000/svg">
+
 <defs>
-<linearGradient id="paint0_linear_1059_19558" x1="184.5" y1="0" x2="184.5" y2="369" gradientUnits="userSpaceOnUse">
-<stop stop-color="#279A48"/>
-<stop offset="1" stop-color="#F5F7F8" stop-opacity="0"/>
-</linearGradient>
+  <linearGradient id="primaryShadesGradient" gradientUnits="objectBoundingBox" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#0b456f"/>
+    <stop offset="20%" stop-color="#065286"/>
+    <stop offset="35%" stop-color="#0161a3"/>
+    <stop offset="50%" stop-color="#0081d4"/>
+    <stop offset="65%" stop-color="#0c9beb"/>
+    <stop offset="80%" stop-color="#7cccfd"/>
+    <stop offset="90%" stop-color="#b9e2fe"/>
+    <stop offset="95%" stop-color="#e0f0fe"/>
+    <stop offset="100%" stop-color="#f0f8ff"/>
+  </linearGradient>
 </defs>
+
+<path opacity="0.2" d="M0 369L369 0V369H0Z" fill="url(#primaryShadesGradient)"/>
+
 </svg>

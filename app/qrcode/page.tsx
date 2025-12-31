@@ -103,59 +103,78 @@ export default function OtpHome() {
   return (
   <>
   <div className="fixed inset-0 overflow-hidden">
-    <div className="bg-[#F5F5F5] hidden md:block h-full">
+  <div className="bg-[#F5F5F5] hidden md:block fixed inset-0">
+    {/* Background */}
+    <Image
+      src="/images/fine-engineering-login-bg.svg"
+      alt="Orizon iconLogo bg"
+      fill
+      className="object-cover"
+      priority
+    />
+  
+    {/* Top Left */}
+    <div className="absolute top-20 left-28 w-[300px] h-[160px]">
       <Image
-        src="/images/orizon-login-bg.svg"
-        alt="Orizon iconLogo bg"
-        width={100}
-        height={100}
-        className="w-full h-full"
-      />
-      <Image
-        src="/images/orizonIcon.svg"
+        src="/images/fine-engineering-icon.png"
         alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="absolute top-20 left-28"
-      />
-      <Image
-        src="/images/orizonIcon.svg"
-        alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="absolute top-32 right-28"
-      />
-      <Image
-        src="/images/orizonIcon.svg"
-        alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="absolute top-1/2 left-[25%]"
-      />
-      <Image
-        src="/images/orizonIcon.svg"
-        alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="absolute top-[60%] right-[25%]"
-      />
-      <Image
-        src="/images/orizonIcon.svg"
-        alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="absolute top-[90%] right-0 left-0 mx-auto"
+        fill
+        className="object-contain"
       />
     </div>
+  
+    {/* Top Right */}
+    <div className="absolute top-32 right-28 w-[300px] h-[160px]">
+      <Image
+        src="/images/fine-engineering-icon.png"
+        alt="OrizonIcon"
+        fill
+        className="object-contain"
+      />
+    </div>
+  
+    {/* Center Left */}
+    <div className="absolute top-[60%] left-[17%] -translate-y-1/2 w-[300px] h-[160px]">
+      <Image
+        src="/images/fine-engineering-icon.png"
+        alt="OrizonIcon"
+        fill
+        className="object-contain"
+      />
+    </div>
+  
+    {/* Center Right */}
+    <div className="absolute top-[65%] right-[17%] -translate-y-1/2 w-[300px] h-[160px]">
+      <Image
+        src="/images/fine-engineering-icon.png"
+        alt="OrizonIcon"
+        fill
+        className="object-contain"
+      />
+    </div>
+  
+    {/* Bottom Center */}
+    <div className="absolute top-[98%] left-0 right-0 mx-auto -translate-y-1/2 w-[300px] h-[160px]">
+      <Image
+        src="/images/fine-engineering-icon.png"
+        alt="OrizonIcon"
+        fill
+        className="object-contain"
+      />
+    </div>
+  </div>
+  
 
     <div className="absolute top-0 bottom-0 left-0 right-0 mx-auto my-auto w-[90%] max-w-[500px] h-[587px] shadow-loginBoxShadow bg-white px-6 sm:px-12 py-10 sm:py-16 rounded-lg overflow-y-auto  flex flex-col justify-center items-center">
-      <Image
-        src="/images/orizonIcon.svg"
-        alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="mx-auto mb-5"
-      />
+<div className="relative mx-auto mb-5 w-[250px] h-[120px]">
+  <Image
+    src="/images/fine-engineering-icon.png"
+    alt="OrizonIcon"
+    fill
+    className="object-contain"
+  />
+</div>
+
       <p className="font-bold text-lg sm:text-base leading-normal text-center text-black mb-2">
         Authenticate your Account
       </p>

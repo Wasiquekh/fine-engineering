@@ -78,62 +78,81 @@ export default function LoginHome() {
   return (
     <>
   <div className="relative min-h-screen overflow-hidden">
-  <div className="bg-[#F5F5F5] hidden md:block fixed inset-0">
+<div className="bg-[#F5F5F5] hidden md:block fixed inset-0">
+  {/* Background */}
+  <Image
+    src="/images/fine-engineering-login-bg.svg"
+    alt="Orizon iconLogo bg"
+    fill
+    className="object-cover"
+    priority
+  />
+
+  {/* Top Left */}
+  <div className="absolute top-20 left-28 w-[300px] h-[160px]">
     <Image
-      src="/images/orizon-login-bg.svg"
-      alt="Orizon iconLogo bg"
+      src="/images/fine-engineering-icon.png"
+      alt="OrizonIcon"
       fill
-      className="object-cover"
-      priority
-    />
-    <Image
-      src="/images/orizonIcon.svg"
-      alt="OrizonIcon"
-      width={82}
-      height={52}
-      className="absolute top-20 left-28"
-    />
-    <Image
-      src="/images/orizonIcon.svg"
-      alt="OrizonIcon"
-      width={82}
-      height={52}
-      className="absolute top-32 right-28"
-    />
-    <Image
-      src="/images/orizonIcon.svg"
-      alt="OrizonIcon"
-      width={82}
-      height={52}
-      className="absolute top-1/2 left-[25%] -translate-y-1/2"
-    />
-    <Image
-      src="/images/orizonIcon.svg"
-      alt="OrizonIcon"
-      width={82}
-      height={52}
-      className="absolute top-[60%] right-[25%] -translate-y-1/2"
-    />
-    <Image
-      src="/images/orizonIcon.svg"
-      alt="OrizonIcon"
-      width={82}
-      height={52}
-      className="absolute top-[90%] right-0 left-0 mx-auto -translate-y-1/2"
+      className="object-contain"
     />
   </div>
+
+  {/* Top Right */}
+  <div className="absolute top-32 right-28 w-[300px] h-[160px]">
+    <Image
+      src="/images/fine-engineering-icon.png"
+      alt="OrizonIcon"
+      fill
+      className="object-contain"
+    />
+  </div>
+
+  {/* Center Left */}
+  <div className="absolute top-[60%] left-[17%] -translate-y-1/2 w-[300px] h-[160px]">
+    <Image
+      src="/images/fine-engineering-icon.png"
+      alt="OrizonIcon"
+      fill
+      className="object-contain"
+    />
+  </div>
+
+  {/* Center Right */}
+  <div className="absolute top-[65%] right-[17%] -translate-y-1/2 w-[300px] h-[160px]">
+    <Image
+      src="/images/fine-engineering-icon.png"
+      alt="OrizonIcon"
+      fill
+      className="object-contain"
+    />
+  </div>
+
+  {/* Bottom Center */}
+  <div className="absolute top-[98%] left-0 right-0 mx-auto -translate-y-1/2 w-[300px] h-[160px]">
+    <Image
+      src="/images/fine-engineering-icon.png"
+      alt="OrizonIcon"
+      fill
+      className="object-contain"
+    />
+  </div>
+</div>
+
   
   <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
     <div className="w-[90%] max-w-[500px] max-h-[587px] shadow-loginBoxShadow bg-white px-6 sm:px-12 py-10 sm:py-16 rounded-lg">
-      <Image
-        src="/images/orizonIcon.svg"
-        alt="OrizonIcon"
-        width={82}
-        height={52}
-        className="mx-auto mb-5"
-      />
+<div className="relative mx-auto mb-5 w-[250px] h-[120px]">
+  <Image
+    src="/images/fine-engineering-icon.png"
+    alt="OrizonIcon"
+    fill
+    className="object-contain"
+  />
+</div>
+
       <p className="font-bold text-lg sm:text-base leading-normal text-center text-black mb-6">
-        Login to Orizon
+        Login to Fine Engineering
       </p>
       <Formik
         initialValues={{ email: "", password: "" }}
