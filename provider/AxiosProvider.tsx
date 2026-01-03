@@ -9,7 +9,7 @@ import StorageManager from "./StorageManager";
 
 const isServer = typeof window === "undefined";
 const defaultBaseURL =
-  "https://orizon-crm-api-uat.yliqo.com/api/v1/Orizonapigateway";
+  "https://fine-engineering-erp-backend.dynsimulation.com/api/v1";
 
 export default class AxiosProvider {
   private instance: AxiosInstance;
@@ -47,10 +47,10 @@ export default class AxiosProvider {
       // Retrieve app check token
       const appCheckTokenResponse = await getToken(appCheck, true);
       const appCheckToken = appCheckTokenResponse.token;
-      console.log("app check", appCheckToken);
+      //  console.log("app check", appCheckToken);
       // Retrieve access token from storage
       const accessToken = this.storage.getAccessToken();
-      console.log("Access token***", accessToken);
+      //console.log("Access token***", accessToken);
 
       // Set headers using the AxiosHeaders instance methods
       if (appCheckToken) {

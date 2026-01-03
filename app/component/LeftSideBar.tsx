@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BiSolidHome } from "react-icons/bi";
 import { MdOutlineBarChart, MdOutlineInventory2 } from "react-icons/md";
-import { TbDeviceMobileDollar } from "react-icons/tb";
+import { TbCategoryFilled, TbDeviceMobileDollar } from "react-icons/tb";
 import { HiWrenchScrewdriver } from "react-icons/hi2";
 import { FaMoneyCheckDollar } from "react-icons/fa6";
 import { BsCreditCard2Back } from "react-icons/bs";
@@ -68,10 +68,9 @@ const LeftSideBar: React.FC = () => {
   const router = useRouter();
 
   const handleLogout = async () => {
-    router.push("/");
-    return;
+    localStorage.clear();
     try {
-      const response = await axiosProvider.post("/logout", {});
+      const response = await axiosProvider.post("/fineengg_erp/logout", {});
       localStorage.clear();
       window.location.href = "/";
     } catch (error) {
@@ -105,7 +104,6 @@ const LeftSideBar: React.FC = () => {
               height={500}
               className=" w-full h-auto"
             />
-    
           </div>
         </Link>
         {/* MENU WITH ICONS */}
@@ -131,6 +129,18 @@ const LeftSideBar: React.FC = () => {
           >
             <MdOutlineInventory2 className=" w-6 h-6   " />
             <p className="">Inventory</p>
+          </div>
+        </Link>
+        <Link href="/category">
+          <div
+            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
+              pathname === "/category"
+                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+                : ""
+            }`}
+          >
+            <TbCategoryFilled className=" w-6 h-6   " />
+            <p className="">Category</p>
           </div>
         </Link>
         <Link href="/transaction">

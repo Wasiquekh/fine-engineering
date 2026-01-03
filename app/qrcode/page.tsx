@@ -31,7 +31,10 @@ export default function OtpHome() {
   const fetchData = async () => {
     try {
       if (!secretKey) {
-        const res = await axiosProvider.post("/generateqrcode", {});
+        const res = await axiosProvider.post(
+          "/fineengg_erp/generateqrcode",
+          {}
+        );
         if (res.status === 200) {
           setQrCode(res.data.data.qrCodeDataURL);
           setSecretKey(res.data.data.secret);
@@ -51,10 +54,7 @@ export default function OtpHome() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(false);
-    router.push("/dashboard");
     setLoading(false);
-    return;
-
     if (otp.length !== 6) {
       toast.error("Please enter a valid 6-digit code.");
       setLoading(false);
@@ -64,7 +64,7 @@ export default function OtpHome() {
     }
 
     try {
-      const res = await axiosProvider.post("/verifytotp", {
+      const res = await axiosProvider.post("/fineengg_erp/verifytotp", {
         token: otp,
         secretKey: secretKey,
         userId: userId,

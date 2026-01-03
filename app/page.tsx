@@ -34,12 +34,9 @@ export default function LoginHome() {
 
   const handleSubmitLogin = async (values: FormValues) => {
     setLoading(true);
-    router.push("/qrcode");
     setLoading(false);
-
-    return;
     try {
-      const res = await axiosProvider.post("/login", {
+      const res = await axiosProvider.post("/fineengg_erp/login", {
         email: values.email,
         password: values.password,
       });
