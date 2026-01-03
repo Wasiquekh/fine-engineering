@@ -75,8 +75,8 @@ export default function OtpHome() {
       //  expiryTokenafter24Hour();
       router.push("/dashboard");
 
-      const activityLogger = new UserActivityLogger();
-      await activityLogger.userLogin();
+      // const activityLogger = new UserActivityLogger();
+      //await activityLogger.userLogin();
     } catch (error) {
       console.error("Network error:", error);
       toast.error("Invalid Code. Please try again.");
