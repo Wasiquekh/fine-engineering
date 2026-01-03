@@ -1,217 +1,280 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiFilter } from "react-icons/fi";
-import { HiOutlineBookOpen } from "react-icons/hi2";
 import { IoCloseOutline } from "react-icons/io5";
-import { RxAvatar } from "react-icons/rx";
+import { HiTrash } from "react-icons/hi";
 import StorageManager from "../../provider/StorageManager";
 import LeftSideBar from "../component/LeftSideBar";
 import { useRouter } from "next/navigation";
-import { HiChevronDoubleLeft } from "react-icons/hi";
-import { HiChevronDoubleRight } from "react-icons/hi";
 import { toast } from "react-toastify";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { format } from "date-fns";
-import Select from "react-select";
 import DesktopHeader from "../component/DesktopHeader";
 import { Formik, Form, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import SelectInput from "../component/SelectInput";
 import DatePickerInput from "../component/DatePickerInput";
+import AxiosProvider from "../../provider/AxiosProvider";
+import Swal from "sweetalert2";
 
-const moduleOptions = [
-  { value: "System", label: "System" },
-  { value: "User Management", label: "User Management" },
-  { value: "Customer", label: "Customer" },
+const axiosProvider = new AxiosProvider();
+
+// Options for Job Type
+const jobTypeOptions = [
+  { value: "JOB_SERVICE", label: "Job Service" },
+  { value: "TSO_SERVICE", label: "TSO Service" },
+  { value: "KANBAN", label: "Kanban" },
 ];
 
-// Static data for table
-const staticData = [
-  {
-    id: 1,
-    activity: "User logged in",
-    userName: "John Doe",
-    userUuid: "uuid-0000-001",
-    date: "2025-07-25 10:30 AM",
-    module: "Auth Module",
-    type: "LOGIN",
-  },
-  {
-    id: 2,
-    activity: "User created new customer",
-    userName: "Jane Smith",
-    userUuid: "uuid-0000-002",
-    date: "2025-07-25 11:45 AM",
-    module: "Customer Management",
-    type: "CREATE",
-  },
-  {
-    id: 3,
-    activity: "User updated profile",
-    userName: "Robert Johnson",
-    userUuid: "uuid-0000-003",
-    date: "2025-07-25 02:15 PM",
-    module: "User Management",
-    type: "UPDATE",
-  },
-  {
-    id: 4,
-    activity: "User deleted record",
-    userName: "Emily Davis",
-    userUuid: "uuid-0000-004",
-    date: "2025-07-25 03:30 PM",
-    module: "System",
-    type: "DELETE",
-  },
-  {
-    id: 5,
-    activity: "User viewed report",
-    userName: "Michael Wilson",
-    userUuid: "uuid-0000-005",
-    date: "2025-07-25 04:45 PM",
-    module: "Reports",
-    type: "VIEW",
-  },
-  {
-    id: 6,
-    activity: "User logged out",
-    userName: "Sarah Brown",
-    userUuid: "uuid-0000-006",
-    date: "2025-07-25 05:20 PM",
-    module: "Auth Module",
-    type: "LOGOUT",
-  },
-  {
-    id: 7,
-    activity: "User uploaded file",
-    userName: "David Miller",
-    userUuid: "uuid-0000-007",
-    date: "2025-07-25 09:10 AM",
-    module: "System",
-    type: "UPLOAD",
-  },
-  {
-    id: 8,
-    activity: "User downloaded report",
-    userName: "Lisa Anderson",
-    userUuid: "uuid-0000-008",
-    date: "2025-07-25 01:25 PM",
-    module: "Reports",
-    type: "DOWNLOAD",
-  },
-  {
-    id: 9,
-    activity: "User changed settings",
-    userName: "James Taylor",
-    userUuid: "uuid-0000-009",
-    date: "2025-07-25 03:50 PM",
-    module: "System",
-    type: "UPDATE",
-  },
-  {
-    id: 10,
-    activity: "User accessed dashboard",
-    userName: "Maria Garcia",
-    userUuid: "uuid-0000-010",
-    date: "2025-07-25 08:30 AM",
-    module: "Dashboard",
-    type: "VIEW",
-  },
+// Options for TSO Service Category
+const tsoServiceCategory = [
+  { value: "drawing", label: "Drawing" },
+  { value: "sample", label: "Sample" },
 ];
 
-// Validation Schema
+// Options for Kanban Category - UPDATED based on API validation
+const kanbanCategory = [
+  { value: "RAW_MATERIAL", label: "RAW MATERIAL" },
+  { value: "IN_PROGRESS", label: "IN PROGRESS" },
+  { value: "FINISHED_GOODS", label: "FINISHED GOODS" },
+];
+
+// Validation Schema for Jobs form
 const validationSchema = Yup.object().shape({
-  startDate: Yup.date()
-    .nullable()
-    .typeError("Please enter a valid date")
-    .max(Yup.ref("endDate"), "Start date cannot be after end date"),
-  endDate: Yup.date()
-    .nullable()
-    .typeError("Please enter a valid date")
-    .min(Yup.ref("startDate"), "End date cannot be before start date"),
-  module: Yup.string().nullable(),
+  job_type: Yup.string().required("Job Type is required"),
+  job_category: Yup.string().when("job_type", {
+    is: (job_type: string) =>
+      job_type === "TSO_SERVICE" || job_type === "KANBAN",
+    then: (schema) => schema.required("Job Category is required"),
+    otherwise: (schema) => schema,
+  }),
+  job_no: Yup.number().when("job_type", {
+    is: "JOB_SERVICE",
+    then: (schema) =>
+      schema
+        .required("Job No is required")
+        .typeError("Job No must be a number")
+        .positive("Job No must be positive")
+        .integer("Job No must be an integer"),
+    otherwise: (schema) => schema,
+  }),
+  serial_no: Yup.number()
+    .required("Serial No is required")
+    .typeError("Serial No must be a number")
+    .positive("Serial No must be positive")
+    .integer("Serial No must be an integer"),
+  job_order_date: Yup.date().required("Job Order Date is required"),
+  mtl_rcd_date: Yup.date().required("Material Received Date is required"),
+  mtl_challan_no: Yup.number()
+    .required("Material Challan No is required")
+    .typeError("Material Challan No must be a number")
+    .positive("Material Challan No must be positive")
+    .integer("Material Challan No must be an integer"),
+  item_description: Yup.string().required("Item Description is required"),
+  item_no: Yup.number()
+    .required("Item No is required")
+    .typeError("Item No must be a number")
+    .positive("Item No must be positive")
+    .integer("Item No must be an integer"),
+  qty: Yup.number()
+    .required("Quantity is required")
+    .typeError("Quantity must be a number")
+    .positive("Quantity must be positive"),
+  moc: Yup.string().required("MOC is required"),
+  remark: Yup.string(),
+  bin_location: Yup.string().required("Bin Location is required"),
+  material_remark: Yup.string(),
 });
 
-// Initial form values
+// Initial form values for Jobs
 const initialValues = {
-  startDate: null as Date | null,
-  endDate: null as Date | null,
-  module: "",
+  job_type: "",
+  job_category: "",
+  job_no: "",
+  serial_no: "",
+  job_order_date: "",
+  mtl_rcd_date: "",
+  mtl_challan_no: "",
+  item_description: "",
+  item_no: "",
+  qty: "",
+  moc: "",
+  remark: "",
+  bin_location: "",
+  material_remark: "",
 };
 
 export default function Home() {
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
-  const [isFlyoutFilterOpen, setFlyoutFilterOpen] = useState<boolean>(false);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [filteredData, setFilteredData] = useState(staticData);
-  const itemsPerPage = 5;
-  const storage = new StorageManager();
+  const [flyoutType, setFlyoutType] = useState<
+    "JOB_SERVICE" | "TSO_SERVICE" | "KANBAN"
+  >("JOB_SERVICE");
+  const [data, setData] = useState<any | []>([]);
+
   const router = useRouter();
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredData.slice(startIndex, endIndex);
+  const handleSubmit = async (values: any) => {
+    // Format dates to YYYY-MM-DD format
+    const formatDate = (date: any) => {
+      if (!date) return null;
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
-  const toggleFlyout = () => setFlyoutOpen(!isFlyoutOpen);
-  const toggleFilterFlyout = () => setFlyoutFilterOpen(!isFlyoutFilterOpen);
+    // Create payload based on job type
+    let payload: any = {
+      job_type: values.job_type,
+      serial_no: Number(values.serial_no),
+      job_order_date: formatDate(values.job_order_date),
+      mtl_rcd_date: formatDate(values.mtl_rcd_date),
+      mtl_challan_no: Number(values.mtl_challan_no),
+      item_description: values.item_description,
+      item_no: Number(values.item_no),
+      qty: Number(values.qty),
+      moc: values.moc,
+      remark: values.remark || "",
+      bin_location: values.bin_location,
+      material_remark: values.material_remark || "",
+    };
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && newPage <= totalPages) {
-      setCurrentPage(newPage);
+    // Add conditional fields
+    if (values.job_type === "JOB_SERVICE") {
+      payload.job_no = Number(values.job_no);
+    } else if (values.job_type === "TSO_SERVICE") {
+      payload.job_category = values.job_category;
+    } else if (values.job_type === "KANBAN") {
+      payload.job_category = values.job_category;
+    }
+
+    try {
+      const response = await axiosProvider.post("/fineengg_erp/jobs", payload);
+
+      // Different success messages based on job type
+      if (values.job_type === "JOB_SERVICE") {
+        toast.success("Job Service added successfully");
+      } else if (values.job_type === "TSO_SERVICE") {
+        toast.success("TSO Service added successfully");
+      } else if (values.job_type === "KANBAN") {
+        toast.success("Kanban added successfully");
+      }
+
+      fetchData();
+      setFlyoutOpen(false);
+    } catch (error: any) {
+      console.error("Error saving job:", error);
+
+      // Different error messages based on job type
+      if (values.job_type === "JOB_SERVICE") {
+        toast.error("Failed to add Job Service");
+      } else if (values.job_type === "TSO_SERVICE") {
+        toast.error("Failed to add TSO Service");
+      } else if (values.job_type === "KANBAN") {
+        toast.error("Failed to add Kanban");
+      }
     }
   };
 
-  const handleSubmit = (
-    values: typeof initialValues,
-    { setSubmitting }: any
-  ) => {
-    console.log("Form values:", values);
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
 
-    // Apply filters to static data
-    let filtered = [...staticData];
+    if (result.isConfirmed) {
+      try {
+        const response = await axiosProvider.delete(`/fineengg_erp/jobs/${id}`);
 
-    // Filter by module if selected
-    if (values.module) {
-      filtered = filtered.filter(
-        (item) =>
-          item.module.toLowerCase().includes(values.module.toLowerCase()) ||
-          item.type.toLowerCase().includes(values.module.toLowerCase())
-      );
+        if (response.data.success) {
+          toast.success("Job deleted successfully");
+          fetchData();
+        } else {
+          toast.error("Failed to delete job");
+        }
+      } catch (error: any) {
+        console.error("Error deleting job:", error);
+        toast.error("Failed to delete job");
+      }
     }
-
-    // Filter by date range if both dates are selected
-    if (values.startDate && values.endDate) {
-      const startDateStr = format(values.startDate, "yyyy-MM-dd");
-      const endDateStr = format(values.endDate, "yyyy-MM-dd");
-
-      filtered = filtered.filter((item) => {
-        const itemDateStr = item.date.split(" ")[0]; // Extract date part only
-        return itemDateStr >= startDateStr && itemDateStr <= endDateStr;
-      });
-    }
-
-    setFilteredData(filtered);
-    setCurrentPage(1); // Reset to first page after filtering
-
-    // Show success message
-    toast.success("Filters applied successfully!");
-
-    // Close the flyout
-    setFlyoutFilterOpen(false);
-
-    setSubmitting(false);
   };
 
-  const handleClearAll = (resetForm: () => void) => {
-    resetForm();
-    setFilteredData(staticData);
-    setCurrentPage(1);
-    toast.info("Filters cleared");
+  const fetchData = async () => {
+    try {
+      const response = await axiosProvider.get("/fineengg_erp/jobs");
+      setData(response.data.data);
+    } catch (error: any) {
+      console.error("Error fetching jobs:", error);
+      toast.error("Failed to load jobs");
+    }
   };
+
+  const resetFormState = () => {
+    setFlyoutOpen(false);
+  };
+
+  const openJobServiceFlyout = () => {
+    setFlyoutType("JOB_SERVICE");
+    setFlyoutOpen(true);
+  };
+
+  const openTsoServiceFlyout = () => {
+    setFlyoutType("TSO_SERVICE");
+    setFlyoutOpen(true);
+  };
+
+  const openKanbanFlyout = () => {
+    setFlyoutType("KANBAN");
+    setFlyoutOpen(true);
+  };
+
+  // Get initial values based on flyout type
+  const getInitialValues = () => {
+    if (flyoutType === "JOB_SERVICE") {
+      return { ...initialValues, job_type: "JOB_SERVICE" };
+    } else if (flyoutType === "TSO_SERVICE") {
+      return { ...initialValues, job_type: "TSO_SERVICE" };
+    } else if (flyoutType === "KANBAN") {
+      return { ...initialValues, job_type: "KANBAN" };
+    }
+    return initialValues;
+  };
+
+  // Get category options based on job type
+  const getCategoryOptions = (jobType: string) => {
+    if (jobType === "TSO_SERVICE") {
+      return tsoServiceCategory;
+    } else if (jobType === "KANBAN") {
+      return kanbanCategory;
+    }
+    return [];
+  };
+
+  // Get flyout title
+  const getFlyoutTitle = () => {
+    if (flyoutType === "JOB_SERVICE") return "Add Job Service";
+    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
+    if (flyoutType === "KANBAN") return "Add Kanban";
+    return "Add Job";
+  };
+
+  // Get submit button text
+  const getSubmitButtonText = () => {
+    if (flyoutType === "JOB_SERVICE") return "Add Job Service";
+    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
+    if (flyoutType === "KANBAN") return "Add Kanban";
+    return "Add Job";
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <>
@@ -236,15 +299,33 @@ export default function Home() {
             {/* ----------------Table----------------------- */}
             <div className="relative overflow-x-auto sm:rounded-lg">
               {/* Search and filter table row */}
-              <div className="flex justify-end items-center mb-6 w-full mx-auto">
+              <div className="flex flex-col md:flex-row justify-end items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex justify-center items-center gap-4">
                   <div
-                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 group hover:bg-primary-600"
-                    onClick={toggleFilterFlyout}
+                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
+                    onClick={openJobServiceFlyout}
                   >
                     <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
                     <p className="text-white text-base font-medium group-hover:text-white">
-                      Filter
+                      Add Job Service
+                    </p>
+                  </div>
+                  <div
+                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
+                    onClick={openTsoServiceFlyout}
+                  >
+                    <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
+                    <p className="text-white text-base font-medium group-hover:text-white">
+                      Add TSO Service
+                    </p>
+                  </div>
+                  <div
+                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
+                    onClick={openKanbanFlyout}
+                  >
+                    <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
+                    <p className="text-white text-base font-medium group-hover:text-white">
+                      Add Kanban
                     </p>
                   </div>
                 </div>
@@ -255,9 +336,8 @@ export default function Home() {
                   <tr className="border border-tableBorder">
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
-                        <RxAvatar className="w-6 h-6" />
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Name and User Activity
+                          Job No
                         </div>
                       </div>
                     </th>
@@ -266,9 +346,8 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2 whitespace-nowrap">
-                        <HiOutlineBookOpen className="w-6 h-6" />
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          User&apos;s Name
+                          Job Type
                         </div>
                       </div>
                     </th>
@@ -277,9 +356,8 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <HiOutlineBookOpen className="w-6 h-6" />
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          User&apos;s uuid
+                          Job Category
                         </div>
                       </div>
                     </th>
@@ -288,9 +366,8 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <HiOutlineBookOpen className="w-6 h-6" />
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Date
+                          Item Description
                         </div>
                       </div>
                     </th>
@@ -299,9 +376,8 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <HiOutlineBookOpen className="w-6 h-6" />
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Module
+                          Item No
                         </div>
                       </div>
                     </th>
@@ -310,104 +386,169 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <HiOutlineBookOpen className="w-6 h-6" />
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Type
+                          Quantity
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          MOC
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          Bin Location
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          Status
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          Actions
                         </div>
                       </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {currentData.map((item) => (
-                    <tr
-                      className="border border-tableBorder bg-white hover:bg-primary-100"
-                      key={item.id}
-                    >
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">
-                          {item.activity}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                        <p className="text-[#232323] text-base leading-normal">
-                          {item.userName}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                        <p className="text-[#232323] text-base leading-normal">
-                          {item.userUuid}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                        <p className="text-[#232323] text-base leading-normal">
-                          {item.date}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                        <p className="text-[#232323] text-base leading-normal">
-                          {item.module}
-                        </p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                        <p className="text-[#232323] text-base leading-normal">
-                          {item.type}
+                  {data.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={10}
+                        className="px-4 py-6 text-center border border-tableBorder"
+                      >
+                        <p className="text-[#666666] text-base">
+                          No data found
                         </p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    data.map((item: any) => (
+                      <tr
+                        className="border border-tableBorder bg-white hover:bg-primary-100"
+                        key={item.id}
+                      >
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.job_no || "N/A"}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.job_type}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.job_category || "N/A"}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.item_description}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.item_no}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.qty}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.moc}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.bin_location}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <span
+                            className={`px-2 py-1 rounded text-sm ${
+                              item.urgent
+                                ? "bg-red-100 text-red-600"
+                                : "bg-green-100 text-green-600"
+                            }`}
+                          >
+                            {item.urgent ? "Urgent" : "Normal"}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                              title="Delete"
+                            >
+                              <HiTrash className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
-          {/* ----------------End table--------------------------- */}
-
-          {/* Pagination Controls */}
-          {filteredData.length > 0 && (
-            <div className="flex justify-center items-center my-10 relative">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-2 py-2 mx-2 border rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <HiChevronDoubleLeft className="w-6 h-auto" />
-              </button>
-              <span className="text-[#717171] text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-2 py-2 mx-2 border rounded bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <HiChevronDoubleRight className="w-6 h-auto" />
-              </button>
-            </div>
-          )}
-          {/* ------------------- */}
         </div>
       </div>
 
       {/* FITLER FLYOUT */}
       <>
         {/* DARK BG SCREEN */}
-        {isFlyoutFilterOpen && (
+        {isFlyoutOpen && (
           <div
             className="min-h-screen w-full bg-[#1f1d1d80] fixed top-0 left-0 right-0 z-[999]"
-            onClick={() => setFlyoutFilterOpen(!isFlyoutFilterOpen)}
+            onClick={() => {
+              setFlyoutOpen(false);
+              resetFormState();
+            }}
           ></div>
         )}
 
         {/* NOW MY FLYOUT */}
-        <div className={`flyout ${isFlyoutFilterOpen ? "open" : ""}`}>
+        <div className={`flyout ${isFlyoutOpen ? "open" : ""}`}>
           <div className="w-full min-h-auto">
             {/* Header */}
             <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
               <p className="text-primary-600 text-[22px] sm:text-[24px] md:text-[26px] font-bold leading-8 sm:leading-9">
-                User Filter
+                {getFlyoutTitle()}
               </p>
               <IoCloseOutline
-                onClick={toggleFilterFlyout}
+                onClick={() => {
+                  setFlyoutOpen(false);
+                  resetFormState();
+                }}
                 className="h-7 sm:h-8 w-7 sm:w-8 border border-[#E7E7E7] text-[#0A0A0A] rounded cursor-pointer"
               />
             </div>
@@ -415,102 +556,313 @@ export default function Home() {
 
             {/* FORM */}
             <Formik
-              initialValues={initialValues}
+              initialValues={getInitialValues()}
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
+              enableReinitialize={true}
             >
-              {({
-                values,
-                setFieldValue,
-                handleSubmit,
-                isSubmitting,
-                resetForm,
-              }) => (
+              {({ values, setFieldValue, handleSubmit, isSubmitting }) => (
                 <Form onSubmit={handleSubmit}>
                   <div className="w-full">
-                    {/* Date Filters */}
-                    <div className="w-full flex flex-col md:flex-row gap-4 md:justify-between mb-4 sm:mb-6">
-                      {/* Start Date */}
-                      <div className="w-full md:w-[49%]">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Start Date
-                        </p>
-
-                        <DatePickerInput
-                          name="startDate"
-                          value={values.startDate}
-                          setFieldValue={setFieldValue}
-                        />
-
-                        <ErrorMessage name="startDate">
-                          {(msg) => (
-                            <div className="text-red-500 text-sm mt-1">
-                              {msg}
-                            </div>
-                          )}
-                        </ErrorMessage>
-                      </div>
-
-                      {/* End Date */}
-                      <div className="w-full md:w-[49%]">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          End Date
-                        </p>
-
-                        <DatePickerInput
-                          name="endDate"
-                          value={values.endDate}
-                          setFieldValue={setFieldValue}
-                        />
-
-                        <ErrorMessage name="endDate">
-                          {(msg) => (
-                            <div className="text-red-500 text-sm mt-1">
-                              {msg}
-                            </div>
-                          )}
-                        </ErrorMessage>
-                      </div>
-                    </div>
-                    {/* Module Select */}
-                    {/* Module Select */}
-                    <div className="w-full mb-4 sm:mb-6">
-                      <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                        Module
-                      </p>
-
-                      <SelectInput
-                        name="module"
-                        value={values.module}
-                        setFieldValue={setFieldValue}
-                        options={moduleOptions}
-                        placeholder="Select Module"
+                    {/* Grid container for form fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                      {/* Job Type - Hidden but required for form */}
+                      <input
+                        type="hidden"
+                        name="job_type"
+                        value={values.job_type}
                       />
 
-                      <ErrorMessage
-                        name="module"
-                        component="div"
-                        className="text-red-500 text-sm mt-1"
-                      />
-                    </div>
-                  </div>
+                      {/* Job No - Only for JOB_SERVICE */}
+                      {values.job_type === "JOB_SERVICE" && (
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Job No
+                          </p>
+                          <input
+                            type="number"
+                            name="job_no"
+                            value={values.job_no}
+                            onChange={(e) =>
+                              setFieldValue("job_no", e.target.value)
+                            }
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            placeholder="Enter Job No"
+                          />
+                          <ErrorMessage
+                            name="job_no"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+                      )}
 
-                  {/* BUTTONS */}
-                  <div className="mt-8 md:mt-10 w-full flex flex-col md:flex-row md:justify-between items-center gap-y-4 md:gap-y-0">
-                    <button
-                      type="button"
-                      onClick={() => handleClearAll(resetForm)}
-                      className="py-[13px] px-[26px] border border-[#A3000E] hover:bg-[#FFF0F1] rounded-[4px] w-full md:w-[49%] text-base font-medium leading-6 text-[#A3000E] text-center"
-                    >
-                      Clear All
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:w-[49%] text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSubmitting ? "Applying..." : "Filter Now"}
-                    </button>
+                      {/* Job Category - Only for TSO_SERVICE and KANBAN */}
+                      {(values.job_type === "TSO_SERVICE" ||
+                        values.job_type === "KANBAN") && (
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Job Category
+                          </p>
+                          <SelectInput
+                            name="job_category"
+                            value={values.job_category}
+                            setFieldValue={setFieldValue}
+                            options={getCategoryOptions(values.job_type)}
+                            placeholder={`Select ${
+                              values.job_type === "TSO_SERVICE"
+                                ? "TSO Service"
+                                : "Kanban"
+                            } Category`}
+                          />
+                          <ErrorMessage
+                            name="job_category"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+                      )}
+
+                      {/* Serial No */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Serial No
+                        </p>
+                        <input
+                          type="number"
+                          name="serial_no"
+                          value={values.serial_no}
+                          onChange={(e) =>
+                            setFieldValue("serial_no", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Serial No"
+                        />
+                        <ErrorMessage
+                          name="serial_no"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Job Order Date */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Job Order Date
+                        </p>
+                        <DatePickerInput
+                          name="job_order_date"
+                          value={values.job_order_date}
+                          setFieldValue={setFieldValue}
+                          placeholderText="Select Job Order Date"
+                        />
+                        <ErrorMessage
+                          name="job_order_date"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Material Received Date */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Material Received Date
+                        </p>
+                        <DatePickerInput
+                          name="mtl_rcd_date"
+                          value={values.mtl_rcd_date}
+                          setFieldValue={setFieldValue}
+                          placeholderText="Select Material Received Date"
+                        />
+                        <ErrorMessage
+                          name="mtl_rcd_date"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Material Challan No */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Material Challan No
+                        </p>
+                        <input
+                          type="number"
+                          name="mtl_challan_no"
+                          value={values.mtl_challan_no}
+                          onChange={(e) =>
+                            setFieldValue("mtl_challan_no", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Material Challan No"
+                        />
+                        <ErrorMessage
+                          name="mtl_challan_no"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Item Description */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Item Description
+                        </p>
+                        <input
+                          type="text"
+                          name="item_description"
+                          value={values.item_description}
+                          onChange={(e) =>
+                            setFieldValue("item_description", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Item Description"
+                        />
+                        <ErrorMessage
+                          name="item_description"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Item No */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Item No
+                        </p>
+                        <input
+                          type="number"
+                          name="item_no"
+                          value={values.item_no}
+                          onChange={(e) =>
+                            setFieldValue("item_no", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Item No"
+                        />
+                        <ErrorMessage
+                          name="item_no"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Quantity */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Quantity
+                        </p>
+                        <input
+                          type="number"
+                          name="qty"
+                          value={values.qty}
+                          onChange={(e) => setFieldValue("qty", e.target.value)}
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Quantity"
+                        />
+                        <ErrorMessage
+                          name="qty"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* MOC */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          MOC
+                        </p>
+                        <input
+                          type="text"
+                          name="moc"
+                          value={values.moc}
+                          onChange={(e) => setFieldValue("moc", e.target.value)}
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter MOC (Material of Construction)"
+                        />
+                        <ErrorMessage
+                          name="moc"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Bin Location */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Bin Location
+                        </p>
+                        <input
+                          type="text"
+                          name="bin_location"
+                          value={values.bin_location}
+                          onChange={(e) =>
+                            setFieldValue("bin_location", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Bin Location"
+                        />
+                        <ErrorMessage
+                          name="bin_location"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Remark */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Remark
+                        </p>
+                        <input
+                          type="text"
+                          name="remark"
+                          value={values.remark}
+                          onChange={(e) =>
+                            setFieldValue("remark", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Remark (Optional)"
+                        />
+                        <ErrorMessage
+                          name="remark"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Material Remark */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Material Remark
+                        </p>
+                        <textarea
+                          name="material_remark"
+                          value={values.material_remark}
+                          onChange={(e) =>
+                            setFieldValue("material_remark", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                          placeholder="Enter Material Remark (Optional)"
+                        />
+                        <ErrorMessage
+                          name="material_remark"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    {/* BUTTONS */}
+                    <div className="mt-8 md:mt-10 w-full flex flex-col md:flex-row md:justify-between items-center gap-y-4 md:gap-y-0 gap-x-4">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isSubmitting ? "Submitting..." : getSubmitButtonText()}
+                      </button>
+                    </div>
                   </div>
                 </Form>
               )}
