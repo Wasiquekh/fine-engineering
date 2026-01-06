@@ -9,7 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Orizon",
+  title: "Fine Engg",
   description: "CRM",
 };
 

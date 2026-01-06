@@ -143,16 +143,16 @@ const LeftSideBar: React.FC = () => {
             <p className="">Category</p>
           </div>
         </Link>
-        <Link href="/transaction">
+        <Link href="/production_planning">
           <div
             className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/transaction"
+              pathname === "/production_planning"
                 ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                 : ""
             }`}
           >
             <TbDeviceMobileDollar className=" w-6 h-6   " />
-            <p className="">Transaction</p>
+            <p className="">Production Planning</p>
           </div>
         </Link>
         <Link href="/point-of-services">
