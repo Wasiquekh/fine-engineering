@@ -57,15 +57,15 @@ const validationSchema = Yup.object().shape({
         .integer("Job No must be an integer"),
     otherwise: (schema) => schema,
   }),
-  serial_no: Yup.number().when("job_type", {
-    is: (val: string) => val !== "PENDING_MATERIAL",
-    then: (schema) =>
-      schema
-        .required("Serial No is required")
-        .typeError("Serial No must be a number")
-        .positive("Serial No must be positive")
-        .integer("Serial No must be an integer"),
-  }),
+  // serial_no: Yup.number().when("job_type", {
+  //   is: (val: string) => val !== "PENDING_MATERIAL",
+  //   then: (schema) =>
+  //     schema
+  //       .required("Serial No is required")
+  //       .typeError("Serial No must be a number")
+  //       .positive("Serial No must be positive")
+  //       .integer("Serial No must be an integer"),
+  // }),
   job_order_date: Yup.date().when("job_type", {
     is: (val: string) => val !== "PENDING_MATERIAL",
     then: (schema) => schema.required("Job Order Date is required"),
@@ -114,7 +114,7 @@ const initialValues = {
   job_type: "",
   job_category: "",
   job_no: "",
-  serial_no: "",
+  // serial_no: "",
   job_order_date: "",
   mtl_rcd_date: "",
   mtl_challan_no: "",
@@ -229,7 +229,7 @@ export default function Home() {
         qty: Number(values.qty),
         moc: values.moc,
         remark: values.remark || "",
-        serial_no: Number(values.serial_no),
+        // serial_no: Number(values.serial_no),
         job_order_date: formatDate(values.job_order_date),
         mtl_rcd_date: formatDate(values.mtl_rcd_date),
         mtl_challan_no: Number(values.mtl_challan_no),
@@ -1005,7 +1005,7 @@ export default function Home() {
                       )}
 
                       {/* Serial No - Not for Pending Material */}
-                      {values.job_type !== "PENDING_MATERIAL" && (
+                      {/* {values.job_type !== "PENDING_MATERIAL" && (
                         <div className="w-full">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                             Serial No
@@ -1026,7 +1026,7 @@ export default function Home() {
                             className="text-red-500 text-sm mt-1"
                           />
                         </div>
-                      )}
+                      )} */}
 
                       {/* Item No */}
                       <div className="w-full">
