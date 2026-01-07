@@ -35,6 +35,7 @@ const jobCategoryOptions = [
   { value: "SPARES", label: "SPARES" },
   { value: "INTSO", label: "INTSO" },
   { value: "ASO", label: "ASO" },
+  { value: "AD", label: "AD" },
 ];
 
 // Options for Material Type

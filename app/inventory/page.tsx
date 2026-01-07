@@ -18,6 +18,11 @@ import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
 
+const clientOptions = [
+  { value: "Amar Equipment", label: "Amar Equipment" },
+  { value: "Amar Biosystem", label: "Amar Biosystem" }
+];
+
 // Options for Job Type
 const jobTypeOptions = [
   { value: "JOB_SERVICE", label: "Job Service" },
@@ -41,6 +46,7 @@ const kanbanCategory = [
 // Validation Schema for Jobs form
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
+  client_name: Yup.string().required("Client Name is required"),
   job_category: Yup.string().when("job_type", {
     is: (job_type: string) =>
       job_type === "TSO_SERVICE" || job_type === "KANBAN",
@@ -57,11 +63,6 @@ const validationSchema = Yup.object().shape({
         .integer("Job No must be an integer"),
     otherwise: (schema) => schema,
   }),
-  serial_no: Yup.number()
-    .required("Serial No is required")
-    .typeError("Serial No must be a number")
-    .positive("Serial No must be positive")
-    .integer("Serial No must be an integer"),
   job_order_date: Yup.date().required("Job Order Date is required"),
   mtl_rcd_date: Yup.date().required("Material Received Date is required"),
   mtl_challan_no: Yup.number()
@@ -88,9 +89,9 @@ const validationSchema = Yup.object().shape({
 // Initial form values for Jobs
 const initialValues = {
   job_type: "",
+  client_name: "",
   job_category: "",
   job_no: "",
-  serial_no: "",
   job_order_date: "",
   mtl_rcd_date: "",
   mtl_challan_no: "",
@@ -126,7 +127,7 @@ export default function Home() {
     // Create payload based on job type
     let payload: any = {
       job_type: values.job_type,
-      serial_no: Number(values.serial_no),
+      client_name: values.client_name,
       job_order_date: formatDate(values.job_order_date),
       mtl_rcd_date: formatDate(values.mtl_rcd_date),
       mtl_challan_no: Number(values.mtl_challan_no),
@@ -573,6 +574,25 @@ export default function Home() {
                         value={values.job_type}
                       />
 
+                      {/* Client Name */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Client Name
+                        </p>
+                        <SelectInput
+                          name="client_name"
+                          value={values.client_name}
+                          setFieldValue={setFieldValue}
+                          options={clientOptions}
+                          placeholder="Select Client Name"
+                        />
+                        <ErrorMessage
+                          name="client_name"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
                       {/* Job No - Only for JOB_SERVICE */}
                       {values.job_type === "JOB_SERVICE" && (
                         <div className="w-full">
@@ -624,7 +644,7 @@ export default function Home() {
                       )}
 
                       {/* Serial No */}
-                      <div className="w-full">
+                      {/* <div className="w-full">
                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                           Serial No
                         </p>
@@ -643,7 +663,7 @@ export default function Home() {
                           component="div"
                           className="text-red-500 text-sm mt-1"
                         />
-                      </div>
+                      </div> */}
 
                       {/* Job Order Date */}
                       <div className="w-full">

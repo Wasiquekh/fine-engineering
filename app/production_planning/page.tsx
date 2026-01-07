@@ -6,7 +6,7 @@ import { IoCloseOutline } from "react-icons/io5";
 import { HiTrash, HiLightningBolt } from "react-icons/hi";
 import StorageManager from "../../provider/StorageManager";
 import LeftSideBar from "../component/LeftSideBar";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import DesktopHeader from "../component/DesktopHeader";
 import { Formik, Form, ErrorMessage } from "formik";
@@ -137,9 +137,24 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [currentDataset, setCurrentDataset] = useState<"JOBS" | "PENDING">("JOBS");
   const [pendingSubFilter, setPendingSubFilter] = useState<"PENDING" | "COMPLETED">("PENDING");
-  const [jobServiceSubFilter, setJobServiceSubFilter] = useState<"ALL" | "URGENT">("ALL");
+  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
+  const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
+  const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [isUrgentModalOpen, setUrgentModalOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [urgentDate, setUrgentDate] = useState<string>("");
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const filterParam = searchParams.get("filter");
+
+  useEffect(() => {
+    if (filterParam) {
+      // Update active filter if a valid param is present
+      setActiveFilter(filterParam);
+    }
+  }, [filterParam]);
 
   const filteredData = useMemo(() => {
     if (activeFilter === "PENDING") {
@@ -149,17 +164,40 @@ export default function Home() {
       });
     }
     if (activeFilter === "JOB_SERVICE") {
+      if (jobServiceCategoryFilter === "PENDING_TAB") {
+        return data.filter((item) => {
+          const isCompleted = item.is_completed === true || item.is_completed === 1;
+          return pendingSubFilter === "COMPLETED" ? isCompleted : !isCompleted;
+        });
+      }
       return data.filter((item) => {
         if (item.job_type !== "JOB_SERVICE") return false;
-        if (jobServiceSubFilter === "URGENT") return item.urgent;
+        if (jobServiceCategoryFilter === "URGENT_TAB") {
+          return item.urgent;
+        }
+        if (jobServiceCategoryFilter !== "ALL" && item.job_category !== jobServiceCategoryFilter) return false;
         return true;
+      });
+    }
+    if (activeFilter === "TSO_SERVICE") {
+      return data.filter((item) => {
+        if (item.job_type !== "TSO_SERVICE") return false;
+        if (tsoSubFilter === "ALL") return true;
+        return item.job_category === tsoSubFilter;
+      });
+    }
+    if (activeFilter === "KANBAN") {
+      return data.filter((item) => {
+        if (item.job_type !== "KANBAN") return false;
+        if (kanbanSubFilter === "ALL") return true;
+        return item.job_category === kanbanSubFilter;
       });
     }
     if (activeFilter === "ALL") {
       return data;
     }
     return data.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, pendingSubFilter, jobServiceSubFilter]);
+  }, [data, activeFilter, pendingSubFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter]);
 
   const handleSubmit = async (values: any) => {
     // Format dates to YYYY-MM-DD format
@@ -243,16 +281,31 @@ export default function Home() {
     }
   };
 
-  const handleUrgent = async (id: string) => {
+  const handleUrgent = (id: string) => {
+    setSelectedJobId(id);
+    setUrgentDate("");
+    setUrgentModalOpen(true);
+  };
+
+  const submitUrgent = async () => {
+    if (!selectedJobId || !urgentDate) {
+      toast.error("Please select a due date");
+      return;
+    }
+
     try {
       const response = await axiosProvider.post(
-        `/fineengg_erp/jobs/${id}/urgent`,
-        {}
+        `/fineengg_erp/jobs/${selectedJobId}/urgent`,
+        {
+          urgent_due_date: urgentDate,
+        }
       );
 
       if (response.data.success) {
         toast.success("Job marked as urgent");
         fetchData();
+        setUrgentModalOpen(false);
+        setSelectedJobId(null);
       } else {
         toast.error("Failed to mark as urgent");
       }
@@ -276,12 +329,12 @@ export default function Home() {
 
     if (result.isConfirmed) {
       try {
-        const endpoint = activeFilter === "PENDING" ? `/fineengg_erp/pending-materials/${id}` : `/fineengg_erp/jobs/${id}`;
+        const endpoint = currentDataset === "PENDING" ? `/fineengg_erp/pending-materials/${id}` : `/fineengg_erp/jobs/${id}`;
         const response = await axiosProvider.delete(endpoint);
 
         if (response.data.success) {
           toast.success("Job deleted successfully");
-          fetchData(activeFilter === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
+          fetchData(currentDataset === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
         } else {
           toast.error("Failed to delete job");
         }
@@ -294,12 +347,28 @@ export default function Home() {
 
   const fetchData = async (endpoint?: string) => {
     try {
-      const url = endpoint || (activeFilter === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
+      const url = endpoint || (currentDataset === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
       const response = await axiosProvider.get(url);
       setData(response.data.data);
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axiosProvider.get("/fineengg_erp/categories");
+      if (response.data && response.data.data) {
+        const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
+        const formattedCats = cats.map((cat: any) => ({
+          value: cat.job_category,
+          label: cat.job_category
+        }));
+        setCategories(formattedCats);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
     }
   };
 
@@ -353,7 +422,10 @@ export default function Home() {
 
   // Get flyout title
   const getFlyoutTitle = () => {
-    if (flyoutType === "JOB_SERVICE") return "Add Job Service";
+    if (flyoutType === "JOB_SERVICE") {
+      if (jobServiceCategoryFilter === "URGENT_TAB") return "Add Pending";
+      // return "Add Job Service";
+    }
     if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
     if (flyoutType === "KANBAN") return "Add Kanban";
     if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
@@ -371,17 +443,20 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
+    fetchCategories();
   }, []);
 
   useEffect(() => {
-    if (activeFilter === "PENDING" && currentDataset !== "PENDING") {
+    const isPendingTab = activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter === "PENDING_TAB";
+
+    if ((activeFilter === "PENDING" || isPendingTab) && currentDataset !== "PENDING") {
       setCurrentDataset("PENDING");
       fetchData("/fineengg_erp/pending-materials");
-    } else if (activeFilter !== "PENDING" && currentDataset !== "JOBS") {
+    } else if (activeFilter !== "PENDING" && !isPendingTab && currentDataset !== "JOBS") {
       setCurrentDataset("JOBS");
       fetchData("/fineengg_erp/jobs");
     }
-  }, [activeFilter, currentDataset]);
+  }, [activeFilter, currentDataset, jobServiceCategoryFilter]);
 
   return (
     <>
@@ -408,82 +483,120 @@ export default function Home() {
               {/* Search and filter table row */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex items-center gap-4">
-                {/* Filter Buttons */}
-                <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200">
-                  <button
-                    onClick={() => setActiveFilter("ALL")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeFilter === "ALL"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter("JOB_SERVICE")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeFilter === "JOB_SERVICE"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Job Service
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter("TSO_SERVICE")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeFilter === "TSO_SERVICE"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    TSO Service
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter("KANBAN")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeFilter === "KANBAN"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Kanban
-                  </button>
-                  <button
-                    onClick={() => setActiveFilter("PENDING")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                      activeFilter === "PENDING"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Pending
-                  </button>
-                </div>
-
-                {/* Job Service Sub-filter Dropdown */}
+                {/* TSO Service Tabs */}
+                {activeFilter === "TSO_SERVICE" && (
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white">
+                    <button
+                      onClick={() => setTsoSubFilter("ALL")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        tsoSubFilter === "ALL"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      All
+                    </button>
+                    {tsoServiceCategory.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => setTsoSubFilter(cat.value)}
+                        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                          tsoSubFilter === cat.value
+                            ? "bg-primary-600 text-white"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Kanban Tabs */}
+                {activeFilter === "KANBAN" && (
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white">
+                    <button
+                      onClick={() => setKanbanSubFilter("ALL")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                        kanbanSubFilter === "ALL"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      All
+                    </button>
+                    {kanbanCategory.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => setKanbanSubFilter(cat.value)}
+                        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                          kanbanSubFilter === cat.value
+                            ? "bg-primary-600 text-white"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Job Service Tabs */}
                 {activeFilter === "JOB_SERVICE" && (
-                  <select
-                    value={jobServiceSubFilter}
-                    onChange={(e) =>
-                      setJobServiceSubFilter(e.target.value as "ALL" | "URGENT")
-                    }
-                    className="py-2 px-4 rounded-md text-sm font-medium border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-600 text-gray-600 h-[42px]"
-                  >
-                    <option value="ALL">All Jobs</option>
-                    <option value="URGENT">Urgent Only</option>
-                  </select>
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto">
+                    <button
+                      onClick={() => setJobServiceCategoryFilter("ALL")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        jobServiceCategoryFilter === "ALL"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      All
+                    </button>
+                    
+                    {categories.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => setJobServiceCategoryFilter(cat.value)}
+                        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                          jobServiceCategoryFilter === cat.value
+                            ? "bg-primary-600 text-white"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setJobServiceCategoryFilter("URGENT_TAB")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        jobServiceCategoryFilter === "URGENT_TAB"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Urgent
+                    </button>
+                    <button
+                      onClick={() => setJobServiceCategoryFilter("PENDING_TAB")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        jobServiceCategoryFilter === "PENDING_TAB"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Pending
+                    </button>
+                  </div>
                 )}
 
                 {/* Pending Sub-filter Dropdown */}
-                {activeFilter === "PENDING" && (
+                {(activeFilter === "PENDING" || (activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter === "PENDING_TAB")) && (
                   <select
                     value={pendingSubFilter}
                     onChange={(e) =>
                       setPendingSubFilter(e.target.value as "PENDING" | "COMPLETED")
                     }
-                    className="py-2 px-4 rounded-md text-sm font-medium border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-600 text-gray-600 h-[42px]"
+                    className="py-2 px-4 rounded-md text-base font-medium border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-600 text-gray-600 h-[42px]"
                   >
                     <option value="PENDING">Pending</option>
                     <option value="COMPLETED">Completed</option>
@@ -493,20 +606,22 @@ export default function Home() {
 
                 {/* Pending Material Button */}
                 <div className="relative">
-                  <button
-                    onClick={openPendingMaterialFlyout}
-                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 text-white group hover:bg-primary-500"
-                  >
-                    <FiFilter className="w-4 h-4 text-white" />
-                    <p className="text-base font-medium">Add Pending Material</p>
-                  </button>
+                  {activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter === "URGENT_TAB" && (
+                    <button
+                      onClick={openJobServiceFlyout}
+                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 text-white group hover:bg-primary-500"
+                    >
+                      <FiFilter className="w-4 h-4 text-white" />
+                      <p className="text-base font-medium">Add Pending</p>
+                    </button>
+                  )}
                 </div>
               </div>
 
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    {activeFilter === "PENDING" ? (
+                    {currentDataset === "PENDING" ? (
                       <>
                         <th scope="col" className="p-3 border border-tableBorder">
                           <div className="flex items-center gap-2">
@@ -675,7 +790,7 @@ export default function Home() {
                     </tr>
                   ) : (
                     filteredData.map((item: any) => (
-                      activeFilter === "PENDING" ? (
+                      currentDataset === "PENDING" ? (
                         <tr
                           className="border border-tableBorder bg-white hover:bg-primary-100"
                           key={item.id}
@@ -728,7 +843,14 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p
+                            className={`text-base leading-normal ${
+                              item.urgent_due_date &&
+                              new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                ? "text-red-600"
+                                : "text-[#232323]"
+                            }`}
+                          >
                             {item.job_no || "N/A"}
                           </p>
                         </td>
@@ -1051,6 +1173,51 @@ export default function Home() {
           </div>
         </div>
       {/* FITLER FLYOUT END */}
+
+      {/* URGENT MODAL */}
+      {isUrgentModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Mark as Urgent</h3>
+              <button
+                onClick={() => setUrgentModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <IoCloseOutline className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Due Date
+              </label>
+              <input
+                type="date"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600"
+                value={urgentDate}
+                onChange={(e) => setUrgentDate(e.target.value)}
+                min={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setUrgentModalOpen(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitUrgent}
+                className="px-4 py-2 text-white bg-primary-600 rounded-md hover:bg-primary-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
