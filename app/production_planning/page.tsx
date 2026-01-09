@@ -148,6 +148,7 @@ export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter");
+  const clientParam = searchParams.get("client");
 
   useEffect(() => {
     if (filterParam) {
@@ -157,20 +158,26 @@ export default function Home() {
   }, [filterParam]);
 
   const filteredData = useMemo(() => {
+    let currentData = data;
+
+    if (clientParam) {
+      currentData = currentData.filter((item) => item.client_name === clientParam);
+    }
+
     if (activeFilter === "PENDING") {
-      return data.filter((item) => {
+      return currentData.filter((item) => {
         const isCompleted = item.is_completed === true || item.is_completed === 1;
         return pendingSubFilter === "COMPLETED" ? isCompleted : !isCompleted;
       });
     }
     if (activeFilter === "JOB_SERVICE") {
       if (jobServiceCategoryFilter === "PENDING_TAB") {
-        return data.filter((item) => {
+        return currentData.filter((item) => {
           const isCompleted = item.is_completed === true || item.is_completed === 1;
           return pendingSubFilter === "COMPLETED" ? isCompleted : !isCompleted;
         });
       }
-      return data.filter((item) => {
+      return currentData.filter((item) => {
         if (item.job_type !== "JOB_SERVICE") return false;
         if (jobServiceCategoryFilter === "URGENT_TAB") {
           return item.urgent;
@@ -180,24 +187,24 @@ export default function Home() {
       });
     }
     if (activeFilter === "TSO_SERVICE") {
-      return data.filter((item) => {
+      return currentData.filter((item) => {
         if (item.job_type !== "TSO_SERVICE") return false;
         if (tsoSubFilter === "ALL") return true;
         return item.job_category === tsoSubFilter;
       });
     }
     if (activeFilter === "KANBAN") {
-      return data.filter((item) => {
+      return currentData.filter((item) => {
         if (item.job_type !== "KANBAN") return false;
         if (kanbanSubFilter === "ALL") return true;
         return item.job_category === kanbanSubFilter;
       });
     }
     if (activeFilter === "ALL") {
-      return data;
+      return currentData;
     }
-    return data.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, pendingSubFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter]);
+    return currentData.filter((item) => item.job_type === activeFilter);
+  }, [data, activeFilter, pendingSubFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam]);
 
   const handleSubmit = async (values: any) => {
     // Format dates to YYYY-MM-DD format
@@ -686,6 +693,16 @@ export default function Home() {
                       scope="col"
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          J/O Number
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <div className="font-medium text-firstBlack text-base leading-normal">
                           Job Type
@@ -780,7 +797,7 @@ export default function Home() {
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -852,6 +869,11 @@ export default function Home() {
                             }`}
                           >
                             {item.job_no || "N/A"}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.jo_number || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">

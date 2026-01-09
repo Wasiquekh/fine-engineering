@@ -36,6 +36,8 @@ const jobCategoryOptions = [
   { value: "INTSO", label: "INTSO" },
   { value: "ASO", label: "ASO" },
   { value: "AD", label: "AD" },
+  { value: "MD", label: "MD" },
+  { value: "TBR", label: "TBR" },
 ];
 
 // Options for Material Type
@@ -197,6 +199,17 @@ export default function Home() {
 
   return (
     <>
+    <style>{`
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+      
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
         {/* Main content right section */}

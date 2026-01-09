@@ -47,6 +47,11 @@ const kanbanCategory = [
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
   client_name: Yup.string().required("Client Name is required"),
+  jo_number: Yup.number()
+    .required("J/O Number is required")
+    .typeError("J/O Number must be a number")
+    .positive("J/O Number must be positive")
+    .integer("J/O Number must be an integer"),
   job_category: Yup.string().when("job_type", {
     is: (job_type: string) =>
       job_type === "TSO_SERVICE" || job_type === "KANBAN",
@@ -71,11 +76,14 @@ const validationSchema = Yup.object().shape({
     .positive("Material Challan No must be positive")
     .integer("Material Challan No must be an integer"),
   item_description: Yup.string().required("Item Description is required"),
-  item_no: Yup.number()
-    .required("Item No is required")
-    .typeError("Item No must be a number")
-    .positive("Item No must be positive")
-    .integer("Item No must be an integer"),
+  item_no: Yup.number().when("job_type", {
+    is: (job_type: string) => job_type !== "KANBAN",
+    then: (schema) => schema.required("Item No is required")
+      .typeError("Item No must be a number")
+      .positive("Item No must be positive")
+      .integer("Item No must be an integer"),
+    otherwise: (schema) => schema.notRequired().nullable(),
+  }),
   qty: Yup.number()
     .required("Quantity is required")
     .typeError("Quantity must be a number")
@@ -90,6 +98,7 @@ const validationSchema = Yup.object().shape({
 const initialValues = {
   job_type: "",
   client_name: "",
+  jo_number: "",
   job_category: "",
   job_no: "",
   job_order_date: "",
@@ -128,6 +137,7 @@ export default function Home() {
     let payload: any = {
       job_type: values.job_type,
       client_name: values.client_name,
+      jo_number: Number(values.jo_number),
       job_order_date: formatDate(values.job_order_date),
       mtl_rcd_date: formatDate(values.mtl_rcd_date),
       mtl_challan_no: Number(values.mtl_challan_no),
@@ -242,7 +252,7 @@ export default function Home() {
     } else if (flyoutType === "TSO_SERVICE") {
       return { ...initialValues, job_type: "TSO_SERVICE" };
     } else if (flyoutType === "KANBAN") {
-      return { ...initialValues, job_type: "KANBAN" };
+      return { ...initialValues, job_type: "KANBAN", client_name: "Amar Equipment" };
     }
     return initialValues;
   };
@@ -279,6 +289,16 @@ export default function Home() {
 
   return (
     <>
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
         {/* Main content right section */}
@@ -339,6 +359,16 @@ export default function Home() {
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
                           Job No
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          J/O Number
                         </div>
                       </div>
                     </th>
@@ -438,7 +468,7 @@ export default function Home() {
                   {data.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -455,6 +485,11 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder">
                           <p className="text-[#232323] text-base leading-normal">
                             {item.job_no || "N/A"}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {item.jo_number || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
@@ -583,11 +618,37 @@ export default function Home() {
                           name="client_name"
                           value={values.client_name}
                           setFieldValue={setFieldValue}
-                          options={clientOptions}
+                          options={
+                            values.job_type === "KANBAN"
+                              ? [{ value: "Amar Equipment", label: "Amar Equipment" }]
+                              : clientOptions
+                          }
                           placeholder="Select Client Name"
                         />
                         <ErrorMessage
                           name="client_name"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* J/O Number */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          J/O Number
+                        </p>
+                        <input
+                          type="number"
+                          name="jo_number"
+                          value={values.jo_number}
+                          onChange={(e) =>
+                            setFieldValue("jo_number", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter J/O Number"
+                        />
+                        <ErrorMessage
+                          name="jo_number"
                           component="div"
                           className="text-red-500 text-sm mt-1"
                         />
@@ -618,7 +679,7 @@ export default function Home() {
                       )}
 
                       {/* Job Category - Only for TSO_SERVICE and KANBAN */}
-                      {(values.job_type === "TSO_SERVICE" ||
+                      { (values.job_type === "TSO_SERVICE" ||
                         values.job_type === "KANBAN") && (
                         <div className="w-full">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
@@ -746,6 +807,7 @@ export default function Home() {
                       </div>
 
                       {/* Item No */}
+                      {values.job_type !== "KANBAN" && (
                       <div className="w-full">
                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                           Item No
@@ -766,6 +828,7 @@ export default function Home() {
                           className="text-red-500 text-sm mt-1"
                         />
                       </div>
+                      )}
 
                       {/* Quantity */}
                       <div className="w-full">

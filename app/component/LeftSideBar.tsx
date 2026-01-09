@@ -91,7 +91,12 @@ const LeftSideBar: React.FC = () => {
   const toggleSubmenu = (): void => {
     setIsSubmenuOpen((prev) => !prev);
   };
-  const [isProductionOpen, setIsProductionOpen] = useState<boolean>(false);
+  const [isProductionOpen, setIsProductionOpen] = useState<boolean>(
+    pathname.includes("/production_planning") || pathname === "/category"
+  );
+  const [isAmarEquipmentOpen, setIsAmarEquipmentOpen] = useState<boolean>(
+    pathname.includes("/production_planning")
+  );
   return (
     <div className="w-full hidden md:w-[17%]  md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0  h-screen fixed top-0 left-0">
       {/* SIDE LEFT BAR TOP SECTION */}
@@ -132,22 +137,10 @@ const LeftSideBar: React.FC = () => {
             <p className="">Inventory</p>
           </div>
         </Link>
-        <Link href="/category">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/category"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <TbCategoryFilled className=" w-6 h-6   " />
-            <p className="">Category</p>
-          </div>
-        </Link>
         <div
           onClick={() => setIsProductionOpen(!isProductionOpen)}
           className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-            pathname.includes("/production_planning")
+            pathname.includes("/production_planning") || pathname === "/category"
               ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
               : ""
           }`}
@@ -162,38 +155,70 @@ const LeftSideBar: React.FC = () => {
         </div>
         {isProductionOpen && (
           <div className="pl-4 mb-4 flex flex-col gap-1">
-            <Link href="/production_planning?filter=JOB_SERVICE">
+            <Link href="/category">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  Job Service
+                  Category
                 </p>
               </div>
             </Link>
-            <Link href="/production_planning?filter=TSO_SERVICE">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  TSO Service
-                </p>
+            <div
+              onClick={() => setIsAmarEquipmentOpen(!isAmarEquipmentOpen)}
+              className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+            >
+              <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                Amar Equipment
+              </p>
+              <FaChevronDown
+                className={`ml-auto w-3 h-3 transition-transform ${
+                  isAmarEquipmentOpen ? "rotate-180" : ""
+                }`}
+              />
+            </div>
+            {isAmarEquipmentOpen && (
+              <div className="pl-4 flex flex-col gap-1">
+                <Link href="/production_planning?filter=JOB_SERVICE&client=Amar%20Equipment">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                      Job Service
+                    </p>
+                  </div>
+                </Link>
+                <Link href="/production_planning?filter=TSO_SERVICE&client=Amar%20Equipment">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                      TSO Service
+                    </p>
+                  </div>
+                </Link>
+                <Link href="/production_planning?filter=KANBAN&client=Amar%20Equipment">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                      Kanban
+                    </p>
+                  </div>
+                </Link>
+                <Link href="#">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                      P/O
+                    </p>
+                  </div>
+                </Link>
               </div>
-            </Link>
-            <Link href="/production_planning?filter=KANBAN">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  Kanban
-                </p>
-              </div>
-            </Link>
-            <Link href="/production_planning?filter=PENDING">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  P/O
-                </p>
-              </div>
-            </Link>
+            )}
+            <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+              <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                Amar Biosystem
+              </p>
+            </div>
           </div>
         )}
         {/* <Link href="/point-of-services">
