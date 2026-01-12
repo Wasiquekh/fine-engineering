@@ -160,7 +160,12 @@ export default function Home() {
   const filteredData = useMemo(() => {
     let currentData = data;
 
-    if (clientParam) {
+    const isPendingView =
+      activeFilter === "PENDING" ||
+      (activeFilter === "JOB_SERVICE" &&
+        jobServiceCategoryFilter === "PENDING_TAB");
+
+    if (clientParam && !isPendingView) {
       currentData = currentData.filter((item) => item.client_name === clientParam);
     }
 
@@ -356,7 +361,7 @@ export default function Home() {
     try {
       const url = endpoint || (currentDataset === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
       const response = await axiosProvider.get(url);
-      setData(response.data.data);
+      setData(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
@@ -429,22 +434,19 @@ export default function Home() {
 
   // Get flyout title
   const getFlyoutTitle = () => {
-    if (flyoutType === "JOB_SERVICE") {
-      if (jobServiceCategoryFilter === "URGENT_TAB") return "Add Pending";
-      // return "Add Job Service";
-    }
+    if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
+    if (flyoutType === "JOB_SERVICE") return "Add JOB Service";
     if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
     if (flyoutType === "KANBAN") return "Add Kanban";
-    if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
     return "Add Job";
   };
 
   // Get submit button text
   const getSubmitButtonText = () => {
+    if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
     if (flyoutType === "JOB_SERVICE") return "Add Job Service";
     if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
     if (flyoutType === "KANBAN") return "Add Kanban";
-    if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
     return "Add Job";
   };
 
@@ -467,6 +469,16 @@ export default function Home() {
 
   return (
     <>
+    <style>{`
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
         {/* Main content right section */}
@@ -613,9 +625,9 @@ export default function Home() {
 
                 {/* Pending Material Button */}
                 <div className="relative">
-                  {activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter === "URGENT_TAB" && (
+                  {activeFilter === "JOB_SERVICE" && (
                     <button
-                      onClick={openJobServiceFlyout}
+                      onClick={openPendingMaterialFlyout}
                       className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 text-white group hover:bg-primary-500"
                     >
                       <FiFilter className="w-4 h-4 text-white" />
