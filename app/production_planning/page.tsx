@@ -595,7 +595,7 @@ export default function Home() {
                     >
                       Urgent
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => setJobServiceCategoryFilter("PENDING_TAB")}
                       className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         jobServiceCategoryFilter === "PENDING_TAB"
@@ -604,7 +604,7 @@ export default function Home() {
                       }`}
                     >
                       Pending
-                    </button>
+                    </button> */}
                   </div>
                 )}
 
@@ -872,16 +872,21 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          <p
-                            className={`text-base leading-normal ${
-                              item.urgent_due_date &&
-                              new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
-                                ? "text-red-600"
-                                : "text-[#232323]"
-                            }`}
-                          >
-                            {item.job_no || "N/A"}
-                          </p>
+                          {item.job_no ? (
+                            <p
+                              onClick={() => router.push(`/production_planning/${item.job_no}`)}
+                              className={`text-base leading-normal cursor-pointer underline ${
+                                item.urgent_due_date &&
+                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                  ? "text-red-600 hover:text-red-700"
+                                  : "text-blue-600 hover:text-blue-800"
+                              }`}
+                            >
+                              {item.job_no}
+                            </p>
+                          ) : (
+                            <p className="text-[#232323] text-base leading-normal">N/A</p>
+                          )}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
