@@ -135,8 +135,7 @@ export default function Home() {
   >("JOB_SERVICE");
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
-  const [currentDataset, setCurrentDataset] = useState<"JOBS" | "PENDING">("JOBS");
-  const [pendingSubFilter, setPendingSubFilter] = useState<"PENDING" | "COMPLETED">("PENDING");
+  const [currentDataset, setCurrentDataset] = useState<"JOBS" | "CATEGORIES">("JOBS");
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
@@ -160,28 +159,21 @@ export default function Home() {
   const filteredData = useMemo(() => {
     let currentData = data;
 
-    const isPendingView =
-      activeFilter === "PENDING" ||
-      (activeFilter === "JOB_SERVICE" &&
-        jobServiceCategoryFilter === "PENDING_TAB");
+    if (currentDataset === "CATEGORIES") {
+      if (jobServiceCategoryFilter === "URGENT_TAB") {
+        return currentData.filter((item) => item.urgent || item.is_urgent);
+      }
+      if (jobServiceCategoryFilter !== "ALL") {
+        return currentData.filter((item) => item.job_category === jobServiceCategoryFilter);
+      }
+      return currentData;
+    }
 
-    if (clientParam && !isPendingView) {
+    if (clientParam) {
       currentData = currentData.filter((item) => item.client_name === clientParam);
     }
 
-    if (activeFilter === "PENDING") {
-      return currentData.filter((item) => {
-        const isCompleted = item.is_completed === true || item.is_completed === 1;
-        return pendingSubFilter === "COMPLETED" ? isCompleted : !isCompleted;
-      });
-    }
     if (activeFilter === "JOB_SERVICE") {
-      if (jobServiceCategoryFilter === "PENDING_TAB") {
-        return currentData.filter((item) => {
-          const isCompleted = item.is_completed === true || item.is_completed === 1;
-          return pendingSubFilter === "COMPLETED" ? isCompleted : !isCompleted;
-        });
-      }
       return currentData.filter((item) => {
         if (item.job_type !== "JOB_SERVICE") return false;
         if (jobServiceCategoryFilter === "URGENT_TAB") {
@@ -209,7 +201,7 @@ export default function Home() {
       return currentData;
     }
     return currentData.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, pendingSubFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam]);
+  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset]);
 
   const handleSubmit = async (values: any) => {
     // Format dates to YYYY-MM-DD format
@@ -275,7 +267,7 @@ export default function Home() {
         toast.success("Pending Material added successfully");
       }
 
-      fetchData(values.job_type === "PENDING_MATERIAL" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
+      fetchData();
       setFlyoutOpen(false);
     } catch (error: any) {
       console.error("Error saving job:", error);
@@ -293,8 +285,8 @@ export default function Home() {
     }
   };
 
-  const handleUrgent = (id: string) => {
-    setSelectedJobId(id);
+  const handleUrgent = (job_no: string | number) => {
+    setSelectedJobId(String(job_no));
     setUrgentDate("");
     setUrgentModalOpen(true);
   };
@@ -307,9 +299,20 @@ export default function Home() {
 
     try {
       const response = await axiosProvider.post(
-        `/fineengg_erp/jobs/${selectedJobId}/urgent`,
+        `/fineengg_erp/jobs/mark-urgent`,
         {
+          job_no: selectedJobId,
           urgent_due_date: urgentDate,
+        }
+      );
+
+      const params = new URLSearchParams();
+      params.append("job_no", selectedJobId);
+      await axiosProvider.post(
+        "/fineengg_erp/categories/mark-urgent",
+        params,
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
         }
       );
 
@@ -341,12 +344,14 @@ export default function Home() {
 
     if (result.isConfirmed) {
       try {
-        const endpoint = currentDataset === "PENDING" ? `/fineengg_erp/pending-materials/${id}` : `/fineengg_erp/jobs/${id}`;
+        const endpoint = currentDataset === "CATEGORIES" 
+          ? `/fineengg_erp/categories/${id}` 
+          : `/fineengg_erp/jobs/${id}`;
         const response = await axiosProvider.delete(endpoint);
 
         if (response.data.success) {
           toast.success("Job deleted successfully");
-          fetchData(currentDataset === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
+          fetchData(currentDataset === "CATEGORIES" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs");
         } else {
           toast.error("Failed to delete job");
         }
@@ -359,7 +364,10 @@ export default function Home() {
 
   const fetchData = async (endpoint?: string) => {
     try {
-      const url = endpoint || (currentDataset === "PENDING" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs");
+      let url = endpoint;
+      if (!url) {
+        url = activeFilter === "JOB_SERVICE" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs";
+      }
       const response = await axiosProvider.get(url);
       setData(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (error: any) {
@@ -451,21 +459,41 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData();
     fetchCategories();
   }, []);
 
   useEffect(() => {
-    const isPendingTab = activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter === "PENDING_TAB";
+    let isMounted = true;
+    const loadData = async () => {
+      let endpoint = "/fineengg_erp/jobs";
+      let dataset: "JOBS" | "CATEGORIES" = "JOBS";
 
-    if ((activeFilter === "PENDING" || isPendingTab) && currentDataset !== "PENDING") {
-      setCurrentDataset("PENDING");
-      fetchData("/fineengg_erp/pending-materials");
-    } else if (activeFilter !== "PENDING" && !isPendingTab && currentDataset !== "JOBS") {
-      setCurrentDataset("JOBS");
-      fetchData("/fineengg_erp/jobs");
-    }
-  }, [activeFilter, currentDataset, jobServiceCategoryFilter]);
+      if (activeFilter === "JOB_SERVICE") {
+        endpoint = "/fineengg_erp/categories";
+        dataset = "CATEGORIES";
+      }
+
+      if (currentDataset !== dataset) {
+        setCurrentDataset(dataset);
+        setData([]);
+      }
+
+      try {
+        const response = await axiosProvider.get(endpoint);
+        if (isMounted) {
+          setData(Array.isArray(response.data.data) ? response.data.data : []);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeFilter]);
 
   return (
     <>
@@ -595,32 +623,9 @@ export default function Home() {
                     >
                       Urgent
                     </button>
-                    {/* <button
-                      onClick={() => setJobServiceCategoryFilter("PENDING_TAB")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                        jobServiceCategoryFilter === "PENDING_TAB"
-                          ? "bg-primary-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      Pending
-                    </button> */}
                   </div>
                 )}
 
-                {/* Pending Sub-filter Dropdown */}
-                {(activeFilter === "PENDING" || (activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter === "PENDING_TAB")) && (
-                  <select
-                    value={pendingSubFilter}
-                    onChange={(e) =>
-                      setPendingSubFilter(e.target.value as "PENDING" | "COMPLETED")
-                    }
-                    className="py-2 px-4 rounded-md text-base font-medium border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-primary-600 text-gray-600 h-[42px]"
-                  >
-                    <option value="PENDING">Pending</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
-                )}
                 </div>
 
                 {/* Pending Material Button */}
@@ -640,7 +645,7 @@ export default function Home() {
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    {currentDataset === "PENDING" ? (
+                    {currentDataset === "CATEGORIES" ? (
                       <>
                         <th scope="col" className="p-3 border border-tableBorder">
                           <div className="flex items-center gap-2">
@@ -652,21 +657,21 @@ export default function Home() {
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <div className="font-medium text-firstBlack text-base leading-normal">
-                              Item No
+                              Job Category
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <div className="font-medium text-firstBlack text-base leading-normal">
-                              Size
+                              Description
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <div className="font-medium text-firstBlack text-base leading-normal">
-                              MOC
+                              Material Type
                             </div>
                           </div>
                         </th>
@@ -680,7 +685,21 @@ export default function Home() {
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <div className="font-medium text-firstBlack text-base leading-normal">
-                              Description
+                              Bar
+                            </div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-2 py-0 border border-tableBorder">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-firstBlack text-base leading-normal">
+                              Temperature
+                            </div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-2 py-0 border border-tableBorder">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-firstBlack text-base leading-normal">
+                              Status
                             </div>
                           </div>
                         </th>
@@ -819,48 +838,58 @@ export default function Home() {
                     </tr>
                   ) : (
                     filteredData.map((item: any) => (
-                      currentDataset === "PENDING" ? (
+                      currentDataset === "CATEGORIES" ? (
                         <tr
                           className="border border-tableBorder bg-white hover:bg-primary-100"
                           key={item.id}
                         >
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">
-                              {item.job_no || "N/A"}
+                            <p
+                              onClick={() => router.push(`/production_planning/${item.job_no}`)}
+                              className={`text-base leading-normal cursor-pointer underline ${
+                                item.urgent || item.is_urgent
+                                  ? "text-red-600 hover:text-red-800"
+                                  : "text-blue-600 hover:text-blue-800"
+                              }`}
+                            >
+                              {item.job_no}
                             </p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">
-                              {item.item_no}
-                            </p>
+                            <p className="text-[#232323] text-base leading-normal">{item.job_category}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">
-                              {item.size}
-                            </p>
+                            <p className="text-[#232323] text-base leading-normal">{item.description}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">
-                              {item.moc}
-                            </p>
+                            <p className="text-[#232323] text-base leading-normal">{item.material_type}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">
-                              {item.qty}
-                            </p>
+                            <p className="text-[#232323] text-base leading-normal">{item.qty}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">
-                              {item.description || item.item_description}
-                            </p>
+                            <p className="text-[#232323] text-base leading-normal">{item.bar}</p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base leading-normal">{item.tempp}</p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <span
+                              className={`px-2 py-1 rounded text-sm ${
+                                item.urgent || item.is_urgent
+                                  ? "bg-red-100 text-red-600"
+                                  : "bg-green-100 text-green-600"
+                              }`}
+                            >
+                              {item.urgent || item.is_urgent ? "Urgent" : "Normal"}
+                            </span>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                                title="Delete"
-                              >
+                              <button onClick={() => handleUrgent(item.job_no)} className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors" title="Mark as Urgent">
+                                <HiLightningBolt className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors" title="Delete">
                                 <HiTrash className="w-4 h-4" />
                               </button>
                             </div>
@@ -943,7 +972,7 @@ export default function Home() {
                           <div className="flex items-center gap-2">
                             {activeFilter === "JOB_SERVICE" && (
                               <button
-                                onClick={() => handleUrgent(item.id)}
+                                onClick={() => handleUrgent(item.job_no)}
                                 className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
                                 title="Mark as Urgent"
                               >

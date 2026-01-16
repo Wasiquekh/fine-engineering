@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { FiFilter } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
 import { HiTrash } from "react-icons/hi";
@@ -119,6 +119,7 @@ export default function Home() {
     "JOB_SERVICE" | "TSO_SERVICE" | "KANBAN"
   >("JOB_SERVICE");
   const [data, setData] = useState<any | []>([]);
+  const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
   const router = useRouter();
 
@@ -226,6 +227,11 @@ export default function Home() {
     }
   };
 
+  const filteredData = useMemo(() => {
+    if (activeFilter === "ALL") return data;
+    return data.filter((item: any) => item.job_type === activeFilter);
+  }, [data, activeFilter]);
+
   const resetFormState = () => {
     setFlyoutOpen(false);
   };
@@ -320,7 +326,49 @@ export default function Home() {
             {/* ----------------Table----------------------- */}
             <div className="relative overflow-x-auto sm:rounded-lg">
               {/* Search and filter table row */}
-              <div className="flex flex-col md:flex-row justify-end items-center gap-4 mb-6 w-full mx-auto">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
+                <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+                  <button
+                    onClick={() => setActiveFilter("ALL")}
+                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeFilter === "ALL"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter("JOB_SERVICE")}
+                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeFilter === "JOB_SERVICE"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    Job Service
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter("TSO_SERVICE")}
+                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeFilter === "TSO_SERVICE"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    TSO Service
+                  </button>
+                  <button
+                    onClick={() => setActiveFilter("KANBAN")}
+                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeFilter === "KANBAN"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    Kanban
+                  </button>
+                </div>
                 <div className="flex justify-center items-center gap-4">
                   <div
                     className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
@@ -448,16 +496,6 @@ export default function Home() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Status
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
                           Actions
                         </div>
                       </div>
@@ -465,10 +503,10 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.length === 0 ? (
+                  {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={10}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -477,7 +515,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    data.map((item: any) => (
+                    filteredData.map((item: any) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -526,17 +564,6 @@ export default function Home() {
                           <p className="text-[#232323] text-base leading-normal">
                             {item.bin_location}
                           </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <span
-                            className={`px-2 py-1 rounded text-sm ${
-                              item.urgent
-                                ? "bg-red-100 text-red-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            {item.urgent ? "Urgent" : "Normal"}
-                          </span>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <div className="flex items-center gap-2">
