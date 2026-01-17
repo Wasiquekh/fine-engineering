@@ -312,7 +312,7 @@ export default function Home() {
         "/fineengg_erp/categories/mark-urgent",
         params,
         {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
         }
       );
 
