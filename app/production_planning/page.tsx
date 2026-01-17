@@ -33,9 +33,18 @@ const tsoServiceCategory = [
 
 // Options for Kanban Category - UPDATED based on API validation
 const kanbanCategory = [
-  { value: "RAW_MATERIAL", label: "RAW MATERIAL" },
-  { value: "IN_PROGRESS", label: "IN PROGRESS" },
-  { value: "FINISHED_GOODS", label: "FINISHED GOODS" },
+  { value: "VESSEL", label: "VESSEL" },
+  { value: "HEAD", label: "HEAD" },
+  { value: "CLAMP", label: "CLAMP" },
+  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
+  { value: "HEATER_PLATE", label: "HEATER PLATE" },
+  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
+  { value: "HEATER_SHELL", label: "HEATER SHELL" },
+  { value: "OUTER_RING", label: "OUTER RING" },
+  { value: "COOLING_COIL", label: "COOLING COIL" },
+  { value: "SPARGER", label: "SPARGER" },
+  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
+  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
 
 // Validation Schema for Jobs form
@@ -525,14 +534,12 @@ export default function Home() {
 
           {/* Main content middle section */}
           <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
-            {/* ----------------Table----------------------- */}
-            <div className="relative overflow-x-auto sm:rounded-lg">
-              {/* Search and filter table row */}
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
-                <div className="flex items-center gap-4">
+            {/* Search and filter table row */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
+              <div className="flex items-center gap-4 max-w-full min-w-0">
                 {/* TSO Service Tabs */}
                 {activeFilter === "TSO_SERVICE" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white">
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                     <button
                       onClick={() => setTsoSubFilter("ALL")}
                       className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -560,7 +567,7 @@ export default function Home() {
                 )}
                 {/* Kanban Tabs */}
                 {activeFilter === "KANBAN" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white">
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                     <button
                       onClick={() => setKanbanSubFilter("ALL")}
                       className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -588,7 +595,7 @@ export default function Home() {
                 )}
                 {/* Job Service Tabs */}
                 {activeFilter === "JOB_SERVICE" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto">
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                     <button
                       onClick={() => setJobServiceCategoryFilter("ALL")}
                       className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
@@ -625,23 +632,24 @@ export default function Home() {
                     </button>
                   </div>
                 )}
-
-                </div>
-
-                {/* Pending Material Button */}
-                <div className="relative">
-                  {activeFilter === "JOB_SERVICE" && (
-                    <button
-                      onClick={openPendingMaterialFlyout}
-                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 text-white group hover:bg-primary-500"
-                    >
-                      <FiFilter className="w-4 h-4 text-white" />
-                      <p className="text-base font-medium">Add Pending</p>
-                    </button>
-                  )}
-                </div>
               </div>
 
+              {/* Pending Material Button */}
+              <div className="relative shrink-0">
+                {activeFilter === "JOB_SERVICE" && (
+                  <button
+                    onClick={openPendingMaterialFlyout}
+                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 text-white group hover:bg-primary-500"
+                  >
+                    <FiFilter className="w-4 h-4 text-white" />
+                    <p className="text-base font-medium">Add Pending</p>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ----------------Table----------------------- */}
+            <div className="relative overflow-x-auto sm:rounded-lg">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">

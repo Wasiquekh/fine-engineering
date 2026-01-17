@@ -38,9 +38,18 @@ const tsoServiceCategory = [
 
 // Options for Kanban Category - UPDATED based on API validation
 const kanbanCategory = [
-  { value: "RAW_MATERIAL", label: "RAW MATERIAL" },
-  { value: "IN_PROGRESS", label: "IN PROGRESS" },
-  { value: "FINISHED_GOODS", label: "FINISHED GOODS" },
+  { value: "VESSEL", label: "VESSEL" },
+  { value: "HEAD", label: "HEAD" },
+  { value: "CLAMP", label: "CLAMP" },
+  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
+  { value: "HEATER_PLATE", label: "HEATER PLATE" },
+  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
+  { value: "HEATER_SHELL", label: "HEATER SHELL" },
+  { value: "OUTER_RING", label: "OUTER RING" },
+  { value: "COOLING_COIL", label: "COOLING COIL" },
+  { value: "SPARGER", label: "SPARGER" },
+  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
+  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
 
 // Validation Schema for Jobs form
