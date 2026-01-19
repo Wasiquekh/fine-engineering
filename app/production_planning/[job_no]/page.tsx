@@ -26,6 +26,22 @@ interface JobDetail {
   assign_date?: string;
 }
 
+interface CategoryDetail {
+  id: string;
+  job_category: string;
+  job_no: string;
+  description: string;
+  material_type: string;
+  bar: string;
+  tempp: string;
+  qty: string;
+  remark: string;
+  client_name: string;
+  drawing_recieved_date: string;
+  urgent_due_date: string | null;
+  is_urgent: boolean;
+}
+
 interface PendingMaterial {
   id: string;
   job_no: number;
@@ -40,6 +56,7 @@ interface PendingMaterial {
 export default function JobDetailsPage() {
   const [pendingData, setPendingData] = useState<PendingMaterial[]>([]);
   const [jobDetails, setJobDetails] = useState<JobDetail[]>([]);
+  const [categoryDetails, setCategoryDetails] = useState<CategoryDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<{
     [key: string]: { assignTo: string; otherName: string; assignDate: string };
@@ -53,9 +70,10 @@ export default function JobDetailsPage() {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const [jobsResponse, pendingResponse] = await Promise.all([
+          const [jobsResponse, pendingResponse, categoriesResponse] = await Promise.all([
             axiosProvider.get(`/fineengg_erp/jobs?job_no=${job_no}`),
             axiosProvider.get(`/fineengg_erp/pending-materials?job_no=${job_no}`),
+            axiosProvider.get(`/fineengg_erp/categories`),
           ]);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
@@ -82,6 +100,14 @@ export default function JobDetailsPage() {
             setPendingData(pendingResponse.data.data);
           } else {
             setPendingData([]);
+          }
+
+          if (categoriesResponse.data && Array.isArray(categoriesResponse.data.data)) {
+            const allCategories = categoriesResponse.data.data;
+            const filteredCategories = allCategories.filter((cat: CategoryDetail) => Number(cat.job_no) === Number(job_no));
+            setCategoryDetails(filteredCategories);
+          } else {
+            setCategoryDetails([]);
           }
         } catch (error) {
           console.error("Error fetching data for job:", error);
@@ -177,32 +203,35 @@ export default function JobDetailsPage() {
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">
+                    {/* <th scope="col" className="p-3 border border-tableBorder">
                       Job No
-                    </th>
+                    </th> */}
                     <th scope="col" className="p-3 border border-tableBorder">
-                      J/O Number
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Job Type
+                      Client Name
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
                       Job Category
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
-                      Item Description
+                      Drawing Rec. Date
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
-                      Item No
+                      Description
+                    </th>
+                    <th scope="col" className="p-3 border border-tableBorder">
+                      Material Type
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
                       Quantity
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
-                      MOC
+                      Pressure[Bar]
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
-                      Bin Location
+                      Temperature
+                    </th>
+                    <th scope="col" className="p-3 border border-tableBorder">
+                      Due Date
                     </th>
                     <th scope="col" className="p-3 border border-tableBorder">
                       Status
@@ -216,54 +245,57 @@ export default function JobDetailsPage() {
                         Loading...
                       </td>
                     </tr>
-                  ) : jobDetails.length === 0 ? (
+                  ) : categoryDetails.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="text-center py-4">
                         No job details found for this job number.
                       </td>
                     </tr>
                   ) : (
-                    jobDetails.map((item) => (
+                    categoryDetails.map((item) => (
                       <tr
                         key={item.id}
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                       >
-                        <td className="px-2 py-2 border border-tableBorder">
+                        {/* <td className="px-2 py-2 border border-tableBorder">
                           {item.job_no}
-                        </td>
+                        </td> */}
                         <td className="px-2 py-2 border border-tableBorder">
-                          {item.jo_number || "N/A"}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.job_type}
+                          {item.client_name}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           {item.job_category || "N/A"}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
-                          {item.item_description}
+                          {item.drawing_recieved_date}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
-                          {item.item_no}
+                          {item.description}
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          {item.material_type}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           {item.qty}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
-                          {item.moc}
+                          {item.bar}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
-                          {item.bin_location}
+                          {item.tempp}
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          {item.urgent_due_date || "-"}
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <span
                             className={`px-2 py-1 rounded text-sm ${
-                              item.urgent
+                              item.is_urgent
                                 ? "bg-red-100 text-red-600"
                                 : "bg-green-100 text-green-600"
                             }`}
                           >
-                            {item.urgent ? "Urgent" : "Normal"}
+                            {item.is_urgent ? "Urgent" : "Normal"}
                           </span>
                         </td>
                       </tr>
@@ -275,16 +307,21 @@ export default function JobDetailsPage() {
           </div>
 
           {/* Bottom Section */}
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex flex-col gap-8">
             {/* Left Side: Assignment Form */}
-            <div className="w-full lg:w-1/2">
-              <h2 className="text-xl font-bold mb-4">Assign Job</h2>
+            <div className="w-full">
+              <h2 className="text-xl font-bold mb-4">Material Recieved From Amar</h2>
               <div className="relative overflow-x-auto sm:rounded-lg">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th scope="col" className="p-3 border border-tableBorder">Item No</th>
                       <th scope="col" className="p-3 border border-tableBorder">J/O No</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Job Type</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Job Category</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Item No</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
+                      <th scope="col" className="p-3 border border-tableBorder">MOC</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
                       <th scope="col" className="p-3 border border-tableBorder">Assign To</th>
                       <th scope="col" className="p-3 border border-tableBorder">Assign Date</th>
                       <th scope="col" className="p-3 border border-tableBorder">Action</th>
@@ -302,8 +339,14 @@ export default function JobDetailsPage() {
                     ) : (
                       jobDetails.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
-                          <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
+                          
                           <td className="px-2 py-2 border border-tableBorder">{item.jo_number || 'N/A'}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.job_type}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
                           <td className="px-2 py-2 border border-tableBorder">
                             {assignments[item.id]?.assignTo === "Others" ? (
                               <div className="flex items-center gap-1">
@@ -382,7 +425,7 @@ export default function JobDetailsPage() {
             </div>
 
             {/* Right Side: Pending Materials */}
-            <div className="w-full lg:w-1/2">
+            <div className="w-full">
               <h1 className="text-2xl font-bold mb-6">
                 Pending Materials for Job No: {job_no}
               </h1>
