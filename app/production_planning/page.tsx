@@ -66,15 +66,6 @@ const validationSchema = Yup.object().shape({
         .integer("Job No must be an integer"),
     otherwise: (schema) => schema,
   }),
-  // serial_no: Yup.number().when("job_type", {
-  //   is: (val: string) => val !== "PENDING_MATERIAL",
-  //   then: (schema) =>
-  //     schema
-  //       .required("Serial No is required")
-  //       .typeError("Serial No must be a number")
-  //       .positive("Serial No must be positive")
-  //       .integer("Serial No must be an integer"),
-  // }),
   job_order_date: Yup.date().when("job_type", {
     is: (val: string) => val !== "PENDING_MATERIAL",
     then: (schema) => schema.required("Job Order Date is required"),
@@ -317,6 +308,7 @@ export default function Home() {
 
       const params = new URLSearchParams();
       params.append("job_no", selectedJobId);
+      params.append("urgent_due_date", urgentDate);
       await axiosProvider.post(
         "/fineengg_erp/categories/mark-urgent",
         params,
@@ -707,6 +699,13 @@ export default function Home() {
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <div className="font-medium text-firstBlack text-base leading-normal">
+                              Due Date
+                            </div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-2 py-0 border border-tableBorder">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-firstBlack text-base leading-normal">
                               Status
                             </div>
                           </div>
@@ -880,6 +879,9 @@ export default function Home() {
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <p className="text-[#232323] text-base leading-normal">{item.tempp}</p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base leading-normal">{item.urgent_due_date || "-"}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <span

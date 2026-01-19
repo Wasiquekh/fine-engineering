@@ -60,10 +60,11 @@ const validationSchema = Yup.object().shape({
     .typeError("Quantity must be a number")
     .positive("Quantity must be positive"),
   bar: Yup.string()
-    .required("Bar is required")
-    .matches(/^\d+%$/, "Bar must be in format like '18%'"),
+    .required("Bar is required"),
   tempp: Yup.string().required("Temperature is required"),
   remark: Yup.string().max(200, "Remark cannot exceed 200 characters"),
+  client_name: Yup.string().required("Client Name is required"),
+  drawing_recieved_date: Yup.date().required("Drawing Received Date is required").nullable(),
 });
 
 // Initial form values for Category
@@ -76,6 +77,8 @@ const initialValues = {
   bar: "",
   tempp: "",
   remark: "",
+  client_name: "",
+  drawing_recieved_date: null,
 };
 
 export default function Home() {
@@ -90,8 +93,17 @@ export default function Home() {
   const router = useRouter();
 
   const handleSubmit = async (values: any) => {
+    const formatDate = (date: any) => {
+      if (!date) return null;
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
     const payload = {
       ...values,
+      drawing_recieved_date: formatDate(values.drawing_recieved_date),
       user_id: userID,
     };
 
@@ -138,6 +150,8 @@ export default function Home() {
       bar: item.bar,
       tempp: item.tempp,
       remark: item.remark || "",
+      client_name: item.client_name || "",
+      drawing_recieved_date: item.drawing_recieved_date || null,
     };
 
     // Store these values to populate form when flyout opens
@@ -276,6 +290,26 @@ export default function Home() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
+                          Client Name
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          Drawing Rec. Date
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
                           Description
                         </div>
                       </div>
@@ -362,8 +396,14 @@ export default function Home() {
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
-                            {item.description}
+                            {item.client_name}
                           </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">{item.drawing_recieved_date}</p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">{item.description}</p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
@@ -500,6 +540,44 @@ export default function Home() {
                         />
                       </div>
 
+                      {/* Client Name */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Client Name
+                        </p>
+                        <input
+                          type="text"
+                          name="client_name"
+                          value={values.client_name}
+                          onChange={(e) => setFieldValue("client_name", e.target.value)}
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter Client Name"
+                        />
+                        <ErrorMessage
+                          name="client_name"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Drawing Received Date */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          Drawing Received Date
+                        </p>
+                        <DatePickerInput
+                          name="drawing_recieved_date"
+                          value={values.drawing_recieved_date}
+                          setFieldValue={setFieldValue}
+                          placeholderText="Select Date"
+                        />
+                        <ErrorMessage
+                          name="drawing_recieved_date"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
                       {/* Description */}
                       <div className="w-full">
                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
@@ -526,13 +604,16 @@ export default function Home() {
                       <div className="w-full">
                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                           Material Type
-                        </p>
-                        <SelectInput
+                        </p>                        
+                        <input
+                          type="text"
                           name="material_type"
                           value={values.material_type}
-                          setFieldValue={setFieldValue}
-                          options={materialTypeOptions}
-                          placeholder="Select Material Type"
+                          onChange={(e) =>
+                            setFieldValue("material_type", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter description"
                         />
                         <ErrorMessage
                           name="material_type"
@@ -572,7 +653,7 @@ export default function Home() {
                           value={values.bar}
                           onChange={(e) => setFieldValue("bar", e.target.value)}
                           className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter bar (e.g., 18%)"
+                          placeholder="Enter bar"
                         />
                         <ErrorMessage
                           name="bar"
