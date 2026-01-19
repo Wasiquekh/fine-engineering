@@ -359,7 +359,7 @@ export default function JobDetailsPage() {
                                     handleAssignmentChange(item.id, "otherName", e.target.value)
                                   }
                                   autoFocus={!item.assign_to}
-                                  disabled={!!item.assign_to}
+                                  disabled={!!item.assign_to || !item.urgent}
                                 />
                                 {!item.assign_to && (
                                   <button
@@ -385,7 +385,7 @@ export default function JobDetailsPage() {
                                     e.target.value
                                   )
                                 }
-                                disabled={!!item.assign_to}
+                                disabled={!!item.assign_to || !item.urgent}
                               >
                                 <option value="">Select</option>
                                 <option value="Usmaan">Usmaan</option>
@@ -400,16 +400,18 @@ export default function JobDetailsPage() {
                               className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                               value={assignments[item.id]?.assignDate || ""}
                               onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                              disabled={!!item.assign_to}
+                              disabled={!!item.assign_to || !item.urgent}
                             />
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <button
-                              onClick={() => !item.assign_to && handleAssign(item.id)}
-                              disabled={!!item.assign_to}
+                              onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
+                              disabled={!!item.assign_to || !item.urgent}
                               className={`px-3 py-1 rounded text-sm transition-colors text-white ${
                                 item.assign_to
                                   ? "bg-green-600 cursor-default"
+                                  : !item.urgent
+                                  ? "bg-gray-400 cursor-not-allowed"
                                   : "bg-blue-600 hover:bg-blue-700"
                               }`}
                             >
@@ -463,14 +465,14 @@ export default function JobDetailsPage() {
                           Loading...
                         </td>
                       </tr>
-                    ) : pendingData.length === 0 ? (
+                    ) : pendingData.filter((item) => !item.is_completed).length === 0 ? (
                       <tr>
                         <td colSpan={7} className="text-center py-4">
                           No pending materials found for this job number.
                         </td>
                       </tr>
                     ) : (
-                      pendingData.map((item) => (
+                      pendingData.filter((item) => !item.is_completed).map((item) => (
                         <tr
                           key={item.id}
                           className="border border-tableBorder bg-white hover:bg-primary-100"
