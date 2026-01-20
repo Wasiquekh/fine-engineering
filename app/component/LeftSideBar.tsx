@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { BiSolidHome } from "react-icons/bi";
-import { MdOutlineBarChart, MdOutlineInventory2, MdWorkOutline, MdDesignServices, MdViewKanban, MdPendingActions } from "react-icons/md";
+import { MdOutlineBarChart, MdOutlineInventory2, MdWorkOutline, MdDesignServices, MdViewKanban, MdPendingActions, MdPrecisionManufacturing } from "react-icons/md";
 import { TbCategoryFilled, TbDeviceMobileDollar } from "react-icons/tb";
 import { HiWrenchScrewdriver } from "react-icons/hi2";
 import { FaMoneyCheckDollar } from "react-icons/fa6";
@@ -98,6 +98,9 @@ const LeftSideBar: React.FC = () => {
     pathname.includes("/production_planning") || pathname.includes("/po-services")
   );
   const [isPOOpen, setIsPOOpen] = useState<boolean>(pathname.includes("/po-services"));
+  const [isProductionDropdownOpen, setIsProductionDropdownOpen] = useState<boolean>(
+    pathname.includes("/production") && !pathname.includes("/production_planning")
+  );
   return (
     <div className="w-full hidden md:w-[17%]  md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0  h-screen fixed top-0 left-0">
       {/* SIDE LEFT BAR TOP SECTION */}
@@ -245,6 +248,50 @@ const LeftSideBar: React.FC = () => {
                 <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
                   Amar Biosystem
+                </p>
+              </div>
+            </Link>
+          </div>
+        )}
+        <div
+          onClick={() => setIsProductionDropdownOpen(!isProductionDropdownOpen)}
+          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
+            pathname.includes("/production") && !pathname.includes("/production_planning")
+              ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+              : ""
+          }`}
+        >
+          <MdPrecisionManufacturing className=" w-6 h-6   " />
+          <p className="">Production</p>
+          <FaChevronDown
+            className={`ml-auto w-3 h-3 transition-transform ${
+              isProductionDropdownOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+        {isProductionDropdownOpen && (
+          <div className="pl-4 mb-4 flex flex-col gap-1">
+            <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Production 1
+                </p>
+              </div>
+            </Link>
+            <Link href="/production/production-2">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Production 2
+                </p>
+              </div>
+            </Link>
+            <Link href="/production/production-3">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Production 3
                 </p>
               </div>
             </Link>
