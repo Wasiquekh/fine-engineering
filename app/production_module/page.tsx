@@ -121,6 +121,7 @@ export default function Home() {
   const [isUrgentModalOpen, setUrgentModalOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [urgentDate, setUrgentDate] = useState<string>("");
+  const [usmaanJobNos, setUsmaanJobNos] = useState<number[]>([]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -137,6 +138,10 @@ export default function Home() {
 
   const filteredData = useMemo(() => {
     let currentData = data;
+
+    if (usmaanJobNos.length > 0) {
+      currentData = currentData.filter((item) => usmaanJobNos.includes(item.job_no));
+    }
 
     if (urgentParam === "true") {
       currentData = currentData.filter((item) => item.urgent || item.is_urgent);
@@ -184,7 +189,7 @@ export default function Home() {
       return currentData;
     }
     return currentData.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam]);
+  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam, usmaanJobNos]);
 
   const handleSubmit = async (values: any) => {
     // Format dates to YYYY-MM-DD format
@@ -336,7 +341,15 @@ export default function Home() {
         url = activeFilter === "JOB_SERVICE" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs";
       }
       const response = await axiosProvider.get(url);
-      setData(Array.isArray(response.data.data) ? response.data.data : []);
+      const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
+      setData(fetchedData);
+
+      if (url.includes("/fineengg_erp/jobs")) {
+        const usmaanJobs = fetchedData
+          .filter((job: any) => job.assign_to === "Usmaan")
+          .map((job: any) => job.job_no);
+        setUsmaanJobNos(usmaanJobs);
+      }
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
@@ -439,7 +452,15 @@ export default function Home() {
       try {
         const response = await axiosProvider.get(endpoint);
         if (isMounted) {
-          setData(Array.isArray(response.data.data) ? response.data.data : []);
+          const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
+          setData(fetchedData);
+
+          if (endpoint.includes("/fineengg_erp/jobs")) {
+            const usmaanJobs = fetchedData
+              .filter((job: any) => job.assign_to === "Usmaan")
+              .map((job: any) => job.job_no);
+            setUsmaanJobNos(usmaanJobs);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -569,7 +590,7 @@ export default function Home() {
                         {cat.label}
                       </button>
                     ))}
-                    <button
+                    {/* <button
                       onClick={() => setJobServiceCategoryFilter("URGENT_TAB")}
                       className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         jobServiceCategoryFilter === "URGENT_TAB"
@@ -578,7 +599,7 @@ export default function Home() {
                       }`}
                     >
                       Urgent
-                    </button>
+                    </button> */}
                   </div>
                 )}
               </div>

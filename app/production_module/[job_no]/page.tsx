@@ -46,10 +46,11 @@ export default function JobDetailsPage() {
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
-            setJobDetails(fetchedJobs);
+            const filteredJobs = fetchedJobs.filter((job: JobDetail) => job.assign_to === "Usmaan");
+            setJobDetails(filteredJobs);
 
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
-            fetchedJobs.forEach((job: JobDetail) => {
+            filteredJobs.forEach((job: JobDetail) => {
               if (job.assign_to) {
                 const isStandard = ["Usmaan", "Ashfaq", "Ramzaan"].includes(job.assign_to);
                 initialAssignments[job.id] = {
@@ -166,7 +167,7 @@ export default function JobDetailsPage() {
                       <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
                       <th scope="col" className="p-3 border border-tableBorder">Assign To</th>
                       <th scope="col" className="p-3 border border-tableBorder">Assign Date</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Action</th>
+                      {/* <th scope="col" className="p-3 border border-tableBorder">Action</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -257,7 +258,7 @@ export default function JobDetailsPage() {
                               disabled={!!item.assign_to || !item.urgent}
                             />
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          {/* <td className="px-2 py-2 border border-tableBorder">
                             <button
                               onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
                               disabled={!!item.assign_to || !item.urgent}
@@ -271,7 +272,7 @@ export default function JobDetailsPage() {
                             >
                               {item.assign_to ? "Assigned" : "Assign"}
                             </button>
-                          </td>
+                          </td> */}
                         </tr>
                       ))
                     )}

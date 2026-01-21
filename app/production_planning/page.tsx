@@ -301,23 +301,29 @@ export default function Home() {
       const response = await axiosProvider.post(
         `/fineengg_erp/jobs/mark-urgent`,
         {
-          job_no: selectedJobId,
+          job_no: Number(selectedJobId),
           urgent_due_date: urgentDate,
         }
       );
 
-      const params = new URLSearchParams();
-      params.append("job_no", selectedJobId);
-      params.append("urgent_due_date", urgentDate);
-      await axiosProvider.post(
-        "/fineengg_erp/categories/mark-urgent",
-        params,
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-        }
-      );
+      //Always treat jobs API as source of truth
+      if (response.status === 200) {
+        // try {
+        //   const params = new URLSearchParams();
+        //   params.append("job_no", selectedJobId);
+        //   params.append("urgent_due_date", urgentDate);
 
-      if (response.data.success) {
+        //   await axiosProvider.post(
+        //     "/fineengg_erp/categories/mark-urgent",
+        //     params,
+        //     {
+        //       headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
+        //     }
+        //   );
+        // } catch (error) {
+        //   console.warn("Category urgent update failed (safe to ignore)", error);
+        // }
+
         toast.success("Job marked as urgent");
         fetchData();
         setUrgentModalOpen(false);

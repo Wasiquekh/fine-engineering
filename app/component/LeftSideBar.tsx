@@ -101,6 +101,9 @@ const LeftSideBar: React.FC = () => {
   const [isProductionDropdownOpen, setIsProductionDropdownOpen] = useState<boolean>(
     pathname.includes("/production") && !pathname.includes("/production_planning")
   );
+  const [isProduction1Open, setIsProduction1Open] = useState<boolean>(
+    pathname.includes("/production_module")
+  );
   return (
     <div className="w-full hidden md:w-[17%]  md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0  h-screen fixed top-0 left-0">
       {/* SIDE LEFT BAR TOP SECTION */}
@@ -271,14 +274,28 @@ const LeftSideBar: React.FC = () => {
         </div>
         {isProductionDropdownOpen && (
           <div className="pl-4 mb-4 flex flex-col gap-1">
-            <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  Production 1
-                </p>
+            <div
+              onClick={() => setIsProduction1Open(!isProduction1Open)}
+              className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+            >
+              <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                Production 1
+              </p>
+              <FaChevronDown
+                className={`ml-auto w-3 h-3 transition-transform ${isProduction1Open ? "rotate-180" : ""}`}
+              />
+            </div>
+            {isProduction1Open && (
+              <div className="pl-4 flex flex-col gap-1">
+                <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Urgent</p>
+                  </div>
+                </Link>
               </div>
-            </Link>
+            )}
             <Link href="/production/production-2">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
