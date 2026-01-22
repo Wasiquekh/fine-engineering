@@ -136,6 +136,10 @@ export default function Home() {
     }
   }, [filterParam]);
 
+  useEffect(() => {
+    fetchUsmaanJobNos();
+  }, []);
+
   const filteredData = useMemo(() => {
     let currentData = data;
 
@@ -344,17 +348,33 @@ export default function Home() {
       const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
       setData(fetchedData);
 
-      if (url.includes("/fineengg_erp/jobs")) {
-        const usmaanJobs = fetchedData
-          .filter((job: any) => job.assign_to === "Usmaan")
-          .map((job: any) => job.job_no);
-        setUsmaanJobNos(usmaanJobs);
-      }
+      // if (url.includes("/fineengg_erp/jobs")) {
+      //   const usmaanJobs = fetchedData
+      //     .filter((job: any) => job.assign_to === "Usmaan")
+      //     .map((job: any) => job.job_no);
+      //   setUsmaanJobNos(usmaanJobs);
+      // }
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
     }
   };
+
+  const fetchUsmaanJobNos = async () => {
+  try {
+    const res = await axiosProvider.get(
+      "/fineengg_erp/jobs?assign_to=Usmaan&limit=1000"
+    );
+
+    const jobNos = Array.isArray(res.data.data)
+      ? res.data.data.map((job: any) => job.job_no)
+      : [];
+
+    setUsmaanJobNos(jobNos);
+  } catch (err) {
+    console.error("Failed to fetch Usmaan jobs", err);
+  }
+};
 
   const fetchCategories = async () => {
     try {
@@ -455,12 +475,12 @@ export default function Home() {
           const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
           setData(fetchedData);
 
-          if (endpoint.includes("/fineengg_erp/jobs")) {
-            const usmaanJobs = fetchedData
-              .filter((job: any) => job.assign_to === "Usmaan")
-              .map((job: any) => job.job_no);
-            setUsmaanJobNos(usmaanJobs);
-          }
+          // if (endpoint.includes("/fineengg_erp/jobs")) {
+          //   const usmaanJobs = fetchedData
+          //     .filter((job: any) => job.assign_to === "Usmaan")
+          //     .map((job: any) => job.job_no);
+          //   setUsmaanJobNos(usmaanJobs);
+          // }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
