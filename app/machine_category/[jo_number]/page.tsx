@@ -34,7 +34,7 @@ export default function JoNumberPage() {
             &larr; Back
           </button>
           
-          <h1 className="text-2xl font-bold mb-6">J/O Number: {job_no}</h1>
+          <h1 className="text-2xl font-bold mb-6">Machine Category {job_no}</h1>
 
           <div className="w-full max-w-md">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -46,9 +46,11 @@ export default function JoNumberPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Select</option>
-              <option value="Option 1">Option 1</option>
-              <option value="Option 2">Option 2</option>
-              <option value="Option 3">Option 3</option>
+              <option value="Lathe">Lathe</option>
+              <option value="cnc">CNC</option>
+              <option value="umc">UMC</option>
+              <option value="Milling">Milling</option>
+              <option value="Drilling">Drilling</option>
             </select>
           </div>
         </div>
