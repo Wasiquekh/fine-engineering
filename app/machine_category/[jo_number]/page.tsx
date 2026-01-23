@@ -9,7 +9,8 @@ import Image from "next/image";
 export default function JoNumberPage() {
   const params = useParams();
   const router = useRouter();
-  const job_no = params.job_no;
+  const job_no = Array.isArray(params.job_no) ? params.job_no[0] : params.job_no;
+
   const [selectedOption, setSelectedOption] = useState("");
   const [machineSize, setMachineSize] = useState("");
   const [subSize, setSubSize] = useState("");
@@ -54,69 +55,42 @@ export default function JoNumberPage() {
 
   const getWorkerOptions = () => {
     if (selectedOption === "Lathe" && machineSize === "small") {
-      return [
-        "Naseem",
-        "Sanjay",
-        "Choto bhai",
-        "Ali bhai",
-        "Gufran bhai",
-        "Mahtab alam",
-        "Jamaluddeen",
-        "Javed bhai",
-        "Hasib shekh",
-      ].map((name) => ({ value: name, label: name }));
-    } else if (selectedOption === "Lathe" && machineSize === "medium") {
-      return [
-        "Shoakat ali",
-        "Mohd Jumriti anshari",
-        "Usman bhai",
-      ].map((name) => ({ value: name, label: name }));
-    } else if (selectedOption === "Lathe" && machineSize === "large") {
-      return [
-        "Partab",
-        "Mujeeb bhai",
-        "Rangi lala",
-        "Mahtab mota bhai",
-      ].map((name) => ({ value: name, label: name }));
-    }else if (selectedOption === "cnc" && machineSize === "small") {
-      return [
-        "Ramjan ali",
-        "Mustafa",
-        "Akramuddeen",
-        "Sufyan",
-      ].map((name) => ({ value: name, label: name }));
-    }else if (selectedOption === "cnc" && machineSize === "medium") {
-      return [
-        "Ziyaul mustafa",
-        "Mufeed alam",
-      ].map((name) => ({ value: name, label: name }));
-    }else if (selectedOption === "cnc" && machineSize === "large") {
-      return [
-        "Aqif khan",
-      ].map((name) => ({ value: name, label: name }));
+      return ["Naseem","Sanjay","Choto bhai","Ali bhai","Gufran bhai","Mahtab alam","Jamaluddeen","Javed bhai","Hasib shekh"];
     }
-    else if (selectedOption === "umc") {
-      return [
-        "Rajnish kumar",
-      ].map((name) => ({ value: name, label: name }));
+    if (selectedOption === "Lathe" && machineSize === "medium") {
+      return ["Shoakat ali","Mohd Jumriti anshari","Usman bhai"];
     }
-    else if (selectedOption === "Milling") {
-      return [
-        "Ramakanat",
-      ].map((name) => ({ value: name, label: name }));
+    if (selectedOption === "Lathe" && machineSize === "large") {
+      return ["Partab","Mujeeb bhai","Rangi lala","Mahtab mota bhai"];
     }
-    else if (selectedOption === "Drilling") {
-      return [
-        "Rahman",
-      ].map((name) => ({ value: name, label: name }));
+
+    if (selectedOption === "cnc" && machineSize === "small") {
+      return ["Ramjan ali","Mustafa","Akramuddeen","Sufyan"];
     }
+    if (selectedOption === "cnc" && machineSize === "medium") {
+      return ["Ziyaul mustafa","Mufeed alam"];
+    }
+    if (selectedOption === "cnc" && machineSize === "large") {
+      return ["Aqif khan"];
+    }
+
+    if (selectedOption === "umc") return ["Rajnish kumar"];
+    if (selectedOption === "Milling") return ["Ramakanat"];
+    if (selectedOption === "Drilling") return ["Rahman"];
+
     return [];
   };
+
+  const workerOptions = getWorkerOptions().map((name) => ({
+    value: name,
+    label: name,
+  }));
 
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
-      <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
+
+      <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 relative">
         <div className="absolute bottom-0 right-0">
           <Image
             src="/images/sideDesign.svg"
@@ -126,19 +100,26 @@ export default function JoNumberPage() {
             className="w-full h-full"
           />
         </div>
+
         <DesktopHeader />
-        <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
+
+        <div className="rounded-3xl shadow-lastTransaction bg-white px-4 py-6 md:p-6 relative">
           <button
             onClick={() => router.back()}
             className="text-blue-600 hover:underline mb-4"
           >
-            &larr; Back
+            ← Back
           </button>
-          
-          <h1 className="text-2xl font-bold mb-6">Machine Category {job_no}</h1>
 
-          <div className="flex flex-col md:flex-row gap-4 w-full max-w-6xl">
-            <div className="w-full md:flex-1">
+          <h1 className="text-2xl font-bold mb-6">
+            Machine Category - {job_no}
+          </h1>
+
+          {/* ✅ GRID LAYOUT FIX */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-full">
+
+            {/* Machine Category */}
+            <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Machine Category
               </label>
@@ -147,19 +128,16 @@ export default function JoNumberPage() {
                 onChange={(e) => {
                   const val = e.target.value;
                   setSelectedOption(val);
-                  if (val === "umc") {
-                    setMachineSize("FVMC01");
-                  } else if (val === "Milling") {
-                    setMachineSize("FML01");
-                  } else if (val === "Drilling") {
-                    setMachineSize("FDL01");
-                  } else {
-                    setMachineSize("");
-                  }
+
+                  if (val === "umc") setMachineSize("FVMC01");
+                  else if (val === "Milling") setMachineSize("FML01");
+                  else if (val === "Drilling") setMachineSize("FDL01");
+                  else setMachineSize("");
+
                   setSubSize("");
                   setWorker("");
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-4 py-2 border rounded-md"
               >
                 <option value="">Select</option>
                 <option value="Lathe">Lathe</option>
@@ -170,7 +148,8 @@ export default function JoNumberPage() {
               </select>
             </div>
 
-            <div className="w-full md:flex-1">
+            {/* Machine Size */}
+            <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Machine Size
               </label>
@@ -181,50 +160,60 @@ export default function JoNumberPage() {
                   setSubSize("");
                   setWorker("");
                 }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full px-4 py-2 border rounded-md"
+                disabled={!selectedOption}
               >
                 <option value="">Select</option>
-                {getSizeOptions().map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {getSizeOptions().map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
               </select>
             </div>
 
+            {/* Machine Type */}
             {(machineSize === "small" || machineSize === "medium" || machineSize === "large") && (
-              <div className="w-full md:flex-1">
+              <div className="col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">
                   {machineSize} Machine Type
                 </label>
                 <select
                   value={subSize}
                   onChange={(e) => setSubSize(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-4 py-2 border rounded-md"
                 >
                   <option value="">Select</option>
-                  {getSubSizeOptions().map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                  {getSubSizeOptions().map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
 
-            {getWorkerOptions().length > 0 && (
-              <div className="w-full md:flex-1">
+            {/* Worker */}
+            {workerOptions.length > 0 && (
+              <div className="col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Worker
                 </label>
                 <select
                   value={worker}
                   onChange={(e) => setWorker(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-4 py-2 border rounded-md"
                 >
                   <option value="">Select</option>
-                  {getWorkerOptions().map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                  {workerOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
+
           </div>
         </div>
       </div>
