@@ -3,13 +3,14 @@ import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
 import { FiFilter } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
+import { FaChevronDown, FaPlus } from "react-icons/fa";
 import { HiTrash } from "react-icons/hi";
 import StorageManager from "../../provider/StorageManager";
 import LeftSideBar from "../component/LeftSideBar";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import DesktopHeader from "../component/DesktopHeader";
-import { Formik, Form, ErrorMessage } from "formik";
+import { Formik, Form, ErrorMessage, FieldArray } from "formik";
 import * as Yup from "yup";
 import SelectInput from "../component/SelectInput";
 import DatePickerInput from "../component/DatePickerInput";
@@ -52,6 +53,11 @@ const kanbanCategory = [
   { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
 
+const jobServiceSubTypeOptions = [
+  { value: "PARTIAL", label: "Partial" },
+  { value: "ASSEMBLY", label: "Assembly" },
+];
+
 // Validation Schema for Jobs form
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
@@ -84,23 +90,51 @@ const validationSchema = Yup.object().shape({
     .typeError("Material Challan No must be a number")
     .positive("Material Challan No must be positive")
     .integer("Material Challan No must be an integer"),
-  item_description: Yup.string().required("Item Description is required"),
-  item_no: Yup.number().when("job_type", {
-    is: (job_type: string) => job_type !== "KANBAN",
-    then: (schema) => schema.required("Item No is required")
-      .typeError("Item No must be a number")
-      .positive("Item No must be positive")
-      .integer("Item No must be an integer"),
-    otherwise: (schema) => schema.notRequired().nullable(),
+  item_description: Yup.string().when(['job_type', 'sub_type'], {
+    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+    then: schema => schema.notRequired(),
+    otherwise: schema => schema.required("Item Description is required"),
   }),
-  qty: Yup.number()
-    .required("Quantity is required")
-    .typeError("Quantity must be a number")
-    .positive("Quantity must be positive"),
-  moc: Yup.string().required("MOC is required"),
+  item_no: Yup.number().when(['job_type', 'sub_type'], {
+    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+    then: schema => schema.notRequired().nullable(),
+    otherwise: schema => schema.when('job_type', {
+      is: (job_type) => job_type !== 'KANBAN',
+      then: (schema) => schema.required("Item No is required").typeError("Item No must be a number").positive("Item No must be positive").integer("Item No must be an integer"),
+      otherwise: (schema) => schema.notRequired().nullable(),
+    })
+  }),
+  qty: Yup.number().when(['job_type', 'sub_type'], {
+    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+    then: schema => schema.notRequired(),
+    otherwise: schema => schema.required("Quantity is required").typeError("Quantity must be a number").positive("Quantity must be positive"),
+  }),
+  moc: Yup.string().when(['job_type', 'sub_type'], {
+    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+    then: schema => schema.notRequired(),
+    otherwise: schema => schema.required("MOC is required"),
+  }),
   remark: Yup.string(),
-  bin_location: Yup.string().required("Bin Location is required"),
+  bin_location: Yup.string().when(['job_type', 'sub_type'], {
+    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+    then: schema => schema.notRequired(),
+    otherwise: schema => schema.required("Bin Location is required"),
+  }),
   material_remark: Yup.string(),
+  assembly_items: Yup.array().when(['job_type', 'sub_type'], {
+    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+    then: schema => schema.of(
+      Yup.object().shape({
+        item_description: Yup.string().required("Item Description is required"),
+        item_no: Yup.number().required("Item No is required").typeError("Item No must be a number").positive("Item No must be positive").integer("Item No must be an integer"),
+        qty: Yup.number().required("Quantity is required").typeError("Quantity must be a number").positive("Quantity must be positive"),
+        moc: Yup.string().required("MOC is required"),
+        bin_location: Yup.string().required("Bin Location is required"),
+        material_remark: Yup.string().notRequired(),
+      })
+    ).min(1, "At least one assembly item is required."),
+    otherwise: schema => schema.notRequired(),
+  }),
 });
 
 // Initial form values for Jobs
@@ -120,6 +154,8 @@ const initialValues = {
   remark: "",
   bin_location: "",
   material_remark: "",
+  sub_type: "",
+  assembly_items: [],
 };
 
 export default function Home() {
@@ -127,6 +163,8 @@ export default function Home() {
   const [flyoutType, setFlyoutType] = useState<
     "JOB_SERVICE" | "TSO_SERVICE" | "KANBAN"
   >("JOB_SERVICE");
+  const [isJobServiceDropdownOpen, setJobServiceDropdownOpen] = useState<boolean>(false);
+  const [jobServiceSubType, setJobServiceSubType] = useState<string>("PARTIAL");
   const [data, setData] = useState<any | []>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
@@ -142,6 +180,40 @@ export default function Home() {
       const day = String(d.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
+
+    if (values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY") {
+      const bulkPayload = {
+        common_data: {
+          job_type: values.job_type,
+          job_no: Number(values.job_no),
+          jo_number: Number(values.jo_number),
+          job_order_date: formatDate(values.job_order_date),
+          mtl_rcd_date: formatDate(values.mtl_rcd_date),
+          mtl_challan_no: Number(values.mtl_challan_no),
+          remark: values.remark || "",
+          client_name: values.client_name,
+        },
+        items: values.assembly_items.map((item: any) => ({
+          item_description: item.item_description,
+          item_no: Number(item.item_no),
+          qty: Number(item.qty),
+          moc: item.moc,
+          bin_location: item.bin_location,
+          material_remark: item.material_remark || "",
+        })),
+      };
+
+      try {
+        await axiosProvider.post("/fineengg_erp/jobs/bulk", bulkPayload);
+        toast.success("Assembly Job Service added successfully");
+        fetchData();
+        setFlyoutOpen(false);
+      } catch (error: any) {
+        console.error("Error saving assembly job:", error);
+        toast.error("Failed to add Assembly Job Service");
+      }
+      return;
+    }
 
     // Create payload based on job type
     let payload: any = {
@@ -163,14 +235,16 @@ export default function Home() {
     // Add conditional fields
     if (values.job_type === "JOB_SERVICE") {
       payload.job_no = Number(values.job_no);
+      payload.sub_type = values.sub_type;
     } else if (values.job_type === "TSO_SERVICE") {
       payload.job_category = values.job_category;
     } else if (values.job_type === "KANBAN") {
       payload.job_category = values.job_category;
+      payload.item_no = null;
     }
 
     try {
-      const response = await axiosProvider.post("/fineengg_erp/jobs", payload);
+      await axiosProvider.post("/fineengg_erp/jobs", payload);
 
       // Different success messages based on job type
       if (values.job_type === "JOB_SERVICE") {
@@ -245,9 +319,11 @@ export default function Home() {
     setFlyoutOpen(false);
   };
 
-  const openJobServiceFlyout = () => {
+  const openJobServiceFlyout = (subType: string = "PARTIAL") => {
     setFlyoutType("JOB_SERVICE");
+    setJobServiceSubType(subType);
     setFlyoutOpen(true);
+    setJobServiceDropdownOpen(false);
   };
 
   const openTsoServiceFlyout = () => {
@@ -263,7 +339,17 @@ export default function Home() {
   // Get initial values based on flyout type
   const getInitialValues = () => {
     if (flyoutType === "JOB_SERVICE") {
-      return { ...initialValues, job_type: "JOB_SERVICE" };
+      const values = { ...initialValues, job_type: "JOB_SERVICE", sub_type: jobServiceSubType };
+      if (jobServiceSubType === 'ASSEMBLY') {
+        values.assembly_items = [{ item_description: '', item_no: '', qty: '', moc: '', bin_location: '', material_remark: '' }];
+        values.item_description = '';
+        values.item_no = '';
+        values.qty = '';
+        values.moc = '';
+        values.bin_location = '';
+        values.material_remark = '';
+      }
+      return values;
     } else if (flyoutType === "TSO_SERVICE") {
       return { ...initialValues, job_type: "TSO_SERVICE" };
     } else if (flyoutType === "KANBAN") {
@@ -284,7 +370,11 @@ export default function Home() {
 
   // Get flyout title
   const getFlyoutTitle = () => {
-    if (flyoutType === "JOB_SERVICE") return "Add Job Service";
+    if (flyoutType === "JOB_SERVICE") {
+      const subTypeLabel =
+        jobServiceSubType === "PARTIAL" ? "Partial" : "Assembly";
+      return `Add Job Service (${subTypeLabel})`;
+    }
     if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
     if (flyoutType === "KANBAN") return "Add Kanban";
     return "Add Job";
@@ -379,14 +469,33 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex justify-center items-center gap-4">
-                  <div
-                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
-                    onClick={openJobServiceFlyout}
-                  >
-                    <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                    <p className="text-white text-base font-medium group-hover:text-white">
-                      Add Job Service
-                    </p>
+                  <div className="relative">
+                    <div
+                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
+                      onClick={() => setJobServiceDropdownOpen(!isJobServiceDropdownOpen)}
+                    >
+                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
+                      <p className="text-white text-base font-medium group-hover:text-white">
+                        Add Job Service
+                      </p>
+                      <FaChevronDown className="w-3 h-3 text-white ml-2" />
+                    </div>
+                    {isJobServiceDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
+                        <div
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+                          onClick={() => openJobServiceFlyout("PARTIAL")}
+                        >
+                          Partial
+                        </div>
+                        <div
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+                          onClick={() => openJobServiceFlyout("ASSEMBLY")}
+                        >
+                          Assembly
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div
                     className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
@@ -633,7 +742,7 @@ export default function Home() {
               onSubmit={handleSubmit}
               enableReinitialize={true}
             >
-              {({ values, setFieldValue, handleSubmit, isSubmitting }) => (
+              {({ values, setFieldValue, handleSubmit, isSubmitting, errors }) => (
                 <Form onSubmit={handleSubmit}>
                   <div className="w-full">
                     {/* Grid container for form fields */}
@@ -740,28 +849,6 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* Serial No */}
-                      {/* <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Serial No
-                        </p>
-                        <input
-                          type="number"
-                          name="serial_no"
-                          value={values.serial_no}
-                          onChange={(e) =>
-                            setFieldValue("serial_no", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Serial No"
-                        />
-                        <ErrorMessage
-                          name="serial_no"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div> */}
-
                       {/* Job Order Date */}
                       <div className="w-full">
                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
@@ -820,113 +907,188 @@ export default function Home() {
                         />
                       </div>
 
-                      {/* Item Description */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Item Description
-                        </p>
-                        <input
-                          type="text"
-                          name="item_description"
-                          value={values.item_description}
-                          onChange={(e) =>
-                            setFieldValue("item_description", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Item Description"
-                        />
-                        <ErrorMessage
-                          name="item_description"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
+                      {/* ====== CONDITIONAL FIELDS FOR PARTIAL VS ASSEMBLY ====== */}
 
-                      {/* Item No */}
-                      {values.job_type !== "KANBAN" && (
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Item No
-                        </p>
-                        <input
-                          type="number"
-                          name="item_no"
-                          value={values.item_no}
-                          onChange={(e) =>
-                            setFieldValue("item_no", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Item No"
-                        />
-                        <ErrorMessage
-                          name="item_no"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
+                      {/* Fields for PARTIAL or other job types */}
+                      {!(values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY") && (
+                        <>
+                          {/* Item Description */}
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Item Description
+                            </p>
+                            <input
+                              type="text"
+                              name="item_description"
+                              value={values.item_description}
+                              onChange={(e) =>
+                                setFieldValue("item_description", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Item Description"
+                            />
+                            <ErrorMessage
+                              name="item_description"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+
+                          {/* Item No */}
+                          {values.job_type !== "KANBAN" && (
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Item No
+                            </p>
+                            <input
+                              type="number"
+                              name="item_no"
+                              value={values.item_no}
+                              onChange={(e) =>
+                                setFieldValue("item_no", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Item No"
+                            />
+                            <ErrorMessage
+                              name="item_no"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                          )}
+
+                          {/* Quantity */}
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Quantity
+                            </p>
+                            <input
+                              type="number"
+                              name="qty"
+                              value={values.qty}
+                              onChange={(e) => setFieldValue("qty", e.target.value)}
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Quantity"
+                            />
+                            <ErrorMessage
+                              name="qty"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+
+                          {/* MOC */}
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              MOC
+                            </p>
+                            <input
+                              type="text"
+                              name="moc"
+                              value={values.moc}
+                              onChange={(e) => setFieldValue("moc", e.target.value)}
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter MOC (Material of Construction)"
+                            />
+                            <ErrorMessage
+                              name="moc"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+
+                          {/* Bin Location */}
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Bin Location
+                            </p>
+                            <input
+                              type="text"
+                              name="bin_location"
+                              value={values.bin_location}
+                              onChange={(e) =>
+                                setFieldValue("bin_location", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Bin Location"
+                            />
+                            <ErrorMessage
+                              name="bin_location"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        </>
                       )}
 
-                      {/* Quantity */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Quantity
-                        </p>
-                        <input
-                          type="number"
-                          name="qty"
-                          value={values.qty}
-                          onChange={(e) => setFieldValue("qty", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Quantity"
-                        />
-                        <ErrorMessage
-                          name="qty"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* MOC */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          MOC
-                        </p>
-                        <input
-                          type="text"
-                          name="moc"
-                          value={values.moc}
-                          onChange={(e) => setFieldValue("moc", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter MOC (Material of Construction)"
-                        />
-                        <ErrorMessage
-                          name="moc"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Bin Location */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Bin Location
-                        </p>
-                        <input
-                          type="text"
-                          name="bin_location"
-                          value={values.bin_location}
-                          onChange={(e) =>
-                            setFieldValue("bin_location", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Bin Location"
-                        />
-                        <ErrorMessage
-                          name="bin_location"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
+                      {/* Assembly Items - Only for JOB_SERVICE - ASSEMBLY */}
+                      {values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY" && (
+                        <FieldArray name="assembly_items">
+                          {({ remove, push }) => (
+                            <div className="col-span-1 md:col-span-2 space-y-6">
+                              {values.assembly_items && values.assembly_items.length > 0 &&
+                                values.assembly_items.map((item, index) => (
+                                  <div key={index} className="border border-gray-200 p-4 rounded-lg">
+                                    <div className="flex justify-between items-center mb-4">
+                                      <p className="font-semibold text-gray-700">Item #{index + 1}</p>
+                                      {values.assembly_items.length > 1 && (
+                                        <button
+                                          type="button"
+                                          className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                                          onClick={() => remove(index)}
+                                        >
+                                          <HiTrash className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                      <div className="w-full md:col-span-2">
+                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Item Description</p>
+                                        <input type="text" name={`assembly_items.${index}.item_description`} value={item.item_description} onChange={(e) => setFieldValue(`assembly_items.${index}.item_description`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Item Description" />
+                                        <ErrorMessage name={`assembly_items.${index}.item_description`} component="div" className="text-red-500 text-sm mt-1" />
+                                      </div>
+                                      <div className="w-full">
+                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Item No</p>
+                                        <input type="number" name={`assembly_items.${index}.item_no`} value={item.item_no} onChange={(e) => setFieldValue(`assembly_items.${index}.item_no`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Item No" />
+                                        <ErrorMessage name={`assembly_items.${index}.item_no`} component="div" className="text-red-500 text-sm mt-1" />
+                                      </div>
+                                      <div className="w-full">
+                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Quantity</p>
+                                        <input type="number" name={`assembly_items.${index}.qty`} value={item.qty} onChange={(e) => setFieldValue(`assembly_items.${index}.qty`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Quantity" />
+                                        <ErrorMessage name={`assembly_items.${index}.qty`} component="div" className="text-red-500 text-sm mt-1" />
+                                      </div>
+                                      <div className="w-full">
+                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">MOC</p>
+                                        <input type="text" name={`assembly_items.${index}.moc`} value={item.moc} onChange={(e) => setFieldValue(`assembly_items.${index}.moc`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter MOC" />
+                                        <ErrorMessage name={`assembly_items.${index}.moc`} component="div" className="text-red-500 text-sm mt-1" />
+                                      </div>
+                                      <div className="w-full">
+                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Bin Location</p>
+                                        <input type="text" name={`assembly_items.${index}.bin_location`} value={item.bin_location} onChange={(e) => setFieldValue(`assembly_items.${index}.bin_location`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Bin Location" />
+                                        <ErrorMessage name={`assembly_items.${index}.bin_location`} component="div" className="text-red-500 text-sm mt-1" />
+                                      </div>
+                                      <div className="w-full md:col-span-2">
+                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Material Remark</p>
+                                        <textarea name={`assembly_items.${index}.material_remark`} value={item.material_remark} onChange={(e) => setFieldValue(`assembly_items.${index}.material_remark`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]" placeholder="Enter Material Remark (Optional)" />
+                                        <ErrorMessage name={`assembly_items.${index}.material_remark`} component="div" className="text-red-500 text-sm mt-1" />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                              }
+                              <button
+                                type="button"
+                                className="flex items-center gap-2 text-primary-600 font-medium py-2 px-4 border-2 border-dashed border-primary-600 rounded-lg hover:bg-primary-50"
+                                onClick={() => push({ item_description: '', item_no: '', qty: '', moc: '', bin_location: '', material_remark: '' })}
+                              >
+                                <FaPlus /> Add Another Item
+                              </button>
+                               <ErrorMessage name="assembly_items" component="div" className="text-red-500 text-sm mt-1" />
+                            </div>
+                          )}
+                        </FieldArray>
+                      )}
 
                       {/* Remark */}
                       <div className="w-full">
@@ -951,25 +1113,27 @@ export default function Home() {
                       </div>
 
                       {/* Material Remark */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Material Remark
-                        </p>
-                        <textarea
-                          name="material_remark"
-                          value={values.material_remark}
-                          onChange={(e) =>
-                            setFieldValue("material_remark", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
-                          placeholder="Enter Material Remark (Optional)"
-                        />
-                        <ErrorMessage
-                          name="material_remark"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
+                      {!(values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY") && (
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Material Remark
+                          </p>
+                          <textarea
+                            name="material_remark"
+                            value={values.material_remark}
+                            onChange={(e) =>
+                              setFieldValue("material_remark", e.target.value)
+                            }
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                            placeholder="Enter Material Remark (Optional)"
+                          />
+                          <ErrorMessage
+                            name="material_remark"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* BUTTONS */}
