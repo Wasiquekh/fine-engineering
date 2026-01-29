@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import Image from "next/image";
+import { FaChevronDown } from "react-icons/fa";
 
 const axiosProvider = new AxiosProvider();
 
@@ -18,6 +19,7 @@ interface JobDetail {
   job_category: string;
   item_description: string;
   item_no: number;
+  serial_no: string;
   qty: number;
   moc: string;
   bin_location: string;
@@ -61,9 +63,29 @@ export default function JobDetailsPage() {
   const [assignments, setAssignments] = useState<{
     [key: string]: { assignTo: string; otherName: string; assignDate: string };
   }>({});
+  const [expandedJoNumbers, setExpandedJoNumbers] = useState<string[]>([]);
   const params = useParams();
   const router = useRouter();
   const job_no = params.job_no as string;
+
+  const groupedJobDetails = useMemo(() => {
+    return jobDetails.reduce((acc, job) => {
+      const key = job.jo_number || 'N/A';
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(job);
+      return acc;
+    }, {} as Record<string, JobDetail[]>);
+  }, [jobDetails]);
+
+  const toggleJoNumberExpansion = (joNumber: string) => {
+    setExpandedJoNumbers((prev) =>
+      prev.includes(joNumber)
+        ? prev.filter((n) => n !== joNumber)
+        : [...prev, joNumber]
+    );
+  };
 
   useEffect(() => {
     if (job_no) {
@@ -319,6 +341,7 @@ export default function JobDetailsPage() {
                       <th scope="col" className="p-3 border border-tableBorder">Job Type</th>
                       <th scope="col" className="p-3 border border-tableBorder">Job Category</th>
                       <th scope="col" className="p-3 border border-tableBorder">Item No</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
                       <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
                       <th scope="col" className="p-3 border border-tableBorder">MOC</th>
                       <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
@@ -330,97 +353,125 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-4 border border-tableBorder">Loading...</td>
+                        <td colSpan={11} className="text-center py-4 border border-tableBorder">Loading...</td>
                       </tr>
                     ) : jobDetails.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
+                        <td colSpan={11} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
                       </tr>
                     ) : (
-                      jobDetails.map((item) => (
-                        <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
-                          
-                          <td className="px-2 py-2 border border-tableBorder">{item.jo_number || 'N/A'}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.job_type}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            {assignments[item.id]?.assignTo === "Others" ? (
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="text"
-                                  placeholder="Enter Name"
-                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                  value={assignments[item.id]?.otherName || ""}
-                                  onChange={(e) =>
-                                    handleAssignmentChange(item.id, "otherName", e.target.value)
-                                  }
-                                  autoFocus={!item.assign_to}
-                                  disabled={!!item.assign_to || !item.urgent}
-                                />
-                                {!item.assign_to && (
+                      Object.entries(groupedJobDetails).flatMap(([joNumber, jobs]) => {
+                        const isExpanded = expandedJoNumbers.includes(joNumber);
+                        const hasMultiple = jobs.length > 1;
+
+                        const renderJobRow = (item: JobDetail, isFirst: boolean) => (
+                          <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {isFirst && (
+                                <div className="flex items-center gap-2">
+                                  {joNumber}
+                                  {hasMultiple && (
+                                    <button onClick={() => toggleJoNumberExpansion(joNumber)}>
+                                      <FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.job_type}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.serial_no || 'N/A'}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
+                            {isFirst ? (
+                              <>
+                                <td className="px-2 py-2 border border-tableBorder">
+                                  {assignments[item.id]?.assignTo === "Others" ? (
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="text"
+                                        placeholder="Enter Name"
+                                        className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                        value={assignments[item.id]?.otherName || ""}
+                                        onChange={(e) =>
+                                          handleAssignmentChange(item.id, "otherName", e.target.value)
+                                        }
+                                        autoFocus={!item.assign_to}
+                                        disabled={!!item.assign_to || !item.urgent}
+                                      />
+                                      {!item.assign_to && (
+                                        <button
+                                          onClick={() => {
+                                            handleAssignmentChange(item.id, "assignTo", "");
+                                            handleAssignmentChange(item.id, "otherName", "");
+                                          }}
+                                          className="text-gray-500 hover:text-red-500 px-1"
+                                          title="Clear"
+                                        >
+                                          ✕
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <select
+                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                      value={assignments[item.id]?.assignTo || ""}
+                                      onChange={(e) =>
+                                        handleAssignmentChange(
+                                          item.id,
+                                          "assignTo",
+                                          e.target.value
+                                        )
+                                      }
+                                      disabled={!!item.assign_to || !item.urgent}
+                                    >
+                                      <option value="">Select</option>
+                                      <option value="Usmaan">Usmaan</option>
+                                      <option value="Ashfaq">Ashfaq</option>
+                                      <option value="Ramzaan">Ramzaan</option>
+                                      <option value="Others">Others</option>
+                                    </select>
+                                  )}
+                                </td>
+                                <td className="px-2 py-2 border border-tableBorder">
+                                  <input
+                                    type="date"
+                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                    value={assignments[item.id]?.assignDate || ""}
+                                    onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
+                                    disabled={!!item.assign_to || !item.urgent}
+                                  />
+                                </td>
+                                <td className="px-2 py-2 border border-tableBorder">
                                   <button
-                                    onClick={() => {
-                                      handleAssignmentChange(item.id, "assignTo", "");
-                                      handleAssignmentChange(item.id, "otherName", "");
-                                    }}
-                                    className="text-gray-500 hover:text-red-500 px-1"
-                                    title="Clear"
+                                    onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
+                                    disabled={!!item.assign_to || !item.urgent}
+                                    className={`px-3 py-1 rounded text-sm transition-colors text-white ${
+                                      item.assign_to
+                                        ? "bg-green-600 cursor-default"
+                                        : !item.urgent
+                                        ? "bg-gray-400 cursor-not-allowed"
+                                        : "bg-blue-600 hover:bg-blue-700"
+                                    }`}
                                   >
-                                    ✕
+                                    {item.assign_to ? "Assigned" : "Assign"}
                                   </button>
-                                )}
-                              </div>
+                                </td>
+                              </>
                             ) : (
-                              <select
-                                className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                value={assignments[item.id]?.assignTo || ""}
-                                onChange={(e) =>
-                                  handleAssignmentChange(
-                                    item.id,
-                                    "assignTo",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={!!item.assign_to || !item.urgent}
-                              >
-                                <option value="">Select</option>
-                                <option value="Usmaan">Usmaan</option>
-                                <option value="Ashfaq">Ashfaq</option>
-                                <option value="Ramzaan">Ramzaan</option>
-                                <option value="Others">Others</option>
-                              </select>
+                              <td colSpan={3} className="px-2 py-2 border border-tableBorder"></td>
                             )}
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <input
-                              type="date"
-                              className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                              value={assignments[item.id]?.assignDate || ""}
-                              onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                              disabled={!!item.assign_to || !item.urgent}
-                            />
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <button
-                              onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
-                              disabled={!!item.assign_to || !item.urgent}
-                              className={`px-3 py-1 rounded text-sm transition-colors text-white ${
-                                item.assign_to
-                                  ? "bg-green-600 cursor-default"
-                                  : !item.urgent
-                                  ? "bg-gray-400 cursor-not-allowed"
-                                  : "bg-blue-600 hover:bg-blue-700"
-                              }`}
-                            >
-                              {item.assign_to ? "Assigned" : "Assign"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                          </tr>
+                        );
+
+                        const rows = [renderJobRow(jobs[0], true)];
+                        if (hasMultiple && isExpanded) {
+                          jobs.slice(1).forEach(job => rows.push(renderJobRow(job, false)));
+                        }
+                        return rows;
+                      })
                     )}
                   </tbody>
                 </table>
