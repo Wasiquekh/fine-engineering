@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
@@ -33,6 +33,7 @@ export default function JoNumberPage() {
   const [subSize, setSubSize] = useState("");
   const [worker, setWorker] = useState("");
   const [selectedSerialNo, setSelectedSerialNo] = useState("");
+  const [selectedQuantity, setSelectedQuantity] = useState("");
   const [jobs, setJobs] = useState<JobData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +61,11 @@ export default function JoNumberPage() {
       fetchJobs();
     }
   }, [jo_number]);
+
+  useEffect(() => {
+    // Reset quantity when serial number changes
+    setSelectedQuantity("");
+  }, [selectedSerialNo]);
 
   const getSizeOptions = () => {
     if (selectedOption === "Lathe" || selectedOption === "cnc") {
@@ -137,6 +143,22 @@ export default function JoNumberPage() {
     value: serialNo,
     label: serialNo,
   }));
+
+  const selectedJob = useMemo(() => {
+    if (!selectedSerialNo) return null;
+    return jobs.find((job) => job.serial_no === selectedSerialNo);
+  }, [jobs, selectedSerialNo]);
+
+  const quantityOptions = useMemo(() => {
+    if (!selectedJob) return [];
+    return Array.from({ length: selectedJob.qty }, (_, i) => {
+      const val = i + 1;
+      return {
+        value: String(val),
+        label: String(val),
+      };
+    });
+  }, [selectedJob]);
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -336,6 +358,39 @@ export default function JoNumberPage() {
 
           </div>
 
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-5 gap-4 w-full max-w-full items-end">
+            {/* Quantity Dropdown */}
+            {selectedJob && (
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quantity
+                </label>
+                <select
+                  value={selectedQuantity}
+                  onChange={(e) => setSelectedQuantity(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-md"
+                  disabled={!selectedSerialNo || quantityOptions.length === 0}
+                >
+                  <option value="">Select</option>
+                  {quantityOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Assign Button */}
+            <div className="col-span-1">
+              <button
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                disabled={!selectedSerialNo || !worker || !selectedQuantity}
+              >
+                Assign
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
