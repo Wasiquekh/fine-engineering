@@ -1,20 +1,65 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import Image from "next/image";
+import AxiosProvider from "../../../provider/AxiosProvider";
+import { toast } from "react-toastify";
+
+const axiosProvider = new AxiosProvider();
+
+interface JobData {
+  id: string;
+  job_no: number;
+  jo_number: string;
+  job_type: string;
+  job_category: string;
+  item_description: string;
+  item_no: number;
+  serial_no: string;
+  qty: number;
+  moc: string;
+  bin_location: string;
+}
 
 export default function JoNumberPage() {
   const params = useParams();
   const router = useRouter();
-  const job_no = Array.isArray(params.job_no) ? params.job_no[0] : params.job_no;
+  const jo_number = Array.isArray(params.jo_number) ? params.jo_number[0] : params.jo_number;
 
   const [selectedOption, setSelectedOption] = useState("");
   const [machineSize, setMachineSize] = useState("");
   const [subSize, setSubSize] = useState("");
   const [worker, setWorker] = useState("");
+  const [selectedSerialNo, setSelectedSerialNo] = useState("");
+  const [jobs, setJobs] = useState<JobData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (jo_number) {
+      const fetchJobs = async () => {
+        setLoading(true);
+        try {
+          const response = await axiosProvider.get(
+            `/fineengg_erp/jobs?jo_number=${jo_number}`
+          );
+          if (response.data && Array.isArray(response.data.data)) {
+            setJobs(response.data.data);
+          } else {
+            setJobs([]);
+          }
+        } catch (error) {
+          console.error("Error fetching jobs:", error);
+          toast.error("Failed to fetch jobs.");
+          setJobs([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchJobs();
+    }
+  }, [jo_number]);
 
   const getSizeOptions = () => {
     if (selectedOption === "Lathe" || selectedOption === "cnc") {
@@ -86,6 +131,13 @@ export default function JoNumberPage() {
     label: name,
   }));
 
+  const serialNoOptions = [
+    ...new Set(jobs.map((job) => job.serial_no).filter(Boolean)),
+  ].map((serialNo) => ({
+    value: serialNo,
+    label: serialNo,
+  }));
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -112,11 +164,79 @@ export default function JoNumberPage() {
           </button>
 
           <h1 className="text-2xl font-bold mb-6">
-            Machine Category - {job_no}
+            Machine Category - {jo_number}
           </h1>
 
+          {/* Jobs Table */}
+          <div className="mt-6 mb-8">
+            {/* <h2 className="text-xl font-bold mb-4">
+              Jobs for J/O No: {jo_number}
+            </h2> */}
+            <div className="relative overflow-x-auto sm:rounded-lg">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                <thead className="text-xs text-[#999999]">
+                  <tr className="border border-tableBorder">
+                    {/* <th scope="col" className="p-3 border border-tableBorder">Job No</th> */}
+                    <th scope="col" className="p-3 border border-tableBorder">Item No</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Description</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Qty</th>
+                    <th scope="col" className="p-3 border border-tableBorder">MOC</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4 border border-tableBorder">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : jobs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4 border border-tableBorder">
+                        No jobs found for this J/O number.
+                      </td>
+                    </tr>
+                  ) : (
+                    jobs.map((job) => (
+                      <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                        {/* <td className="px-2 py-2 border border-tableBorder">{job.job_no}</td> */}
+                        <td className="px-2 py-2 border border-tableBorder">{job.item_no}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.serial_no || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.item_description}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.qty}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.moc}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.bin_location}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           {/* ✅ GRID LAYOUT FIX */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-full">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full max-w-full">
+            {/* Serial No */}
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Serial No
+              </label>
+              <select
+                value={selectedSerialNo}
+                onChange={(e) => setSelectedSerialNo(e.target.value)}
+                className="w-full px-4 py-2 border rounded-md"
+                disabled={serialNoOptions.length === 0}
+              >
+                <option value="">Select</option>
+                {serialNoOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Machine Category */}
             <div className="col-span-1">
@@ -215,6 +335,7 @@ export default function JoNumberPage() {
             )}
 
           </div>
+
         </div>
       </div>
     </div>
