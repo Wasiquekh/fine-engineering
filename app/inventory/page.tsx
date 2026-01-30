@@ -137,7 +137,7 @@ const validationSchema = Yup.object().shape({
   }),
 });
 
-// Initial form values for Jobss
+// Initial form values for Jobs
 const initialValues = {
   job_type: "",
   client_name: "",
