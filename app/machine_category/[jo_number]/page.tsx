@@ -1,13 +1,15 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import Image from "next/image";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
+import StorageManager from "../../../provider/StorageManager";
 
 const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
 
 interface JobData {
   id: string;
@@ -23,6 +25,19 @@ interface JobData {
   bin_location: string;
 }
 
+interface AssignedJob {
+  id: string;
+  jo_no: number;
+  item_no: number;
+  machine_category: string;
+  machine_size: string;
+  machine_code: string;
+  worker_name: string;
+  quantity_no: number;
+  assigning_date: string;
+  serial_no: string;
+}
+
 export default function JoNumberPage() {
   const params = useParams();
   const router = useRouter();
@@ -36,31 +51,51 @@ export default function JoNumberPage() {
   const [selectedQuantity, setSelectedQuantity] = useState("");
   const [jobs, setJobs] = useState<JobData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignedJobs, setAssignedJobs] = useState<AssignedJob[]>([]);
+
+  const fetchJobs = useCallback(async () => {
+    if (!jo_number) return;
+    setLoading(true);
+    try {
+      const response = await axiosProvider.get(
+        `/fineengg_erp/jobs?jo_number=${jo_number}`
+      );
+      if (response.data && Array.isArray(response.data.data)) {
+        const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
+        setJobs(validJobs);
+      } else {
+        setJobs([]);
+      }
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      toast.error("Failed to fetch jobs.");
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [jo_number]);
+
+  const fetchAssignedJobs = useCallback(async () => {
+    if (!jo_number) return;
+    try {
+      const response = await axiosProvider.get("/fineengg_erp/assign-to-worker");
+      if (response.data && Array.isArray(response.data.data)) {
+        const filtered = response.data.data.filter(
+          (job: AssignedJob) => String(job.jo_no) === String(jo_number)
+        );
+        setAssignedJobs(filtered);
+      }
+    } catch (error) {
+      console.error("Error fetching assigned jobs:", error);
+    }
+  }, [jo_number]);
 
   useEffect(() => {
     if (jo_number) {
-      const fetchJobs = async () => {
-        setLoading(true);
-        try {
-          const response = await axiosProvider.get(
-            `/fineengg_erp/jobs?jo_number=${jo_number}`
-          );
-          if (response.data && Array.isArray(response.data.data)) {
-            setJobs(response.data.data);
-          } else {
-            setJobs([]);
-          }
-        } catch (error) {
-          console.error("Error fetching jobs:", error);
-          toast.error("Failed to fetch jobs.");
-          setJobs([]);
-        } finally {
-          setLoading(false);
-        }
-      };
       fetchJobs();
+      fetchAssignedJobs();
     }
-  }, [jo_number]);
+  }, [jo_number, fetchJobs, fetchAssignedJobs]);
 
   useEffect(() => {
     // Reset quantity when serial number changes
@@ -159,6 +194,36 @@ export default function JoNumberPage() {
       };
     });
   }, [selectedJob]);
+
+  const handleAssign = async () => {
+    if (!selectedJob) return;
+
+    const payload = {
+      jo_no: Number(jo_number),
+      item_no: selectedJob.item_no,
+      machine_category: selectedOption,
+      machine_size: machineSize,
+      machine_code: subSize || machineSize,
+      worker_name: worker,
+      quantity_no: Number(selectedQuantity),
+      assigning_date: new Date().toISOString().split("T")[0],
+      created_by: storage.getUserId(),
+      updated_by: storage.getUserId(),
+      serial_no: selectedJob.serial_no,
+      job_id: selectedJob.id,
+    };
+
+    try {
+      await axiosProvider.post("/fineengg_erp/assign-to-worker", payload);
+      toast.success("Job assigned successfully");
+      setSelectedSerialNo("");
+      fetchJobs();
+      fetchAssignedJobs();
+    } catch (error) {
+      console.error("Error assigning job:", error);
+      toast.error("Failed to assign job");
+    }
+  };
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -382,10 +447,56 @@ export default function JoNumberPage() {
               <button
                 className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`}
                 disabled={!selectedSerialNo || !worker || !selectedQuantity}
+                onClick={handleAssign}
               >
                 Assign
               </button>
               </div>
+            </div>
+          </div>
+
+          {/* Assigned Jobs Table */}
+          <div className="mt-12 mb-8">
+            <h2 className="text-xl font-bold mb-4">
+              Assigned Jobs History
+            </h2>
+            <div className="relative overflow-x-auto sm:rounded-lg">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                <thead className="text-xs text-[#999999]">
+                  <tr className="border border-tableBorder">
+                    <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Item No</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Machine Category</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Machine Size</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Machine Code</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Worker</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
+                    <th scope="col" className="p-3 border border-tableBorder">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignedJobs.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="text-center py-4 border border-tableBorder">
+                        No assigned jobs found.
+                      </td>
+                    </tr>
+                  ) : (
+                    assignedJobs.map((job) => (
+                      <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                        <td className="px-2 py-2 border border-tableBorder">{job.serial_no || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.item_no}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.machine_category}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.machine_size}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.machine_code}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.worker_name}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.quantity_no}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{job.assigning_date}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
