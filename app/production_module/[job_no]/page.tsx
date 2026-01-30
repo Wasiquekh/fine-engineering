@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
@@ -36,6 +36,16 @@ export default function JobDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const job_no = params.job_no as string;
+
+  const uniqueJobDetails = useMemo(() => {
+    const seen = new Set();
+    return jobDetails.filter((job) => {
+      if (!job.jo_number) return true;
+      if (seen.has(job.jo_number)) return false;
+      seen.add(job.jo_number);
+      return true;
+    });
+  }, [jobDetails]);
 
   useEffect(() => {
     if (job_no) {
@@ -173,14 +183,14 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-4 border border-tableBorder">Loading...</td>
+                        <td colSpan={9} className="text-center py-4 border border-tableBorder">Loading...</td>
                       </tr>
-                    ) : jobDetails.length === 0 ? (
+                    ) : uniqueJobDetails.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
+                        <td colSpan={9} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
                       </tr>
                     ) : (
-                      jobDetails.map((item) => (
+                      uniqueJobDetails.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                           
                           <td className="px-2 py-2 border border-tableBorder">
