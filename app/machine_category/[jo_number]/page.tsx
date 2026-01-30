@@ -137,9 +137,9 @@ export default function JoNumberPage() {
     label: name,
   }));
 
-  const serialNoOptions = [
-    ...new Set(jobs.map((job) => job.serial_no).filter(Boolean)),
-  ].map((serialNo) => ({
+  const serialNoOptions = Array.from(
+    new Set(jobs.map((job) => job.serial_no).filter(Boolean))
+  ).map((serialNo) => ({
     value: serialNo,
     label: serialNo,
   }));
@@ -239,7 +239,7 @@ export default function JoNumberPage() {
           </div>
 
           {/* ✅ GRID LAYOUT FIX */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 w-full max-w-full">
+          <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-7 gap-4 w-full max-w-full items-end">
             {/* Serial No */}
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -355,10 +355,6 @@ export default function JoNumberPage() {
                 </select>
               </div>
             )}
-
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-5 gap-4 w-full max-w-full items-end">
             {/* Quantity Dropdown */}
             {selectedJob && (
               <div className="col-span-1">
@@ -368,7 +364,7 @@ export default function JoNumberPage() {
                 <select
                   value={selectedQuantity}
                   onChange={(e) => setSelectedQuantity(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-md"
+                  className="w-full px-3 py-1.5 border rounded-md text-sm"
                   disabled={!selectedSerialNo || quantityOptions.length === 0}
                 >
                   <option value="">Select</option>
@@ -384,7 +380,7 @@ export default function JoNumberPage() {
             {/* Assign Button */}
             <div className="col-span-1">
               <button
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm"
                 disabled={!selectedSerialNo || !worker || !selectedQuantity}
               >
                 Assign
