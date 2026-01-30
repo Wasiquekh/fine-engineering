@@ -239,7 +239,7 @@ export default function JoNumberPage() {
           </div>
 
           {/* ✅ GRID LAYOUT FIX */}
-          <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-7 gap-4 w-full max-w-full items-end">
+          <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-6 gap-4 w-full max-w-full items-end">
             {/* Serial No */}
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -355,36 +355,37 @@ export default function JoNumberPage() {
                 </select>
               </div>
             )}
-            {/* Quantity Dropdown */}
-            {selectedJob && (
-              <div className="col-span-1">
+
+            {/* Quantity and Assign Button */}
+            <div className="col-span-1">
+              {selectedJob && (
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Quantity
                 </label>
-                <select
-                  value={selectedQuantity}
-                  onChange={(e) => setSelectedQuantity(e.target.value)}
-                  className="w-full px-3 py-1.5 border rounded-md text-sm"
-                  disabled={!selectedSerialNo || quantityOptions.length === 0}
-                >
-                  <option value="">Select</option>
-                  {quantityOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Assign Button */}
-            <div className="col-span-1">
+              )}
+              <div className="flex gap-2">
+                {selectedJob && (
+                  <select
+                    value={selectedQuantity}
+                    onChange={(e) => setSelectedQuantity(e.target.value)}
+                    className="flex-1 px-3 py-1.5 border rounded-md text-sm"
+                    disabled={!selectedSerialNo || quantityOptions.length === 0}
+                  >
+                    <option value="">Select</option>
+                    {quantityOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
               <button
-                className="w-full px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm"
+                className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`}
                 disabled={!selectedSerialNo || !worker || !selectedQuantity}
               >
                 Assign
               </button>
+              </div>
             </div>
           </div>
         </div>
