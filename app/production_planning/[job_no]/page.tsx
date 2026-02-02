@@ -26,6 +26,8 @@ interface JobDetail {
   urgent: boolean;
   assign_to?: string;
   assign_date?: string;
+  product_desc?: string;
+  product_qty?: number;
 }
 
 interface CategoryDetail {
@@ -340,6 +342,8 @@ export default function JobDetailsPage() {
                       <th scope="col" className="p-3 border border-tableBorder">J/O No</th>
                       <th scope="col" className="p-3 border border-tableBorder">Job Type</th>
                       <th scope="col" className="p-3 border border-tableBorder">Job Category</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Product Desc</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Product Qty</th>
                       <th scope="col" className="p-3 border border-tableBorder">Item No</th>
                       <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
                       <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
@@ -353,11 +357,11 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={11} className="text-center py-4 border border-tableBorder">Loading...</td>
+                        <td colSpan={13} className="text-center py-4 border border-tableBorder">Loading...</td>
                       </tr>
                     ) : jobDetails.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
+                        <td colSpan={13} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
                       </tr>
                     ) : (
                       Object.entries(groupedJobDetails).flatMap(([joNumber, jobs]) => {
@@ -380,6 +384,8 @@ export default function JobDetailsPage() {
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">{item.job_type}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.product_desc || "-"}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.product_qty || "-"}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.serial_no || 'N/A'}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>

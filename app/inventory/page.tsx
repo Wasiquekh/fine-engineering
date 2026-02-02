@@ -122,7 +122,7 @@ const validationSchema = Yup.object().shape({
   product_qty: Yup.number().when('sub_type', {
     is: 'ASSEMBLY',
     then: schema => schema.required("Product Quantity is required").typeError("Product Quantity must be a number").positive("Product Quantity must be positive").integer("Product Quantity must be an integer"),
-    otherwise: schema => schema.notRequired(),
+    otherwise: schema => schema.notRequired().nullable(),
   }),
   bin_location: Yup.string().when('sub_type', {
     is: 'ASSEMBLY',
@@ -249,6 +249,8 @@ export default function Home() {
       moc: values.moc,
       bin_location: values.bin_location,
       material_remark: values.material_remark || "",
+      product_desc: values.product_desc || null,
+      product_qty: values.product_qty ? Number(values.product_qty) : null,
     };
 
     // Add conditional fields
