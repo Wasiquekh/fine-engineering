@@ -90,13 +90,13 @@ const validationSchema = Yup.object().shape({
     .typeError("Material Challan No must be a number")
     .positive("Material Challan No must be positive")
     .integer("Material Challan No must be an integer"),
-  item_description: Yup.string().when(['job_type', 'sub_type'], {
-    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+  item_description: Yup.string().when('sub_type', {
+    is: 'ASSEMBLY',
     then: schema => schema.notRequired(),
     otherwise: schema => schema.required("Item Description is required"),
   }),
-  item_no: Yup.number().when(['job_type', 'sub_type'], {
-    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+  item_no: Yup.number().when('sub_type', {
+    is: 'ASSEMBLY',
     then: schema => schema.notRequired().nullable(),
     otherwise: schema => schema.when('job_type', {
       is: (job_type) => job_type !== 'KANBAN',
@@ -104,25 +104,34 @@ const validationSchema = Yup.object().shape({
       otherwise: (schema) => schema.notRequired().nullable(),
     })
   }),
-  qty: Yup.number().when(['job_type', 'sub_type'], {
-    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+  qty: Yup.number().when('sub_type', {
+    is: 'ASSEMBLY',
     then: schema => schema.notRequired(),
     otherwise: schema => schema.required("Quantity is required").typeError("Quantity must be a number").positive("Quantity must be positive"),
   }),
-  moc: Yup.string().when(['job_type', 'sub_type'], {
-    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+  moc: Yup.string().when('sub_type', {
+    is: 'ASSEMBLY',
     then: schema => schema.notRequired(),
     otherwise: schema => schema.required("MOC is required"),
   }),
-  remark: Yup.string(),
-  bin_location: Yup.string().when(['job_type', 'sub_type'], {
-    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+  product_desc: Yup.string().when('sub_type', {
+    is: 'ASSEMBLY',
+    then: schema => schema.required("Product Description is required"),
+    otherwise: schema => schema.notRequired(),
+  }),
+  product_qty: Yup.number().when('sub_type', {
+    is: 'ASSEMBLY',
+    then: schema => schema.required("Product Quantity is required").typeError("Product Quantity must be a number").positive("Product Quantity must be positive").integer("Product Quantity must be an integer"),
+    otherwise: schema => schema.notRequired(),
+  }),
+  bin_location: Yup.string().when('sub_type', {
+    is: 'ASSEMBLY',
     then: schema => schema.notRequired(),
     otherwise: schema => schema.required("Bin Location is required"),
   }),
   material_remark: Yup.string(),
-  assembly_items: Yup.array().when(['job_type', 'sub_type'], {
-    is: (job_type, sub_type) => job_type === 'JOB_SERVICE' && sub_type === 'ASSEMBLY',
+  assembly_items: Yup.array().when('sub_type', {
+    is: 'ASSEMBLY',
     then: schema => schema.of(
       Yup.object().shape({
         item_description: Yup.string().required("Item Description is required"),
@@ -151,9 +160,10 @@ const initialValues = {
   item_no: "",
   qty: "",
   moc: "",
-  remark: "",
   bin_location: "",
   material_remark: "",
+  product_desc: "",
+  product_qty: "",
   sub_type: "",
   assembly_items: [],
 };
@@ -164,7 +174,9 @@ export default function Home() {
     "JOB_SERVICE" | "TSO_SERVICE" | "KANBAN"
   >("JOB_SERVICE");
   const [isJobServiceDropdownOpen, setJobServiceDropdownOpen] = useState<boolean>(false);
-  const [jobServiceSubType, setJobServiceSubType] = useState<string>("PARTIAL");
+  const [isTsoServiceDropdownOpen, setTsoServiceDropdownOpen] = useState<boolean>(false);
+  const [isKanbanDropdownOpen, setKanbanDropdownOpen] = useState<boolean>(false);
+  const [selectedSubType, setSelectedSubType] = useState<string>("PARTIAL");
   const [data, setData] = useState<any | []>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
@@ -181,18 +193,26 @@ export default function Home() {
       return `${year}-${month}-${day}`;
     };
 
-    if (values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY") {
-      const bulkPayload = {
-        common_data: {
+    if (values.sub_type === "ASSEMBLY") {
+      const commonData: any = {
           job_type: values.job_type,
-          job_no: Number(values.job_no),
           jo_number: Number(values.jo_number),
           job_order_date: formatDate(values.job_order_date),
           mtl_rcd_date: formatDate(values.mtl_rcd_date),
           mtl_challan_no: Number(values.mtl_challan_no),
-          remark: values.remark || "",
+          product_desc: values.product_desc,
+          product_qty: Number(values.product_qty),
           client_name: values.client_name,
-        },
+      };
+
+      if (values.job_type === "JOB_SERVICE") {
+        commonData.job_no = Number(values.job_no);
+      } else {
+        commonData.job_category = values.job_category;
+      }
+
+      const bulkPayload = {
+        common_data: commonData,
         items: values.assembly_items.map((item: any) => ({
           item_description: item.item_description,
           item_no: Number(item.item_no),
@@ -205,12 +225,12 @@ export default function Home() {
 
       try {
         await axiosProvider.post("/fineengg_erp/jobs/bulk", bulkPayload);
-        toast.success("Assembly Job Service added successfully");
+        toast.success("Assembly added successfully");
         fetchData();
         setFlyoutOpen(false);
       } catch (error: any) {
         console.error("Error saving assembly job:", error);
-        toast.error("Failed to add Assembly Job Service");
+        toast.error("Failed to add Assembly");
       }
       return;
     }
@@ -227,7 +247,6 @@ export default function Home() {
       item_no: Number(values.item_no),
       qty: Number(values.qty),
       moc: values.moc,
-      remark: values.remark || "",
       bin_location: values.bin_location,
       material_remark: values.material_remark || "",
     };
@@ -321,26 +340,34 @@ export default function Home() {
 
   const openJobServiceFlyout = (subType: string = "PARTIAL") => {
     setFlyoutType("JOB_SERVICE");
-    setJobServiceSubType(subType);
+    setSelectedSubType(subType);
     setFlyoutOpen(true);
     setJobServiceDropdownOpen(false);
   };
 
-  const openTsoServiceFlyout = () => {
+  const openTsoServiceFlyout = (subType: string = "PARTIAL") => {
     setFlyoutType("TSO_SERVICE");
+    setSelectedSubType(subType);
     setFlyoutOpen(true);
+    setTsoServiceDropdownOpen(false);
   };
 
-  const openKanbanFlyout = () => {
+  const openKanbanFlyout = (subType: string = "PARTIAL") => {
     setFlyoutType("KANBAN");
+    setSelectedSubType(subType);
     setFlyoutOpen(true);
+    setKanbanDropdownOpen(false);
   };
 
   // Get initial values based on flyout type
   const getInitialValues = () => {
-    if (flyoutType === "JOB_SERVICE") {
-      const values = { ...initialValues, job_type: "JOB_SERVICE", sub_type: jobServiceSubType };
-      if (jobServiceSubType === 'ASSEMBLY') {
+    const values = { ...initialValues, job_type: flyoutType, sub_type: selectedSubType };
+    
+    if (flyoutType === "KANBAN") {
+      values.client_name = "Amar Equipment";
+    }
+
+    if (selectedSubType === 'ASSEMBLY') {
         values.assembly_items = [{ item_description: '', item_no: '', qty: '', moc: '', bin_location: '', material_remark: '' }];
         values.item_description = '';
         values.item_no = '';
@@ -348,14 +375,10 @@ export default function Home() {
         values.moc = '';
         values.bin_location = '';
         values.material_remark = '';
-      }
-      return values;
-    } else if (flyoutType === "TSO_SERVICE") {
-      return { ...initialValues, job_type: "TSO_SERVICE" };
-    } else if (flyoutType === "KANBAN") {
-      return { ...initialValues, job_type: "KANBAN", client_name: "Amar Equipment" };
+        values.product_desc = '';
+        values.product_qty = '';
     }
-    return initialValues;
+    return values;
   };
 
   // Get category options based on job type
@@ -370,13 +393,10 @@ export default function Home() {
 
   // Get flyout title
   const getFlyoutTitle = () => {
-    if (flyoutType === "JOB_SERVICE") {
-      const subTypeLabel =
-        jobServiceSubType === "PARTIAL" ? "Partial" : "Assembly";
-      return `Add Job Service (${subTypeLabel})`;
-    }
-    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
-    if (flyoutType === "KANBAN") return "Add Kanban";
+    const subTypeLabel = selectedSubType === "PARTIAL" ? "Partial" : "Assembly";
+    if (flyoutType === "JOB_SERVICE") return `Add Job Service (${subTypeLabel})`;
+    if (flyoutType === "TSO_SERVICE") return `Add TSO Service (${subTypeLabel})`;
+    if (flyoutType === "KANBAN") return `Add Kanban (${subTypeLabel})`;
     return "Add Job";
   };
 
@@ -497,23 +517,61 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <div
-                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
-                    onClick={openTsoServiceFlyout}
-                  >
-                    <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                    <p className="text-white text-base font-medium group-hover:text-white">
-                      Add TSO Service
-                    </p>
+                  <div className="relative">
+                    <div
+                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
+                      onClick={() => setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)}
+                    >
+                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
+                      <p className="text-white text-base font-medium group-hover:text-white">
+                        Add TSO Service
+                      </p>
+                      <FaChevronDown className="w-3 h-3 text-white ml-2" />
+                    </div>
+                    {isTsoServiceDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
+                        <div
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+                          onClick={() => openTsoServiceFlyout("PARTIAL")}
+                        >
+                          Partial
+                        </div>
+                        <div
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+                          onClick={() => openTsoServiceFlyout("ASSEMBLY")}
+                        >
+                          Assembly
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div
-                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
-                    onClick={openKanbanFlyout}
-                  >
-                    <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                    <p className="text-white text-base font-medium group-hover:text-white">
-                      Add Kanban
-                    </p>
+                  <div className="relative">
+                    <div
+                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
+                      onClick={() => setKanbanDropdownOpen(!isKanbanDropdownOpen)}
+                    >
+                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
+                      <p className="text-white text-base font-medium group-hover:text-white">
+                        Add Kanban
+                      </p>
+                      <FaChevronDown className="w-3 h-3 text-white ml-2" />
+                    </div>
+                    {isKanbanDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
+                        <div
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+                          onClick={() => openKanbanFlyout("PARTIAL")}
+                        >
+                          Partial
+                        </div>
+                        <div
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
+                          onClick={() => openKanbanFlyout("ASSEMBLY")}
+                        >
+                          Assembly
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -910,7 +968,7 @@ export default function Home() {
                       {/* ====== CONDITIONAL FIELDS FOR PARTIAL VS ASSEMBLY ====== */}
 
                       {/* Fields for PARTIAL or other job types */}
-                      {!(values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY") && (
+                      {values.sub_type !== "ASSEMBLY" && (
                         <>
                           {/* Item Description */}
                           <div className="w-full">
@@ -1023,7 +1081,44 @@ export default function Home() {
                       )}
 
                       {/* Assembly Items - Only for JOB_SERVICE - ASSEMBLY */}
-                      {values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY" && (
+                      {values.sub_type === "ASSEMBLY" && (
+                        <>
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Product Description
+                            </p>
+                            <input
+                              type="text"
+                              name="product_desc"
+                              value={values.product_desc}
+                              onChange={(e) => setFieldValue("product_desc", e.target.value)}
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Product Description"
+                            />
+                            <ErrorMessage
+                              name="product_desc"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Product Quantity
+                            </p>
+                            <input
+                              type="number"
+                              name="product_qty"
+                              value={values.product_qty}
+                              onChange={(e) => setFieldValue("product_qty", e.target.value)}
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Product Quantity"
+                            />
+                            <ErrorMessage
+                              name="product_qty"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
                         <FieldArray name="assembly_items">
                           {({ remove, push }) => (
                             <div className="col-span-1 md:col-span-2 space-y-6">
@@ -1088,32 +1183,11 @@ export default function Home() {
                             </div>
                           )}
                         </FieldArray>
+                        </>
                       )}
 
-                      {/* Remark */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Remark
-                        </p>
-                        <input
-                          type="text"
-                          name="remark"
-                          value={values.remark}
-                          onChange={(e) =>
-                            setFieldValue("remark", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Remark (Optional)"
-                        />
-                        <ErrorMessage
-                          name="remark"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
                       {/* Material Remark */}
-                      {!(values.job_type === "JOB_SERVICE" && values.sub_type === "ASSEMBLY") && (
+                      {values.sub_type !== "ASSEMBLY" && (
                         <div className="w-full">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                             Material Remark
