@@ -729,7 +729,7 @@ export default function Home() {
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job No
+                          {activeFilter === "TSO_SERVICE" ? "TSO No" : "Job No"}
                         </div>
                       </div>
                     </th>
@@ -917,7 +917,11 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          {item.job_no ? (
+                          {activeFilter === "TSO_SERVICE" ? (
+                            <p className="text-[#232323] text-base leading-normal">
+                              {item.tso_no || "N/A"}
+                            </p>
+                          ) : item.job_no ? (
                             <p
                               onClick={() => router.push(`/production_planning/${item.job_no}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
