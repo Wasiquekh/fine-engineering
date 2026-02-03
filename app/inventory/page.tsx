@@ -83,6 +83,11 @@ const validationSchema = Yup.object().shape({
         .integer("Job No must be an integer"),
     otherwise: (schema) => schema,
   }),
+  tso_no: Yup.string().when("job_type", {
+    is: "TSO_SERVICE",
+    then: (schema) => schema.required("TSO No is required"),
+    otherwise: (schema) => schema,
+  }),
   job_order_date: Yup.date().required("Job Order Date is required"),
   mtl_rcd_date: Yup.date().required("Material Received Date is required"),
   mtl_challan_no: Yup.number()
@@ -153,6 +158,7 @@ const initialValues = {
   jo_number: "",
   job_category: "",
   job_no: "",
+  tso_no: "",
   job_order_date: "",
   mtl_rcd_date: "",
   mtl_challan_no: "",
@@ -207,6 +213,9 @@ export default function Home() {
 
       if (values.job_type === "JOB_SERVICE") {
         commonData.job_no = Number(values.job_no);
+      } else if (values.job_type === "TSO_SERVICE") {
+        commonData.job_category = values.job_category;
+        commonData.tso_no = values.tso_no;
       } else {
         commonData.job_category = values.job_category;
       }
@@ -258,6 +267,7 @@ export default function Home() {
       payload.job_no = Number(values.job_no);
       payload.sub_type = values.sub_type;
     } else if (values.job_type === "TSO_SERVICE") {
+      payload.tso_no = values.tso_no;
       payload.job_category = values.job_category;
     } else if (values.job_type === "KANBAN") {
       payload.job_category = values.job_category;
@@ -877,6 +887,30 @@ export default function Home() {
                           />
                           <ErrorMessage
                             name="job_no"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+                      )}
+
+                      {/* TSO No - Only for TSO_SERVICE */}
+                      {values.job_type === "TSO_SERVICE" && (
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            TSO No
+                          </p>
+                          <input
+                            type="text"
+                            name="tso_no"
+                            value={values.tso_no}
+                            onChange={(e) =>
+                              setFieldValue("tso_no", e.target.value)
+                            }
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            placeholder="Enter TSO No"
+                          />
+                          <ErrorMessage
+                            name="tso_no"
                             component="div"
                             className="text-red-500 text-sm mt-1"
                           />
