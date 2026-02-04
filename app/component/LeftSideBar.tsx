@@ -9,12 +9,12 @@ import { FaMoneyCheckDollar } from "react-icons/fa6";
 import { BsCreditCard2Back } from "react-icons/bs";
 import { BiSolidUser } from "react-icons/bi";
 import { IoMdSettings } from "react-icons/io";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import StorageManager from "../../provider/StorageManager";
 import AxiosProvider from "../../provider/AxiosProvider";
 import { useRouter } from "next/navigation";
 import { FaChevronDown } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AiOutlineDashboard } from "react-icons/ai";
 import { RiHistoryLine } from "react-icons/ri";
 import { FaUserEdit } from "react-icons/fa";
@@ -31,6 +31,7 @@ const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 const LeftSideBar: React.FC = () => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const permissions = storage.getUserPermissions();
   const hasCustomerView = permissions?.some(
     (perm) => perm.name === "customer.view"
@@ -104,6 +105,13 @@ const LeftSideBar: React.FC = () => {
   const [isProduction1Open, setIsProduction1Open] = useState<boolean>(
     pathname.includes("/production_module")
   );
+  const [isUrgentOpen, setIsUrgentOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const isUrgentPage = pathname.includes("/production_module") && searchParams.get("urgent") === "true";
+    if (isUrgentPage) setIsUrgentOpen(true);
+  }, [pathname, searchParams]);
+
   return (
     <div className="w-full hidden md:w-[17%]  md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0  h-screen fixed top-0 left-0">
       {/* SIDE LEFT BAR TOP SECTION */}
@@ -287,14 +295,40 @@ const LeftSideBar: React.FC = () => {
               />
             </div>
             {isProduction1Open && (
-              <div className="pl-4 flex flex-col gap-1">
-                <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <div className="pl-4 flex flex-col gap-1">
+                  <div
+                    onClick={() => setIsUrgentOpen(!isUrgentOpen)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                  >
                     <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                     <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Urgent</p>
+                    <FaChevronDown
+                      className={`ml-auto w-3 h-3 transition-transform ${
+                        isUrgentOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </div>
-                </Link>
-              </div>
+                  {isUrgentOpen && (
+                    <div className="pl-4 flex flex-col gap-1">
+                      <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                          <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                            Job Service
+                          </p>
+                        </div>
+                      </Link>
+                      <Link href="/production_module_2?filter=TSO_SERVICE&client=Amar%20Equipment&urgent=true">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                            TSO Service
+                          </p>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
             )}
             <Link href="/production/production-2">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
