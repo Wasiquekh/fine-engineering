@@ -184,11 +184,25 @@ export default function Home() {
       });
     }
     if (activeFilter === "TSO_SERVICE") {
-      return currentData.filter((item) => {
+      const tsoData = currentData.filter((item) => {
         if (item.job_type !== "TSO_SERVICE") return false;
         if (tsoSubFilter === "ALL") return true;
         return item.job_category === tsoSubFilter;
       });
+
+      const uniqueTsoData: any[] = [];
+      const seenTsoNos = new Set();
+
+      tsoData.forEach((item) => {
+        if (item.tso_no && !seenTsoNos.has(item.tso_no)) {
+          seenTsoNos.add(item.tso_no);
+          uniqueTsoData.push(item);
+        } else if (!item.tso_no) {
+          uniqueTsoData.push(item);
+        }
+      });
+
+      return uniqueTsoData;
     }
     if (activeFilter === "KANBAN") {
       return currentData.filter((item) => {
@@ -298,13 +312,26 @@ export default function Home() {
     }
 
     try {
-      const response = await axiosProvider.post(
-        `/fineengg_erp/jobs/mark-urgent`,
-        {
+      let response;
+
+      if (activeFilter === "TSO_SERVICE") {
+        const params = new URLSearchParams();
+        params.append("tso_no", selectedJobId);
+        params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
+
+        response = await axiosProvider.post(
+          `/fineengg_erp/jobs/mark-urgent-by-tso`,
+          params,
+          {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
+          }
+        );
+      } else {
+        response = await axiosProvider.post(`/fineengg_erp/jobs/mark-urgent`, {
           job_no: Number(selectedJobId),
           urgent_due_date: urgentDate,
-        }
-      );
+        });
+      }
 
       //Always treat jobs API as source of truth
       if (response.status === 200) {
@@ -918,7 +945,15 @@ export default function Home() {
                       >
                         <td className="px-2 py-2 border border-tableBorder">
                           {activeFilter === "TSO_SERVICE" ? (
-                            <p className="text-[#232323] text-base leading-normal">
+                            <p
+                              onClick={() => router.push(`/tso_details/${item.tso_no}`)}
+                              className={`text-base leading-normal cursor-pointer underline ${
+                                item.urgent_due_date &&
+                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                  ? "text-red-600 hover:text-red-700"
+                                  : "text-blue-600 hover:text-blue-800"
+                              }`}
+                            >
                               {item.tso_no || "N/A"}
                             </p>
                           ) : item.job_no ? (
@@ -990,9 +1025,14 @@ export default function Home() {
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            {activeFilter === "JOB_SERVICE" && (
+                            {(activeFilter === "JOB_SERVICE" ||
+                              (activeFilter === "TSO_SERVICE" && item.tso_no)) && (
                               <button
-                                onClick={() => handleUrgent(item.job_no)}
+                                onClick={() =>
+                                  handleUrgent(
+                                    activeFilter === "TSO_SERVICE" ? item.tso_no : item.job_no
+                                  )
+                                }
                                 className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
                                 title="Mark as Urgent"
                               >
