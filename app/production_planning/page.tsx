@@ -205,11 +205,25 @@ export default function Home() {
       return uniqueTsoData;
     }
     if (activeFilter === "KANBAN") {
-      return currentData.filter((item) => {
+      const kanbanData = currentData.filter((item) => {
         if (item.job_type !== "KANBAN") return false;
         if (kanbanSubFilter === "ALL") return true;
         return item.job_category === kanbanSubFilter;
       });
+
+      const uniqueKanbanData: any[] = [];
+      const seenJoNumbers = new Set();
+
+      kanbanData.forEach((item) => {
+        if (item.jo_number && !seenJoNumbers.has(item.jo_number)) {
+          seenJoNumbers.add(item.jo_number);
+          uniqueKanbanData.push(item);
+        } else if (!item.jo_number) {
+          uniqueKanbanData.push(item);
+        }
+      });
+
+      return uniqueKanbanData;
     }
     if (activeFilter === "ALL") {
       return currentData;
@@ -321,6 +335,18 @@ export default function Home() {
 
         response = await axiosProvider.post(
           `/fineengg_erp/jobs/mark-urgent-by-tso`,
+          params,
+          {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
+          }
+        );
+      } else if (activeFilter === "KANBAN") {
+        const params = new URLSearchParams();
+        params.append("jo_number", selectedJobId);
+        params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
+
+        response = await axiosProvider.post(
+          `/fineengg_erp/jobs/markUrgentByJoNumber`,
           params,
           {
             headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
@@ -756,20 +782,26 @@ export default function Home() {
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          {activeFilter === "TSO_SERVICE" ? "TSO No" : "Job No"}
+                          {activeFilter === "TSO_SERVICE"
+                            ? "TSO No"
+                            : activeFilter === "KANBAN"
+                            ? "J/O Number"
+                            : "Job No"}
                         </div>
                       </div>
                     </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          J/O Number
+                    {activeFilter !== "KANBAN" && (
+                      <th
+                        scope="col"
+                        className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-firstBlack text-base leading-normal">
+                            J/O Number
+                          </div>
                         </div>
-                      </div>
-                    </th>
+                      </th>
+                    )}
                     <th
                       scope="col"
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
@@ -868,7 +900,11 @@ export default function Home() {
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={
+                          currentDataset === "CATEGORIES" ? 10
+                          : activeFilter === "KANBAN" ? 10
+                          : 11
+                        }
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -944,7 +980,18 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          {activeFilter === "TSO_SERVICE" ? (
+                          {activeFilter === "KANBAN" ? (
+                            item.jo_number ? (
+                              <p
+                                onClick={() => router.push(`/kanban_details/${item.jo_number}`)}
+                                className="text-base leading-normal cursor-pointer underline text-blue-600 hover:text-blue-800"
+                              >
+                                {item.jo_number}
+                              </p>
+                            ) : (
+                              <p className="text-[#232323] text-base leading-normal">N/A</p>
+                            )
+                          ) : activeFilter === "TSO_SERVICE" ? (
                             <p
                               onClick={() => router.push(`/tso_details/${item.tso_no}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
@@ -972,11 +1019,13 @@ export default function Home() {
                             <p className="text-[#232323] text-base leading-normal">N/A</p>
                           )}
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.jo_number || "N/A"}
-                          </p>
-                        </td>
+                        {activeFilter !== "KANBAN" && (
+                          <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                            <p className="text-[#232323] text-base leading-normal">
+                              {item.jo_number || "N/A"}
+                            </p>
+                          </td>
+                        )}
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
                             {item.job_type}
@@ -1025,12 +1074,15 @@ export default function Home() {
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            {(activeFilter === "JOB_SERVICE" ||
-                              (activeFilter === "TSO_SERVICE" && item.tso_no)) && (
+                            {(activeFilter === "JOB_SERVICE" || (activeFilter === "TSO_SERVICE" && item.tso_no) || (activeFilter === "KANBAN" && item.jo_number)) && (
                               <button
                                 onClick={() =>
                                   handleUrgent(
-                                    activeFilter === "TSO_SERVICE" ? item.tso_no : item.job_no
+                                    activeFilter === "TSO_SERVICE"
+                                      ? item.tso_no
+                                      : activeFilter === "KANBAN"
+                                      ? item.jo_number
+                                      : item.job_no
                                   )
                                 }
                                 className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
