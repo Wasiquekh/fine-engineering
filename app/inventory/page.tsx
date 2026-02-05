@@ -53,6 +53,11 @@ const kanbanCategory = [
   { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
 
+const kanbanJobCatOptions = [
+  { value: "MinMax", label: "MinMax" },
+  { value: "Kanban", label: "Kanban" },
+];
+
 const jobServiceSubTypeOptions = [
   { value: "PARTIAL", label: "Partial" },
   { value: "ASSEMBLY", label: "Assembly" },
@@ -72,6 +77,11 @@ const validationSchema = Yup.object().shape({
       job_type === "TSO_SERVICE" || job_type === "KANBAN",
     then: (schema) => schema.required("Job Category is required"),
     otherwise: (schema) => schema,
+  }),
+  kanban_job_cat: Yup.string().when("job_type", {
+    is: "KANBAN",
+    then: (schema) => schema.required("Kanban Job Category is required"),
+    otherwise: (schema) => schema.notRequired(),
   }),
   job_no: Yup.number().when("job_type", {
     is: "JOB_SERVICE",
@@ -159,6 +169,7 @@ const initialValues = {
   job_category: "",
   job_no: "",
   tso_no: "",
+  kanban_job_cat:"",
   job_order_date: "",
   mtl_rcd_date: "",
   mtl_challan_no: "",
@@ -218,6 +229,7 @@ export default function Home() {
         commonData.tso_no = values.tso_no;
       } else {
         commonData.job_category = values.job_category;
+        commonData.kanban_job_cat = values.kanban_job_cat;
       }
 
       const bulkPayload = {
@@ -272,6 +284,7 @@ export default function Home() {
     } else if (values.job_type === "KANBAN") {
       payload.job_category = values.job_category;
       payload.item_no = null;
+      payload.kanban_job_cat = values.kanban_job_cat;
     }
 
     try {
@@ -922,21 +935,38 @@ export default function Home() {
                         values.job_type === "KANBAN") && (
                         <div className="w-full">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Job Category
+                            {values.job_type === "KANBAN" ? "Product Category" : "Job Category"}
                           </p>
                           <SelectInput
                             name="job_category"
                             value={values.job_category}
                             setFieldValue={setFieldValue}
                             options={getCategoryOptions(values.job_type)}
-                            placeholder={`Select ${
-                              values.job_type === "TSO_SERVICE"
-                                ? "TSO Service"
-                                : "Kanban"
-                            } Category`}
+                            placeholder={values.job_type === "KANBAN" ? "Select Product Category" : "Select TSO Service Category"}
                           />
                           <ErrorMessage
                             name="job_category"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+                      )}
+
+                      {/* Kanban Job Category - Only for KANBAN */}
+                      {values.job_type === "KANBAN" && (
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Kanban Job Category
+                          </p>
+                          <SelectInput
+                            name="kanban_job_cat"
+                            value={values.kanban_job_cat}
+                            setFieldValue={setFieldValue}
+                            options={kanbanJobCatOptions}
+                            placeholder="Select Kanban Job Category"
+                          />
+                          <ErrorMessage
+                            name="kanban_job_cat"
                             component="div"
                             className="text-red-500 text-sm mt-1"
                           />
