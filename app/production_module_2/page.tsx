@@ -176,11 +176,25 @@ export default function Home() {
       });
     }
     if (activeFilter === "TSO_SERVICE") {
-      return currentData.filter((item) => {
+      const tsoData = currentData.filter((item) => {
         if (item.job_type !== "TSO_SERVICE") return false;
         if (tsoSubFilter === "ALL") return true;
         return item.job_category === tsoSubFilter;
       });
+
+      const uniqueTsoData: any[] = [];
+      const seenTsoNos = new Set();
+
+      tsoData.forEach((item) => {
+        if (item.tso_no && !seenTsoNos.has(item.tso_no)) {
+          seenTsoNos.add(item.tso_no);
+          uniqueTsoData.push(item);
+        } else if (!item.tso_no) {
+          uniqueTsoData.push(item);
+        }
+      });
+
+      return uniqueTsoData;
     }
     if (activeFilter === "KANBAN") {
       return currentData.filter((item) => {
@@ -899,7 +913,7 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder">
                           {activeFilter === "TSO_SERVICE" ? (
                             <p
-                              onClick={() => router.push(`/tso_details/${item.tso_no}`)}
+                              onClick={() => router.push(`/production_module_2/${item.tso_no}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent_due_date &&
                                 new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))

@@ -13,7 +13,7 @@ const axiosProvider = new AxiosProvider();
 
 interface JobDetail {
   id: string;
-  job_no: number;
+  tso_no: number;
   jo_number: string;
   job_type: string;
   job_category: string;
@@ -35,7 +35,7 @@ export default function JobDetailsPage() {
   }>({});
   const params = useParams();
   const router = useRouter();
-  const job_no = params.job_no as string;
+  const tso_no = params.tso_no as string;
 
   const uniqueJobDetails = useMemo(() => {
     const seen = new Set();
@@ -48,11 +48,11 @@ export default function JobDetailsPage() {
   }, [jobDetails]);
 
   useEffect(() => {
-    if (job_no) {
+    if (tso_no) {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?job_no=${job_no}`);
+          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?tso_no=${tso_no}`);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
@@ -83,7 +83,7 @@ export default function JobDetailsPage() {
       };
       fetchData();
     }
-  }, [job_no]);
+  }, [tso_no]);
 
   const handleAssignmentChange = (id: string, field: string, value: string) => {
     setAssignments((prev) => ({
@@ -196,7 +196,7 @@ export default function JobDetailsPage() {
                           <td className="px-2 py-2 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
-                                href={`/machine_category/${item.jo_number}`}
+                                href={`/machine_category(tso)/${item.jo_number}`}
                                 className="text-blue-600 hover:underline"
                               >
                                 {item.jo_number}

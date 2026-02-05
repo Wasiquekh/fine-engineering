@@ -58,7 +58,7 @@ export default function JoNumberPage() {
     setLoading(true);
     try {
       const response = await axiosProvider.get(
-        `/fineengg_erp/jobs?job_type=JOB_SERVICE&jo_number=${jo_number}`
+        `/fineengg_erp/jobs?job_type=TSO_SERVICE&jo_number=${jo_number}`
       );
       if (response.data && Array.isArray(response.data.data)) {
         const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
