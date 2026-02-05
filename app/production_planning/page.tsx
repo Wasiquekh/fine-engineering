@@ -346,7 +346,7 @@ export default function Home() {
         params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
 
         response = await axiosProvider.post(
-          `/fineengg_erp/jobs/markUrgentByJoNumber`,
+          `/fineengg_erp/jobs/mark-urgent-by-jo-number`,
           params,
           {
             headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
