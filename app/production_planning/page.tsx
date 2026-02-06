@@ -186,6 +186,9 @@ export default function Home() {
     if (activeFilter === "TSO_SERVICE") {
       const tsoData = currentData.filter((item) => {
         if (item.job_type !== "TSO_SERVICE") return false;
+        if (tsoSubFilter === "URGENT_TAB") {
+          return item.urgent || item.is_urgent;
+        }
         if (tsoSubFilter === "ALL") return true;
         return item.job_category === tsoSubFilter;
       });
@@ -207,6 +210,9 @@ export default function Home() {
     if (activeFilter === "KANBAN") {
       const kanbanData = currentData.filter((item) => {
         if (item.job_type !== "KANBAN") return false;
+        if (kanbanSubFilter === "URGENT_TAB") {
+          return item.urgent || item.is_urgent;
+        }
         if (kanbanSubFilter === "ALL") return true;
         return item.job_category === kanbanSubFilter;
       });
@@ -614,6 +620,16 @@ export default function Home() {
                         {cat.label}
                       </button>
                     ))}
+                    <button
+                      onClick={() => setTsoSubFilter("URGENT_TAB")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        tsoSubFilter === "URGENT_TAB"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Urgent
+                    </button>
                   </div>
                 )}
                 {/* Kanban Tabs */}
@@ -642,6 +658,16 @@ export default function Home() {
                         {cat.label}
                       </button>
                     ))}
+                    <button
+                      onClick={() => setKanbanSubFilter("URGENT_TAB")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        kanbanSubFilter === "URGENT_TAB"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Urgent
+                    </button>
                   </div>
                 )}
                 {/* Job Service Tabs */}
