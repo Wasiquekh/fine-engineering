@@ -326,6 +326,14 @@ const LeftSideBar: React.FC = () => {
                           </p>
                         </div>
                       </Link>
+                      <Link href="/production_module_3?filter=KANBAN&client=Amar%20Equipment&urgent=true">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                            Kanban
+                          </p>
+                        </div>
+                      </Link>
                     </div>
                   )}
                 </div>
