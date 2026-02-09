@@ -7,7 +7,8 @@ import { toast } from "react-toastify";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import Image from "next/image";
-import { FaChevronDown } from "react-icons/fa";
+import { FaChevronDown, FaTimesCircle } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
 
@@ -28,6 +29,7 @@ interface JobDetail {
   assign_date?: string;
   product_desc?: string;
   product_qty?: number;
+  is_rejected?: boolean;
 }
 
 interface CategoryDetail {
@@ -193,6 +195,33 @@ export default function JobDetailsPage() {
     } catch (error) {
       console.error("Error assigning job:", error);
       toast.error("Failed to assign job");
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to reject this job?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, reject it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axiosProvider.post(`/fineengg_erp/jobs/${id}/reject`, {});
+        toast.success("Job rejected successfully");
+
+        setJobDetails((prev) =>
+          prev.map((job) => (job.id === id ? { ...job, is_rejected: true } : job))
+        );
+      } catch (error) {
+        console.error("Error rejecting job:", error);
+        toast.error("Failed to reject job");
+      }
     }
   };
 
@@ -451,19 +480,30 @@ export default function JobDetailsPage() {
                                   />
                                 </td>
                                 <td className="px-2 py-2 border border-tableBorder">
-                                  <button
-                                    onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
-                                    disabled={!!item.assign_to || !item.urgent}
-                                    className={`px-3 py-1 rounded text-sm transition-colors text-white ${
-                                      item.assign_to
-                                        ? "bg-green-600 cursor-default"
-                                        : !item.urgent
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-blue-600 hover:bg-blue-700"
-                                    }`}
-                                  >
-                                    {item.assign_to ? "Assigned" : "Assign"}
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
+                                      disabled={!!item.assign_to || !item.urgent}
+                                      className={`px-3 py-1 rounded text-sm transition-colors text-white ${
+                                        item.assign_to
+                                          ? "bg-green-600 cursor-default"
+                                          : !item.urgent
+                                          ? "bg-gray-400 cursor-not-allowed"
+                                          : "bg-blue-600 hover:bg-blue-700"
+                                      }`}
+                                    >
+                                      {item.assign_to ? "Assigned" : "Assign"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleReject(item.id)}
+                                      className={`text-xl ${
+                                        item.is_rejected ? "text-red-500" : "text-orange-500 hover:text-red-600"
+                                      }`}
+                                      title="Reject"
+                                    >
+                                      <FaTimesCircle />
+                                    </button>
+                                  </div>
                                 </td>
                               </>
                             ) : (
