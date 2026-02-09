@@ -32,7 +32,7 @@ export default function Home() {
 
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.post(`/fineengg_erp/jobs/${id}/approve`);
+        const response = await axiosProvider.post(`/fineengg_erp/jobs/${id}/approve`, {});
 
         if (response.data.success) {
           toast.success("Job approved successfully");
