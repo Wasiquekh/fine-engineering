@@ -23,6 +23,7 @@ interface JobData {
   qty: number;
   moc: string;
   bin_location: string;
+  is_approved: boolean | number;
 }
 
 interface AssignedJob {
@@ -446,7 +447,7 @@ export default function JoNumberPage() {
                 )}
               <button
                 className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`}
-                disabled={!selectedSerialNo || !worker || !selectedQuantity}
+                disabled={!selectedSerialNo || !worker || !selectedQuantity || !selectedJob?.is_approved}
                 onClick={handleAssign}
               >
                 Assign
