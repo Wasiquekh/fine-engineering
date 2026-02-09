@@ -182,7 +182,7 @@ const LeftSideBar: React.FC = () => {
                     <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Inventory</p>
                   </div>
                 </Link>
-                <Link href="/inventory">
+                <Link href="/inventory_material_approve">
                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                     <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                     <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Approved</p>
