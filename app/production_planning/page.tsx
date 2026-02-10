@@ -1010,7 +1010,11 @@ export default function Home() {
                             item.jo_number ? (
                               <p
                                 onClick={() => router.push(`/kanban_details/${item.jo_number}`)}
-                                className="text-base leading-normal cursor-pointer underline text-blue-600 hover:text-blue-800"
+                                className={`text-base leading-normal cursor-pointer underline ${
+                                  item.urgent
+                                    ? "text-red-600 hover:text-red-700"
+                                    : "text-blue-600 hover:text-blue-800"
+                                }`}
                               >
                                 {item.jo_number}
                               </p>
@@ -1021,8 +1025,7 @@ export default function Home() {
                             <p
                               onClick={() => router.push(`/tso_details/${item.tso_no}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent_due_date &&
-                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                item.urgent
                                   ? "text-red-600 hover:text-red-700"
                                   : "text-blue-600 hover:text-blue-800"
                               }`}
@@ -1033,8 +1036,7 @@ export default function Home() {
                             <p
                               onClick={() => router.push(`/production_planning/${item.job_no}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent_due_date &&
-                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                item.urgent
                                   ? "text-red-600 hover:text-red-700"
                                   : "text-blue-600 hover:text-blue-800"
                               }`}
