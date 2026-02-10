@@ -873,28 +873,6 @@ export default function Home() {
                         />
                       </div>
 
-                      {/* J/O Number */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          J/O Number
-                        </p>
-                        <input
-                          type="number"
-                          name="jo_number"
-                          value={values.jo_number}
-                          onChange={(e) =>
-                            setFieldValue("jo_number", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter J/O Number"
-                        />
-                        <ErrorMessage
-                          name="jo_number"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
                       {/* Job No - Only for JOB_SERVICE */}
                       {values.job_type === "JOB_SERVICE" && (
                         <div className="w-full">
@@ -942,6 +920,28 @@ export default function Home() {
                           />
                         </div>
                       )}
+
+                      {/* J/O Number */}
+                      <div className="w-full">
+                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          J/O Number
+                        </p>
+                        <input
+                          type="number"
+                          name="jo_number"
+                          value={values.jo_number}
+                          onChange={(e) =>
+                            setFieldValue("jo_number", e.target.value)
+                          }
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          placeholder="Enter J/O Number"
+                        />
+                        <ErrorMessage
+                          name="jo_number"
+                          component="div"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
 
                       {/* Job Category - Only for TSO_SERVICE and KANBAN */}
                       { (values.job_type === "TSO_SERVICE" ||
