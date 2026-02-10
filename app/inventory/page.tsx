@@ -356,6 +356,9 @@ export default function Home() {
 
   const filteredData = useMemo(() => {
     if (activeFilter === "ALL") return data;
+    if (activeFilter === "REJECTED") {
+      return data.filter((item: any) => item.is_rejected || item.rejected);
+    }
     return data.filter((item: any) => item.job_type === activeFilter);
   }, [data, activeFilter]);
 
@@ -512,11 +515,21 @@ export default function Home() {
                   >
                     Kanban
                   </button>
+                  <button
+                    onClick={() => setActiveFilter("REJECTED")}
+                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeFilter === "REJECTED"
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    Rejected
+                  </button>
                 </div>
                 <div className="flex justify-center items-center gap-4">
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
+                      className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
                       onClick={() => setJobServiceDropdownOpen(!isJobServiceDropdownOpen)}
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
@@ -544,7 +557,7 @@ export default function Home() {
                   </div>
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
+                      className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
                       onClick={() => setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)}
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
@@ -572,7 +585,7 @@ export default function Home() {
                   </div>
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
+                      className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
                       onClick={() => setKanbanDropdownOpen(!isKanbanDropdownOpen)}
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
