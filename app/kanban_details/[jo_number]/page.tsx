@@ -7,7 +7,8 @@ import { toast } from "react-toastify";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import Image from "next/image";
-import { FaChevronDown } from "react-icons/fa";
+import { FaChevronDown, FaBan } from "react-icons/fa";
+import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
 
@@ -28,6 +29,8 @@ interface JobDetail {
   assign_date?: string;
   product_desc?: string;
   product_qty?: number;
+  is_rejected?: boolean | number;
+  rejected?: boolean | number;
 }
 
 export default function JobDetailsPage() {
@@ -149,6 +152,33 @@ export default function JobDetailsPage() {
     }
   };
 
+  const handleReject = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to reject this job?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, reject it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axiosProvider.post(`/fineengg_erp/jobs/${id}/reject`, {});
+        toast.success("Job rejected successfully");
+
+        setJobDetails((prev) =>
+          prev.map((job) => (job.id === id ? { ...job, is_rejected: true } : job))
+        );
+      } catch (error) {
+        console.error("Error rejecting job:", error);
+        toast.error("Failed to reject job");
+      }
+    }
+  };
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -209,8 +239,10 @@ export default function JobDetailsPage() {
                         const isExpanded = expandedJoNumbers.includes(joNumber);
                         const hasMultiple = jobs.length > 1;
 
-                        const renderJobRow = (item: JobDetail, isFirst: boolean) => (
-                          <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                        const renderJobRow = (item: JobDetail, isFirst: boolean) => {
+                          const isRejected = item.is_rejected || item.rejected;
+                          return (
+                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                             <td className="px-2 py-2 border border-tableBorder">
                               {isFirst && (
                                 <div className="flex items-center gap-2">
@@ -232,10 +264,9 @@ export default function JobDetailsPage() {
                             <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
-                            {isFirst ? (
-                              <>
+                            
                                 <td className="px-2 py-2 border border-tableBorder">
-                                  {assignments[item.id]?.assignTo === "Others" ? (
+                                  {isFirst && (assignments[item.id]?.assignTo === "Others" ? (
                                     <div className="flex items-center gap-1">
                                       <input
                                         type="text"
@@ -280,9 +311,10 @@ export default function JobDetailsPage() {
                                       <option value="Ramzaan">Ramzaan</option>
                                       <option value="Others">Others</option>
                                     </select>
-                                  )}
+                                  ))}
                                 </td>
                                 <td className="px-2 py-2 border border-tableBorder">
+                                  {isFirst && (
                                   <input
                                     type="date"
                                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
@@ -290,28 +322,44 @@ export default function JobDetailsPage() {
                                     onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
                                     disabled={!!item.assign_to || !item.urgent}
                                   />
+                                  )}
                                 </td>
                                 <td className="px-2 py-2 border border-tableBorder">
-                                  <button
-                                    onClick={() => !item.assign_to && item.urgent && handleAssign(item.id)}
-                                    disabled={!!item.assign_to || !item.urgent}
-                                    className={`px-3 py-1 rounded text-sm transition-colors text-white ${
-                                      item.assign_to
-                                        ? "bg-green-600 cursor-default"
-                                        : !item.urgent
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-blue-600 hover:bg-blue-700"
-                                    }`}
-                                  >
-                                    {item.assign_to ? "Assigned" : "Assign"}
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    {isFirst && (
+                                      <button
+                                        onClick={() => !item.assign_to && item.urgent && !isRejected && handleAssign(item.id)}
+                                        disabled={!!item.assign_to || !item.urgent || !!isRejected}
+                                        className={`px-3 py-1 rounded text-sm transition-colors text-white ${
+                                          item.assign_to
+                                            ? "bg-green-600 cursor-default"
+                                            : !item.urgent || isRejected
+                                            ? "bg-gray-400 cursor-not-allowed"
+                                            : "bg-blue-600 hover:bg-blue-700"
+                                        }`}
+                                      >
+                                        {item.assign_to ? "Assigned" : "Assign"}
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => !item.assign_to && !isRejected && handleReject(item.id)}
+                                      disabled={!!item.assign_to || !!isRejected}
+                                      className={`p-2 rounded-md transition-colors ${
+                                        isRejected
+                                          ? "bg-red-200 text-red-800 cursor-not-allowed"
+                                          : !!item.assign_to
+                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
+                                          : "bg-red-100 text-red-600 hover:bg-red-200"
+                                      }`}
+                                      title={isRejected ? "Rejected" : "Reject"}
+                                    >
+                                      <FaBan className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </td>
-                              </>
-                            ) : (
-                              <td colSpan={3} className="px-2 py-2 border border-tableBorder"></td>
-                            )}
                           </tr>
                         );
+                        }
 
                         const rows = [renderJobRow(jobs[0], true)];
                         if (hasMultiple && isExpanded) {
