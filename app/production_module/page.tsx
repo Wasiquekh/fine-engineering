@@ -56,14 +56,9 @@ const validationSchema = Yup.object().shape({
     then: (schema) => schema.required("Job Category is required"),
     otherwise: (schema) => schema,
   }),
-  job_no: Yup.number().when("job_type", {
+  job_no: Yup.string().when("job_type", {
     is: "JOB_SERVICE",
-    then: (schema) =>
-      schema
-        .required("Job No is required")
-        .typeError("Job No must be a number")
-        .positive("Job No must be positive")
-        .integer("Job No must be an integer"),
+    then: (schema) => schema.required("Job No is required"),
     otherwise: (schema) => schema,
   }),
   job_order_date: Yup.date().required("Job Order Date is required"),
@@ -121,7 +116,7 @@ export default function Home() {
   const [isUrgentModalOpen, setUrgentModalOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [urgentDate, setUrgentDate] = useState<string>("");
-  const [usmaanJobNos, setUsmaanJobNos] = useState<number[]>([]);
+  const [usmaanJobNos, setUsmaanJobNos] = useState<string[]>([]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -225,7 +220,7 @@ export default function Home() {
     };
     // Add conditional fields
       if (values.job_type === "JOB_SERVICE") {
-        payload.job_no = Number(values.job_no);
+        payload.job_no = values.job_no;
       } else if (values.job_type === "TSO_SERVICE") {
         payload.job_category = values.job_category;
       } else if (values.job_type === "KANBAN") {
@@ -1051,7 +1046,7 @@ export default function Home() {
                             Job No
                           </p>
                           <input
-                            type="number"
+                            type="text"
                             name="job_no"
                             value={values.job_no}
                             onChange={(e) =>
