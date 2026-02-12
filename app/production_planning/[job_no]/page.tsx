@@ -14,7 +14,7 @@ const axiosProvider = new AxiosProvider();
 
 interface JobDetail {
   id: string;
-  job_no: number;
+  job_no: string;
   jo_number: string;
   job_type: string;
   job_category: string;
@@ -51,7 +51,7 @@ interface CategoryDetail {
 
 interface PendingMaterial {
   id: string;
-  job_no: number;
+  job_no: string;
   item_no: number;
   size: string;
   moc: string;
@@ -98,8 +98,8 @@ export default function JobDetailsPage() {
         setLoading(true);
         try {
           const [jobsResponse, pendingResponse, categoriesResponse] = await Promise.all([
-            axiosProvider.get(`/fineengg_erp/jobs?job_no=${job_no}`),
-            axiosProvider.get(`/fineengg_erp/pending-materials?job_no=${job_no}`),
+            axiosProvider.get(`/fineengg_erp/jobs?job_no=${encodeURIComponent(job_no)}`),
+            axiosProvider.get(`/fineengg_erp/pending-materials?job_no=${encodeURIComponent(job_no)}`),
             axiosProvider.get(`/fineengg_erp/categories`),
           ]);
 
@@ -131,7 +131,7 @@ export default function JobDetailsPage() {
 
           if (categoriesResponse.data && Array.isArray(categoriesResponse.data.data)) {
             const allCategories = categoriesResponse.data.data;
-            const filteredCategories = allCategories.filter((cat: CategoryDetail) => Number(cat.job_no) === Number(job_no));
+            const filteredCategories = allCategories.filter((cat: CategoryDetail) => String(cat.job_no) === String(job_no));
             setCategoryDetails(filteredCategories);
           } else {
             setCategoryDetails([]);

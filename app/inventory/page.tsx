@@ -67,11 +67,7 @@ const jobServiceSubTypeOptions = [
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
   client_name: Yup.string().required("Client Name is required"),
-  jo_number: Yup.number()
-    .required("J/O Number is required")
-    .typeError("J/O Number must be a number")
-    .positive("J/O Number must be positive")
-    .integer("J/O Number must be an integer"),
+  jo_number: Yup.string().required("J/O Number is required"),
   job_category: Yup.string().when("job_type", {
     is: (job_type: string) =>
       job_type === "TSO_SERVICE" || job_type === "KANBAN",
@@ -83,14 +79,10 @@ const validationSchema = Yup.object().shape({
     then: (schema) => schema.required("Kanban Job Category is required"),
     otherwise: (schema) => schema.notRequired(),
   }),
-  job_no: Yup.number().when("job_type", {
+  job_no: Yup.string().when("job_type", {
     is: "JOB_SERVICE",
     then: (schema) =>
-      schema
-        .required("Job No is required")
-        .typeError("Job No must be a number")
-        .positive("Job No must be positive")
-        .integer("Job No must be an integer"),
+      schema.required("Job No is required"),
     otherwise: (schema) => schema,
   }),
   tso_no: Yup.string().when("job_type", {
@@ -213,7 +205,7 @@ export default function Home() {
     if (values.sub_type === "ASSEMBLY") {
       const commonData: any = {
           job_type: values.job_type,
-          jo_number: Number(values.jo_number),
+          jo_number: values.jo_number,
           job_order_date: formatDate(values.job_order_date),
           mtl_rcd_date: formatDate(values.mtl_rcd_date),
           mtl_challan_no: Number(values.mtl_challan_no),
@@ -223,7 +215,7 @@ export default function Home() {
       };
 
       if (values.job_type === "JOB_SERVICE") {
-        commonData.job_no = Number(values.job_no);
+        commonData.job_no = values.job_no;
       } else if (values.job_type === "TSO_SERVICE") {
         commonData.job_category = values.job_category;
         commonData.tso_no = values.tso_no;
@@ -260,7 +252,7 @@ export default function Home() {
     let payload: any = {
       job_type: values.job_type,
       client_name: values.client_name,
-      jo_number: Number(values.jo_number),
+      jo_number: values.jo_number,
       job_order_date: formatDate(values.job_order_date),
       mtl_rcd_date: formatDate(values.mtl_rcd_date),
       mtl_challan_no: Number(values.mtl_challan_no),
@@ -276,7 +268,7 @@ export default function Home() {
 
     // Add conditional fields
     if (values.job_type === "JOB_SERVICE") {
-      payload.job_no = Number(values.job_no);
+      payload.job_no = values.job_no;
       payload.sub_type = values.sub_type;
     } else if (values.job_type === "TSO_SERVICE") {
       payload.tso_no = values.tso_no;
@@ -880,7 +872,7 @@ export default function Home() {
                             Job No
                           </p>
                           <input
-                            type="number"
+                            type="text"
                             name="job_no"
                             value={values.job_no}
                             onChange={(e) =>
@@ -927,7 +919,7 @@ export default function Home() {
                           J/O Number
                         </p>
                         <input
-                          type="number"
+                          type="text"
                           name="jo_number"
                           value={values.jo_number}
                           onChange={(e) =>
