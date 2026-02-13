@@ -71,7 +71,7 @@ export default function JobDetailsPage() {
   const [expandedJoNumbers, setExpandedJoNumbers] = useState<string[]>([]);
   const params = useParams();
   const router = useRouter();
-  const job_no = params.job_no as string;
+  const job_no = params.job_no ? decodeURIComponent(params.job_no as string) : "";
 
   const groupedJobDetails = useMemo(() => {
     return jobDetails.reduce((acc, job) => {

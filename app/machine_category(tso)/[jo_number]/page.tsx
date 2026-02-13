@@ -42,7 +42,8 @@ interface AssignedJob {
 export default function JoNumberPage() {
   const params = useParams();
   const router = useRouter();
-  const jo_number = Array.isArray(params.jo_number) ? params.jo_number[0] : params.jo_number;
+  const raw_jo_number = Array.isArray(params.jo_number) ? params.jo_number[0] : params.jo_number;
+  const jo_number = raw_jo_number ? decodeURIComponent(raw_jo_number) : "";
 
   const [selectedOption, setSelectedOption] = useState("");
   const [machineSize, setMachineSize] = useState("");
@@ -59,7 +60,7 @@ export default function JoNumberPage() {
     setLoading(true);
     try {
       const response = await axiosProvider.get(
-        `/fineengg_erp/jobs?job_type=TSO_SERVICE&jo_number=${jo_number}`
+        `/fineengg_erp/jobs?job_type=TSO_SERVICE&jo_number=${encodeURIComponent(jo_number)}`
       );
       if (response.data && Array.isArray(response.data.data)) {
         const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
