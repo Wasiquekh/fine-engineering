@@ -531,14 +531,14 @@ export default function Home() {
                         >
                           <td className="px-2 py-2 border border-tableBorder">
                             <p
-                              onClick={() => router.push(`/production_module_3/${item.jo_number}`)}
+                            onClick={() => router.push(`/production_module_3/${encodeURIComponent(item.job_no)}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent || item.is_urgent
                                   ? "text-red-600 hover:text-red-800"
                                   : "text-blue-600 hover:text-blue-800"
                               }`}
                             >
-                              {item.job_no}
+                            {item.job_no || item.jo_number}
                             </p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
@@ -583,7 +583,7 @@ export default function Home() {
                           <td className="px-2 py-2 border border-tableBorder">
                             {item.job_no ? (
                               <p
-                                onClick={() => router.push(`/production_module/${item.job_no}`)}
+                              onClick={() => router.push(`/production_planning/${encodeURIComponent(item.job_no)}`)}
                                 className={`text-base leading-normal cursor-pointer underline ${
                                   item.urgent_due_date &&
                                   new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
@@ -601,7 +601,7 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           {activeFilter === "KANBAN" && item.jo_number ? (
                             <p
-                              onClick={() => router.push(`/production_module_3/${item.jo_number}`)}
+                              onClick={() => router.push(`/kanban_details/${encodeURIComponent(item.jo_number)}`)}
                               className="text-base leading-normal cursor-pointer underline text-blue-600 hover:text-blue-800"
                             >
                               {item.jo_number}

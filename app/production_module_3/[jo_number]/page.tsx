@@ -196,7 +196,7 @@ export default function JobDetailsPage() {
                           <td className="px-2 py-2 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
-                                href={`/machine_category(kanban)/${item.jo_number}`}
+                                href={`/machine_category(kanban)/${encodeURIComponent(item.jo_number)}`}
                                 className="text-blue-600 hover:underline"
                               >
                                 {item.jo_number}
