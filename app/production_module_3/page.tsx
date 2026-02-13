@@ -1,29 +1,12 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState, useMemo } from "react";
-import { FiFilter } from "react-icons/fi";
-import { IoCloseOutline } from "react-icons/io5";
-import { HiTrash, HiLightningBolt } from "react-icons/hi";
-import StorageManager from "../../provider/StorageManager";
+import { useEffect, useState, useMemo, useRef } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "react-toastify";
 import DesktopHeader from "../component/DesktopHeader";
-import { Formik, Form, ErrorMessage } from "formik";
-import * as Yup from "yup";
-import SelectInput from "../component/SelectInput";
-import DatePickerInput from "../component/DatePickerInput";
 import AxiosProvider from "../../provider/AxiosProvider";
-import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
-
-// Options for Job Type
-const jobTypeOptions = [
-  { value: "JOB_SERVICE", label: "Job Service" },
-  { value: "TSO_SERVICE", label: "TSO Service" },
-  { value: "KANBAN", label: "Kanban" },
-];
 
 // Options for TSO Service Category
 const tsoServiceCategory = [
@@ -47,65 +30,7 @@ const kanbanCategory = [
   { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
 
-// Validation Schema for Jobs form
-const validationSchema = Yup.object().shape({
-  job_type: Yup.string().required("Job Type is required"),
-  job_category: Yup.string().when("job_type", {
-    is: (job_type: string) =>
-      job_type === "TSO_SERVICE" || job_type === "KANBAN",
-    then: (schema) => schema.required("Job Category is required"),
-    otherwise: (schema) => schema,
-  }),
-  job_no: Yup.string().when("job_type", {
-    is: "JOB_SERVICE",
-    then: (schema) => schema.required("Job No is required"),
-    otherwise: (schema) => schema,
-  }),
-  job_order_date: Yup.date().required("Job Order Date is required"),
-  mtl_rcd_date: Yup.date().required("Material Received Date is required"),
-  mtl_challan_no: Yup.number()
-    .required("Material Challan No is required")
-    .typeError("Material Challan No must be a number")
-    .positive("Material Challan No must be positive")
-    .integer("Material Challan No must be an integer"),
-  item_description: Yup.string().required("Item Description is required"),
-  item_no: Yup.number()
-    .required("Item No is required")
-    .typeError("Item No must be a number")
-    .positive("Item No must be positive")
-    .integer("Item No must be an integer"),
-  qty: Yup.number()
-    .required("Quantity is required")
-    .typeError("Quantity must be a number")
-    .positive("Quantity must be positive"),
-  size: Yup.string(),
-  moc: Yup.string().required("MOC is required"),
-  remark: Yup.string(),
-  bin_location: Yup.string().required("Bin Location is required"),
-  material_remark: Yup.string(),
-});
-
-// Initial form values for Jobs
-const initialValues = {
-  job_type: "",
-  job_category: "",
-  job_no: "",
-  // serial_no: "",
-  job_order_date: "",
-  mtl_rcd_date: "",
-  mtl_challan_no: "",
-  item_description: "",
-  item_no: "",
-  qty: "",
-  moc: "",
-  remark: "",
-  bin_location: "",
-  material_remark: "",
-};
-
 export default function Home() {
-  const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
-  const [flyoutType, setFlyoutType] = useState<"JOB_SERVICE" | "TSO_SERVICE" | "KANBAN">("JOB_SERVICE");
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [currentDataset, setCurrentDataset] = useState<"JOBS" | "CATEGORIES">("JOBS");
@@ -113,10 +38,8 @@ export default function Home() {
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
-  const [isUrgentModalOpen, setUrgentModalOpen] = useState(false);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [urgentDate, setUrgentDate] = useState<string>("");
   const [usmaanJobNos, setUsmaanJobNos] = useState<string[]>([]);
+  const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -203,171 +126,6 @@ export default function Home() {
     return currentData.filter((item) => item.job_type === activeFilter);
   }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam, usmaanJobNos]);
 
-  const handleSubmit = async (values: any) => {
-    // Format dates to YYYY-MM-DD format
-    const formatDate = (date: any) => {
-      if (!date) return null;
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
-    let payload: any = {};
-
-    // Create payload based on job type
-    payload = {
-        job_type: values.job_type,
-        item_no: Number(values.item_no),
-        qty: Number(values.qty),
-        moc: values.moc,
-        remark: values.remark || "",
-        // serial_no: Number(values.serial_no),
-        job_order_date: formatDate(values.job_order_date),
-        mtl_rcd_date: formatDate(values.mtl_rcd_date),
-        mtl_challan_no: Number(values.mtl_challan_no),
-        item_description: values.item_description,
-        bin_location: values.bin_location,
-        material_remark: values.material_remark || "",
-    };
-    // Add conditional fields
-      if (values.job_type === "JOB_SERVICE") {
-        payload.job_no = values.job_no;
-      } else if (values.job_type === "TSO_SERVICE") {
-        payload.job_category = values.job_category;
-      } else if (values.job_type === "KANBAN") {
-        payload.job_category = values.job_category;
-      }
-
-    try {
-      const response = await axiosProvider.post("/fineengg_erp/jobs", payload);
-
-      // Different success messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.success("Job Service added successfully");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.success("TSO Service added successfully");
-      } else if (values.job_type === "KANBAN") {
-        toast.success("Kanban added successfully");
-      }
-
-      fetchData();
-      setFlyoutOpen(false);
-    } catch (error: any) {
-      console.error("Error saving job:", error);
-
-      // Different error messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.error("Failed to add Job Service");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.error("Failed to add TSO Service");
-      } else if (values.job_type === "KANBAN") {
-        toast.error("Failed to add Kanban");
-      }
-    }
-  };
-
-  const handleUrgent = (job_no: string | number) => {
-    setSelectedJobId(String(job_no));
-    setUrgentDate("");
-    setUrgentModalOpen(true);
-  };
-
-  const submitUrgent = async () => {
-    if (!selectedJobId || !urgentDate) {
-      toast.error("Please select a due date");
-      return;
-    }
-
-    try {
-      const response = await axiosProvider.post(
-        `/fineengg_erp/jobs/mark-urgent`,
-        {
-          job_no: selectedJobId,
-          urgent_due_date: urgentDate,
-        }
-      );
-
-      const params = new URLSearchParams();
-      params.append("job_no", selectedJobId);
-      params.append("urgent_due_date", urgentDate);
-      await axiosProvider.post(
-        "/fineengg_erp/categories/mark-urgent",
-        params,
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-        }
-      );
-
-      if (response.data.success) {
-        toast.success("Job marked as urgent");
-        fetchData();
-        setUrgentModalOpen(false);
-        setSelectedJobId(null);
-      } else {
-        toast.error("Failed to mark as urgent");
-      }
-    } catch (error: any) {
-      console.error("Error marking job as urgent:", error);
-      toast.error("Failed to mark as urgent");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
-    });
-
-    if (result.isConfirmed) {
-      try {
-        const endpoint = currentDataset === "CATEGORIES" 
-          ? `/fineengg_erp/categories/${id}` 
-          : `/fineengg_erp/jobs/${id}`;
-        const response = await axiosProvider.delete(endpoint);
-
-        if (response.data.success) {
-          toast.success("Job deleted successfully");
-          fetchData(currentDataset === "CATEGORIES" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs");
-        } else {
-          toast.error("Failed to delete job");
-        }
-      } catch (error: any) {
-        console.error("Error deleting job:", error);
-        toast.error("Failed to delete job");
-      }
-    }
-  };
-
-  const fetchData = async (endpoint?: string) => {
-    try {
-      let url = endpoint;
-      if (!url) {
-        url = activeFilter === "JOB_SERVICE" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs";
-      }
-      const response = await axiosProvider.get(url);
-      const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
-      setData(fetchedData);
-
-      // if (url.includes("/fineengg_erp/jobs")) {
-      //   const usmaanJobs = fetchedData
-      //     .filter((job: any) => job.assign_to === "Usmaan")
-      //     .map((job: any) => job.job_no);
-      //   setUsmaanJobNos(usmaanJobs);
-      // }
-    } catch (error: any) {
-      console.error("Error fetching jobs:", error);
-      toast.error("Failed to load jobs");
-    }
-  };
-
   const fetchUsmaanJobNos = async () => {
   try {
     const res = await axiosProvider.get(
@@ -400,63 +158,6 @@ export default function Home() {
     }
   };
 
-  const resetFormState = () => {
-    setFlyoutOpen(false);
-  };
-
-  const openJobServiceFlyout = () => {
-    setFlyoutType("JOB_SERVICE");
-    setFlyoutOpen(true);
-  };
-
-  const openTsoServiceFlyout = () => {
-    setFlyoutType("TSO_SERVICE");
-    setFlyoutOpen(true);
-  };
-
-  const openKanbanFlyout = () => {
-    setFlyoutType("KANBAN");
-    setFlyoutOpen(true);
-  };
-
-  // Get initial values based on flyout type
-  const getInitialValues = () => {
-    if (flyoutType === "JOB_SERVICE") {
-      return { ...initialValues, job_type: "JOB_SERVICE" };
-    } else if (flyoutType === "TSO_SERVICE") {
-      return { ...initialValues, job_type: "TSO_SERVICE" };
-    } else if (flyoutType === "KANBAN") {
-      return { ...initialValues, job_type: "KANBAN" };
-    }
-    return initialValues;
-  };
-
-  // Get category options based on job type
-  const getCategoryOptions = (jobType: string) => {
-    if (jobType === "TSO_SERVICE") {
-      return tsoServiceCategory;
-    } else if (jobType === "KANBAN") {
-      return kanbanCategory;
-    }
-    return [];
-  };
-
-  // Get flyout title
-  const getFlyoutTitle = () => {
-    if (flyoutType === "JOB_SERVICE") return "Add JOB Service";
-    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
-    if (flyoutType === "KANBAN") return "Add Kanban";
-    return "Add Job";
-  };
-
-  // Get submit button text
-  const getSubmitButtonText = () => {
-    if (flyoutType === "JOB_SERVICE") return "Add Job Service";
-    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
-    if (flyoutType === "KANBAN") return "Add Kanban";
-    return "Add Job";
-  };
-
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -472,6 +173,10 @@ export default function Home() {
         dataset = "CATEGORIES";
       }
 
+      if (lastFetchedEndpoint.current === endpoint) {
+        return;
+      }
+
       if (currentDataset !== dataset) {
         setCurrentDataset(dataset);
         setData([]);
@@ -482,6 +187,7 @@ export default function Home() {
         if (isMounted) {
           const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
           setData(fetchedData);
+          lastFetchedEndpoint.current = endpoint;
 
           // if (endpoint.includes("/fineengg_erp/jobs")) {
           //   const usmaanJobs = fetchedData
@@ -504,16 +210,6 @@ export default function Home() {
 
   return (
     <>
-    <style>{`
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-          -webkit-appearance: none; 
-          margin: 0; 
-        }
-        input[type=number] {
-          -moz-appearance: textfield;
-        }
-      `}</style>
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
         {/* Main content right section */}
@@ -704,13 +400,6 @@ export default function Home() {
                             </div>
                           </div>
                         </th>
-                        {/* <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Actions
-                            </div>
-                          </div>
-                        </th> */}
                       </>
                     ) : (
                       <>
@@ -813,16 +502,6 @@ export default function Home() {
                         </div>
                       </div>
                     </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Actions
-                        </div>
-                      </div>
-                    </th>
                       </>
                     )}
                   </tr>
@@ -894,16 +573,6 @@ export default function Home() {
                               {item.urgent || item.is_urgent ? "Urgent" : "Normal"}
                             </span>
                           </td>
-                          {/* <td className="px-2 py-2 border border-tableBorder">
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => handleUrgent(item.job_no)} className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors" title="Mark as Urgent">
-                                <HiLightningBolt className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors" title="Delete">
-                                <HiTrash className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td> */}
                         </tr>
                       ) : (
                       <tr
@@ -989,26 +658,6 @@ export default function Home() {
                             {item.urgent ? "Urgent" : "Normal"}
                           </span>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            {activeFilter === "JOB_SERVICE" && (
-                              <button
-                                onClick={() => handleUrgent(item.job_no)}
-                                className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
-                                title="Mark as Urgent"
-                              >
-                                <HiLightningBolt className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                              title="Delete"
-                            >
-                              <HiTrash className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                       )
                     ))
@@ -1019,246 +668,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* FITLER FLYOUT */}
-        {/* DARK BG SCREEN */}
-        {isFlyoutOpen && (
-          <div
-            className="min-h-screen w-full bg-[#1f1d1d80] fixed top-0 left-0 right-0 z-[999]"
-            onClick={() => {
-              setFlyoutOpen(false);
-              resetFormState();
-            }}
-          ></div>
-        )}
-
-        {/* NOW MY FLYOUT */}
-        <div className={`flyout ${isFlyoutOpen ? "open" : ""}`}>
-          <div className="w-full min-h-auto">
-            {/* Header */}
-            <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
-              <p className="text-primary-600 text-[22px] sm:text-[24px] md:text-[26px] font-bold leading-8 sm:leading-9">
-                {getFlyoutTitle()}
-              </p>
-              <IoCloseOutline
-                onClick={() => {
-                  setFlyoutOpen(false);
-                  resetFormState();
-                }}
-                className="h-7 sm:h-8 w-7 sm:w-8 border border-[#E7E7E7] text-[#0A0A0A] rounded cursor-pointer"
-              />
-            </div>
-            <div className="w-full border-b border-[#E7E7E7] mb-4 sm:mb-6"></div>
-
-            {/* FORM */}
-            <Formik
-              initialValues={getInitialValues()}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              enableReinitialize={true}
-            >
-              {({ values, setFieldValue, handleSubmit, isSubmitting }) => (
-                <Form onSubmit={handleSubmit}>
-                  <div className="w-full">
-                    {/* Grid container for form fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                      {/* Job Type - Hidden but required for form */}
-                      <input
-                        type="hidden"
-                        name="job_type"
-                        value={values.job_type}
-                      />
-
-                      {/* Job No - Only for JOB_SERVICE */}
-                      {values.job_type === "JOB_SERVICE" && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Job No
-                          </p>
-                          <input
-                            type="text"
-                            name="job_no"
-                            value={values.job_no}
-                            onChange={(e) =>
-                              setFieldValue("job_no", e.target.value)
-                            }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                            placeholder="Enter Job No"
-                          />
-                          <ErrorMessage
-                            name="job_no"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )}
-
-                      {/* Item No */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Item No
-                        </p>
-                        <input
-                          type="number"
-                          name="item_no"
-                          value={values.item_no}
-                          onChange={(e) =>
-                            setFieldValue("item_no", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Item No"
-                        />
-                        <ErrorMessage
-                          name="item_no"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* MOC */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          MOC
-                        </p>
-                        <input
-                          type="text"
-                          name="moc"
-                          value={values.moc}
-                          onChange={(e) => setFieldValue("moc", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter MOC (Material of Construction)"
-                        />
-                        <ErrorMessage
-                          name="moc"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Quantity */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Quantity
-                        </p>
-                        <input
-                          type="number"
-                          name="qty"
-                          value={values.qty}
-                          onChange={(e) => setFieldValue("qty", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Quantity"
-                        />
-                        <ErrorMessage
-                          name="qty"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Bin Location */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Bin Location
-                        </p>
-                        <input
-                          type="text"
-                          name="bin_location"
-                          value={values.bin_location}
-                          onChange={(e) => setFieldValue("bin_location", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Bin Location"
-                        />
-                        <ErrorMessage
-                          name="bin_location"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Description */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Description
-                        </p>
-                        <textarea
-                          name="item_description"
-                          value={values.item_description}
-                          onChange={(e) =>
-                            setFieldValue("item_description", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
-                          placeholder="Enter Description (Optional)"
-                        />
-                        <ErrorMessage
-                          name="item_description"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-                    </div>
-
-                    {/* BUTTONS */}
-                    <div className="mt-8 md:mt-10 w-full flex flex-col md:flex-row md:justify-between items-center gap-y-4 md:gap-y-0 gap-x-4">
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSubmitting ? "Submitting..." : getSubmitButtonText()}
-                      </button>
-                    </div>
-                  </div>
-                </Form>
-              )}
-            </Formik>
-          </div>
-        </div>
-      {/* FITLER FLYOUT END */}
-
-      {/* URGENT MODAL */}
-      {isUrgentModalOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Mark as Urgent</h3>
-              <button
-                onClick={() => setUrgentModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <IoCloseOutline className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date
-              </label>
-              <input
-                type="date"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600"
-                value={urgentDate}
-                onChange={(e) => setUrgentDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setUrgentModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitUrgent}
-                className="px-4 py-2 text-white bg-primary-600 rounded-md hover:bg-primary-700"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -28,7 +28,7 @@ interface JobData {
 
 interface AssignedJob {
   id: string;
-  jo_no: number;
+  jo_no: string | number;
   item_no: number;
   machine_category: string;
   machine_size: string;
@@ -200,7 +200,7 @@ export default function JoNumberPage() {
     if (!selectedJob) return;
 
     const payload = {
-      jo_no: Number(jo_number),
+      jo_no: jo_number,
       item_no: selectedJob.item_no,
       machine_category: selectedOption,
       machine_size: machineSize,

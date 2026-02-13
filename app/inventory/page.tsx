@@ -1,13 +1,11 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { FiFilter } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
 import { FaChevronDown, FaPlus } from "react-icons/fa";
 import { HiTrash } from "react-icons/hi";
-import StorageManager from "../../provider/StorageManager";
 import LeftSideBar from "../component/LeftSideBar";
-import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import DesktopHeader from "../component/DesktopHeader";
 import { Formik, Form, ErrorMessage, FieldArray } from "formik";
@@ -22,13 +20,6 @@ const axiosProvider = new AxiosProvider();
 const clientOptions = [
   { value: "Amar Equipment", label: "Amar Equipment" },
   { value: "Amar Biosystem", label: "Amar Biosystem" }
-];
-
-// Options for Job Type
-const jobTypeOptions = [
-  { value: "JOB_SERVICE", label: "Job Service" },
-  { value: "TSO_SERVICE", label: "TSO Service" },
-  { value: "KANBAN", label: "Kanban" },
 ];
 
 // Options for TSO Service Category
@@ -56,11 +47,6 @@ const kanbanCategory = [
 const kanbanJobCatOptions = [
   { value: "MinMax", label: "MinMax" },
   { value: "Kanban", label: "Kanban" },
-];
-
-const jobServiceSubTypeOptions = [
-  { value: "PARTIAL", label: "Partial" },
-  { value: "ASSEMBLY", label: "Assembly" },
 ];
 
 // Validation Schema for Jobs form
@@ -177,6 +163,16 @@ const initialValues = {
   assembly_items: [],
 };
 
+// Format dates to YYYY-MM-DD format
+const formatDate = (date: any) => {
+  if (!date) return null;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export default function Home() {
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
   const [flyoutType, setFlyoutType] = useState<
@@ -186,22 +182,20 @@ export default function Home() {
   const [isTsoServiceDropdownOpen, setTsoServiceDropdownOpen] = useState<boolean>(false);
   const [isKanbanDropdownOpen, setKanbanDropdownOpen] = useState<boolean>(false);
   const [selectedSubType, setSelectedSubType] = useState<string>("PARTIAL");
-  const [data, setData] = useState<any | []>([]);
+  const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
-  const router = useRouter();
+  const fetchData = useCallback(async () => {
+    try {
+      const response = await axiosProvider.get("/fineengg_erp/jobs");
+      setData(response.data.data);
+    } catch (error: any) {
+      console.error("Error fetching jobs:", error);
+      toast.error("Failed to load jobs");
+    }
+  }, []);
 
   const handleSubmit = async (values: any) => {
-    // Format dates to YYYY-MM-DD format
-    const formatDate = (date: any) => {
-      if (!date) return null;
-      const d = new Date(date);
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-
     if (values.sub_type === "ASSEMBLY") {
       const commonData: any = {
           job_type: values.job_type,
@@ -336,16 +330,6 @@ export default function Home() {
     }
   };
 
-  const fetchData = async () => {
-    try {
-      const response = await axiosProvider.get("/fineengg_erp/jobs");
-      setData(response.data.data);
-    } catch (error: any) {
-      console.error("Error fetching jobs:", error);
-      toast.error("Failed to load jobs");
-    }
-  };
-
   const filteredData = useMemo(() => {
     if (activeFilter === "ALL") return data;
     if (activeFilter === "REJECTED") {
@@ -380,8 +364,8 @@ export default function Home() {
   };
 
   // Get initial values based on flyout type
-  const getInitialValues = () => {
-    const values = { ...initialValues, job_type: flyoutType, sub_type: selectedSubType };
+  const initialFormValues = useMemo(() => {
+    const values: any = { ...initialValues, job_type: flyoutType, sub_type: selectedSubType };
     
     if (flyoutType === "KANBAN") {
       values.client_name = "Amar Equipment";
@@ -399,7 +383,7 @@ export default function Home() {
         values.product_qty = '';
     }
     return values;
-  };
+  }, [flyoutType, selectedSubType]);
 
   // Get category options based on job type
   const getCategoryOptions = (jobType: string) => {
@@ -430,7 +414,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   return (
     <>
@@ -825,7 +809,7 @@ export default function Home() {
 
             {/* FORM */}
             <Formik
-              initialValues={getInitialValues()}
+              initialValues={initialFormValues}
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
               enableReinitialize={true}

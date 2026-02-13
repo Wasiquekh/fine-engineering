@@ -45,11 +45,7 @@ const materialTypeOptions = [{ value: "GST", label: "GST" }];
 
 // Validation Schema for Category form
 const validationSchema = Yup.object().shape({
-  job_no: Yup.number()
-    .required("Job No is required")
-    .typeError("Job No must be a number")
-    .positive("Job No must be positive")
-    .integer("Job No must be an integer"),
+  job_no: Yup.string().required("Job No is required"),
   job_category: Yup.string().required("Job Category is required"),
   description: Yup.string()
     .required("Description is required")
@@ -505,7 +501,7 @@ export default function Home() {
                           Job No
                         </p>
                         <input
-                          type="number"
+                          type="text"
                           name="job_no"
                           value={values.job_no}
                           onChange={(e) =>

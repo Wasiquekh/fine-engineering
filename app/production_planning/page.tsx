@@ -1,10 +1,9 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { FiFilter } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
 import { HiTrash, HiLightningBolt } from "react-icons/hi";
-import StorageManager from "../../provider/StorageManager";
 import LeftSideBar from "../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -17,13 +16,6 @@ import AxiosProvider from "../../provider/AxiosProvider";
 import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
-
-// Options for Job Type
-const jobTypeOptions = [
-  { value: "JOB_SERVICE", label: "Job Service" },
-  { value: "TSO_SERVICE", label: "TSO Service" },
-  { value: "KANBAN", label: "Kanban" },
-];
 
 // Options for TSO Service Category
 const tsoServiceCategory = [
@@ -138,6 +130,7 @@ export default function Home() {
   const [isUrgentModalOpen, setUrgentModalOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [urgentDate, setUrgentDate] = useState<string>("");
+  const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -431,6 +424,7 @@ export default function Home() {
       }
       const response = await axiosProvider.get(url);
       setData(Array.isArray(response.data.data) ? response.data.data : []);
+      lastFetchedEndpoint.current = url;
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
