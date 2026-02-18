@@ -103,16 +103,17 @@ const LeftSideBar: React.FC = () => {
     pathname.includes("/production") && !pathname.includes("/production_planning")
   );
   const [isProduction1Open, setIsProduction1Open] = useState<boolean>(
-    pathname.includes("/production_module")
+    pathname.includes("/production_module") || pathname === "/review"
   );
   const [isUrgentOpen, setIsUrgentOpen] = useState<boolean>(false);
   const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
+  const [isQCOpen, setIsQCOpen] = useState<boolean>(pathname === "/qc");
 
   useEffect(() => {
     const isUrgentPage = pathname.includes("/production_module") && searchParams.get("urgent") === "true";
     if (isUrgentPage) setIsUrgentOpen(true);
 
-    const isReviewPage = pathname.includes("/production_module") && searchParams.get("review") === "true";
+    const isReviewPage = pathname === "/review" || (pathname.includes("/production_module") && searchParams.get("review") === "true");
     if (isReviewPage) setIsReviewOpen(true);
   }, [pathname, searchParams]);
   const [isInventoryOpen, setIsInventoryOpen] = useState<boolean>(
@@ -460,6 +461,48 @@ const LeftSideBar: React.FC = () => {
                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
                   Production 3
                 </p>
+              </div>
+            </Link>
+          </div>
+        )}
+        <div
+          onClick={() => setIsQCOpen(!isQCOpen)}
+          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
+            pathname === "/qc"
+              ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+              : ""
+          }`}
+        >
+          <MdPrecisionManufacturing className=" w-6 h-6   " />
+          <p className="">QC</p>
+          <FaChevronDown
+            className={`ml-auto w-3 h-3 transition-transform ${
+              isQCOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+        {isQCOpen && (
+          <div className="pl-4 mb-4 flex flex-col gap-1">
+            <Link href="/qc?filter=JOB_SERVICE">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Job Service
+                </p>
+              </div>
+            </Link>
+            <Link href="/qc?filter=TSO_SERVICE">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  TSO Service
+                </p>
+              </div>
+            </Link>
+            <Link href="/qc?filter=KANBAN">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
               </div>
             </Link>
           </div>

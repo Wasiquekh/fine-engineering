@@ -17,7 +17,7 @@ export default function ReviewPage() {
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get(`/fineengg_erp/assign-to-worker?job_type=${filterParam}&status=in-review`);
+      const response = await axiosProvider.get(`/fineengg_erp/assign-to-worker?job_type=${filterParam}&status=ready-for-qc`);
       const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
       setData(fetchedData);
     } catch (error) {
