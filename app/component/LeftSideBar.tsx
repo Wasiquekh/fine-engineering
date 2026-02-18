@@ -106,10 +106,14 @@ const LeftSideBar: React.FC = () => {
     pathname.includes("/production_module")
   );
   const [isUrgentOpen, setIsUrgentOpen] = useState<boolean>(false);
+  const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const isUrgentPage = pathname.includes("/production_module") && searchParams.get("urgent") === "true";
     if (isUrgentPage) setIsUrgentOpen(true);
+
+    const isReviewPage = pathname.includes("/production_module") && searchParams.get("review") === "true";
+    if (isReviewPage) setIsReviewOpen(true);
   }, [pathname, searchParams]);
   const [isInventoryOpen, setIsInventoryOpen] = useState<boolean>(
     pathname.includes("/inventory")
@@ -391,6 +395,46 @@ const LeftSideBar: React.FC = () => {
                         </div>
                       </Link>
                       <Link href="/production_module_3?filter=KANBAN&client=Amar%20Equipment&urgent=true">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                            Kanban
+                          </p>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                  <div
+                    onClick={() => setIsReviewOpen(!isReviewOpen)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                  >
+                    <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Review</p>
+                    <FaChevronDown
+                      className={`ml-auto w-3 h-3 transition-transform ${
+                        isReviewOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
+                  {isReviewOpen && (
+                    <div className="pl-4 flex flex-col gap-1">
+                      <Link href="/review?filter=JOB_SERVICE">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                          <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                            Job Service
+                          </p>
+                        </div>
+                      </Link>
+                      <Link href="/review?filter=TSO_SERVICE">
+                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                            TSO Service
+                          </p>
+                        </div>
+                      </Link>
+                      <Link href="/review?filter=KANBAN">
                         <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                           <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                           <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
