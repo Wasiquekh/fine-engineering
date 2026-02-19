@@ -1,12 +1,13 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
 import { useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
+import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 
 const axiosProvider = new AxiosProvider();
 
@@ -29,51 +30,69 @@ export default function ReviewPage() {
     fetchData();
   }, [filterParam]);
 
-  const handleQc = async (id: string) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You want to mark this as Ready for QC?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, QC it!",
-    });
-
-    if (result.isConfirmed) {
-      try {
-        await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/ready-for-qc`, null);
-        toast.success("Marked as Ready for QC successfully");
-        fetchData();
-      } catch (error) {
-        console.error("Error marking as Ready for QC:", error);
-        toast.error("Failed to mark as Ready for QC");
+  const groupedData = useMemo(() => {
+    const groups: { [key: string]: any[] } = {};
+    data.forEach((item) => {
+      const jo = item.jo_no || "Unknown";
+      if (!groups[jo]) {
+        groups[jo] = [];
       }
-    }
+      groups[jo].push(item);
+    });
+    return groups;
+  }, [data]);
+
+  const [expandedGroups, setExpandedGroups] = useState<{ [key: string]: boolean }>({});
+
+  const toggleGroup = (jo: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [jo]: !prev[jo] }));
   };
 
-  const handleReject = async (id: string) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You want to reject this item?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, Reject it!",
-    });
+  // const handleQc = async (items: any[]) => {
+  //   const result = await Swal.fire({
+  //     title: "Are you sure?",
+  //     text: `You want to mark ${items.length} item(s) as Ready for QC?`,
+  //     icon: "warning",
+  //     showCancelButton: true,
+  //     confirmButtonColor: "#3085d6",
+  //     cancelButtonColor: "#d33",
+  //     confirmButtonText: "Yes, QC it!",
+  //   });
 
-    if (result.isConfirmed) {
-      try {
-        await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/reject`, null);
-        toast.success("Rejected successfully");
-        fetchData();
-      } catch (error) {
-        console.error("Error rejecting item:", error);
-        toast.error("Failed to reject item");
-      }
-    }
-  };
+  //   if (result.isConfirmed) {
+  //     try {
+  //       await Promise.all(items.map((item) => axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/ready-for-qc`, null)));
+  //       toast.success("Marked as Ready for QC successfully");
+  //       fetchData();
+  //     } catch (error) {
+  //       console.error("Error marking as Ready for QC:", error);
+  //       toast.error("Failed to mark as Ready for QC");
+  //     }
+  //   }
+  // };
+
+  // const handleReject = async (items: any[]) => {
+  //   const result = await Swal.fire({
+  //     title: "Are you sure?",
+  //     text: `You want to reject ${items.length} item(s)?`,
+  //     icon: "warning",
+  //     showCancelButton: true,
+  //     confirmButtonColor: "#d33",
+  //     cancelButtonColor: "#3085d6",
+  //     confirmButtonText: "Yes, Reject it!",
+  //   });
+
+  //   if (result.isConfirmed) {
+  //     try {
+  //       await Promise.all(items.map((item) => axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, null)));
+  //       toast.success("Rejected successfully");
+  //       fetchData();
+  //     } catch (error) {
+  //       console.error("Error rejecting item:", error);
+  //       toast.error("Failed to reject item");
+  //     }
+  //   }
+  // };
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -95,6 +114,9 @@ export default function ReviewPage() {
               <thead className="text-xs text-[#999999]">
                 <tr className="border border-tableBorder">
                   <th scope="col" className="p-3 border border-tableBorder">
+                    JO No
+                  </th>
+                  <th scope="col" className="px-2 py-0 border border-tableBorder">
                     Serial No
                   </th>
                   <th scope="col" className="px-2 py-0 border border-tableBorder">
@@ -124,51 +146,80 @@ export default function ReviewPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.length === 0 ? (
+                {Object.keys(groupedData).length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-6 text-center border border-tableBorder">
+                    <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                       <p className="text-[#666666] text-base">No data found</p>
                     </td>
                   </tr>
                 ) : (
-                  data.map((item: any) => (
-                    <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.serial_no || "-"}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.item_no}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.machine_category}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.machine_size}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.machine_code}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.worker_name}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.quantity_no}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.assigning_date}</p>
-                      </td>
-                      <td className="px-2 py-2 border border-tableBorder">
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => handleQc(item.id)} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
-                                QC
-                            </button>
-                            <button onClick={() => handleReject(item.id)} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
-                                Reject
-                            </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  Object.keys(groupedData).map((jo) => {
+                    const items = groupedData[jo];
+                    const isExpanded = expandedGroups[jo];
+
+                    return (
+                      <>
+                        <tr key={jo} className="border border-tableBorder bg-white hover:bg-primary-100">
+                          <td className="px-2 py-2 border border-tableBorder cursor-pointer" onClick={() => toggleGroup(jo)}>
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? <FaChevronDown /> : <FaChevronRight />}
+                              <p className="text-[#232323] text-base leading-normal">{jo}</p>
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder"></td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <div className="flex items-center gap-2">
+                              {/* <button onClick={(e) => { e.stopPropagation(); handleQc(items); }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"> */}
+                              <button onClick={(e) => { e.stopPropagation();  }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+                                OK
+                              </button>
+                              {/* <button onClick={(e) => { e.stopPropagation(); handleReject(items); }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"> */}
+                              <button onClick={(e) => { e.stopPropagation();  }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+                                Rework
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && items.map((item: any) => (
+                          <tr key={item.id} className="border border-tableBorder bg-gray-50">
+                            <td className="px-2 py-2 border border-tableBorder"></td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.serial_no || "-"}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.item_no}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.machine_category}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.machine_size}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.machine_code}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.worker_name}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.quantity_no}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base leading-normal">{item.assigning_date}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder"></td>
+                          </tr>
+                        ))}
+                      </>
+                    );
+                  })
                 )}
               </tbody>
             </table>
