@@ -48,51 +48,82 @@ export default function ReviewPage() {
     setExpandedGroups((prev) => ({ ...prev, [jo]: !prev[jo] }));
   };
 
-  // const handleQc = async (items: any[]) => {
-  //   const result = await Swal.fire({
-  //     title: "Are you sure?",
-  //     text: `You want to mark ${items.length} item(s) as Ready for QC?`,
-  //     icon: "warning",
-  //     showCancelButton: true,
-  //     confirmButtonColor: "#3085d6",
-  //     cancelButtonColor: "#d33",
-  //     confirmButtonText: "Yes, QC it!",
-  //   });
+  const handleOK = async (items: any[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to dispatch.");
+      return;
+    }
 
-  //   if (result.isConfirmed) {
-  //     try {
-  //       await Promise.all(items.map((item) => axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/ready-for-qc`, null)));
-  //       toast.success("Marked as Ready for QC successfully");
-  //       fetchData();
-  //     } catch (error) {
-  //       console.error("Error marking as Ready for QC:", error);
-  //       toast.error("Failed to mark as Ready for QC");
-  //     }
-  //   }
-  // };
+    console.log("Dispatching item details:", items[0]);
 
-  // const handleReject = async (items: any[]) => {
-  //   const result = await Swal.fire({
-  //     title: "Are you sure?",
-  //     text: `You want to reject ${items.length} item(s)?`,
-  //     icon: "warning",
-  //     showCancelButton: true,
-  //     confirmButtonColor: "#d33",
-  //     cancelButtonColor: "#3085d6",
-  //     confirmButtonText: "Yes, Reject it!",
-  //   });
+    const { value: formValues } = await Swal.fire({
+      title: "Dispatch Job",
+      html: `
+        <input id="chalan_no" class="swal2-input" placeholder="Chalan No" style="width: 50%;">
+        <input id="dispatch_date" class="swal2-input" type="date" style="width: 50%;">
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
+        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+        if (!chalan_no || !dispatch_date) {
+          Swal.showValidationMessage("Please fill out both fields");
+          return false;
+        }
+        return { chalan_no, dispatch_date };
+      },
+      showCancelButton: true,
+      confirmButtonText: "Dispatch",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+    });
 
-  //   if (result.isConfirmed) {
-  //     try {
-  //       await Promise.all(items.map((item) => axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, null)));
-  //       toast.success("Rejected successfully");
-  //       fetchData();
-  //     } catch (error) {
-  //       console.error("Error rejecting item:", error);
-  //       toast.error("Failed to reject item");
-  //     }
-  //   }
-  // };
+    if (formValues) {
+      const { chalan_no, dispatch_date } = formValues;
+      // It's possible the property is named 'jobId' (camelCase). Let's check for both.
+      const job_id = items[0]?.jobId || items[0]?.job_id || items[0]?.job?.id;
+
+      if (!job_id) {
+        toast.error("Job ID not found for the selected items.");
+        console.error("Could not find 'jobId', 'job_id', or 'job.id' on the first item:", items[0]);
+        return;
+      }
+
+      try {
+        await axiosProvider.post("/fineengg_erp/jobs/dispatch", { job_id, dispatch_date, chalan_no });
+        toast.success("Job dispatched successfully");
+        fetchData();
+      } catch (error) {
+        const errorMessage = (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
+        console.error("Error dispatching job:", error, "with payload:", { job_id, dispatch_date, chalan_no });
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleNotOk = async (items: any[]) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `You want to reject ${items.length} item(s)?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, Reject it!",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await Promise.all(items.map((item) => axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, null)));
+        toast.success("Rejected successfully");
+        fetchData();
+      } catch (error) {
+        const errorMessage = (error as any).response?.data?.message || (error as Error).message || "An unknown error occurred";
+        console.error("Error rejecting item:", error);
+        toast.error(errorMessage);
+      }
+    }
+  };
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -176,12 +207,10 @@ export default function ReviewPage() {
                           <td className="px-2 py-2 border border-tableBorder"></td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <div className="flex items-center gap-2">
-                              {/* <button onClick={(e) => { e.stopPropagation(); handleQc(items); }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"> */}
-                              <button onClick={(e) => { e.stopPropagation();  }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+                              <button onClick={(e) => { e.stopPropagation(); handleOK(items); }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
                                 OK
                               </button>
-                              {/* <button onClick={(e) => { e.stopPropagation(); handleReject(items); }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"> */}
-                              <button onClick={(e) => { e.stopPropagation();  }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+                              <button onClick={(e) => { e.stopPropagation(); handleNotOk(items); }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
                                 Rework
                               </button>
                             </div>
