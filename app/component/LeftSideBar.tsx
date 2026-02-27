@@ -108,6 +108,7 @@ const LeftSideBar: React.FC = () => {
   const [isUrgentOpen, setIsUrgentOpen] = useState<boolean>(false);
   const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
   const [isQCOpen, setIsQCOpen] = useState<boolean>(pathname === "/qc");
+  const [isNotOkOpen, setIsNotOkOpen] = useState<boolean>(pathname.includes("/vendors"));
 
   useEffect(() => {
     const isUrgentPage = pathname.includes("/production_module") && searchParams.get("urgent") === "true";
@@ -247,6 +248,40 @@ const LeftSideBar: React.FC = () => {
                 </p>
               </div>
             </Link>
+            <div
+              onClick={() => setIsNotOkOpen(!isNotOkOpen)}
+              className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+            >
+              <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                Not-Ok
+              </p>
+              <FaChevronDown
+                className={`ml-auto w-3 h-3 transition-transform ${isNotOkOpen ? "rotate-180" : ""}`}
+              />
+            </div>
+            {isNotOkOpen && (
+              <div className="pl-4 flex flex-col gap-1">
+                <Link href="/pp_not-ok?filter=JOB_SERVICE">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                  </div>
+                </Link>
+                <Link href="/pp_not-ok?filter=TSO_SERVICE">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                  </div>
+                </Link>
+                <Link href="/pp_not-ok?filter=KANBAN">
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                  </div>
+                </Link>
+              </div>
+            )}
             <div
               onClick={() => setIsAmarEquipmentOpen(!isAmarEquipmentOpen)}
               className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
