@@ -4,12 +4,14 @@ import { useEffect, useState, useMemo } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
+import StorageManager from "../../provider/StorageManager";
 import { useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 
 const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
 
 export default function ReviewPage() {
   const [data, setData] = useState<any[]>([]);
@@ -96,6 +98,94 @@ export default function ReviewPage() {
       } catch (error) {
         const errorMessage = (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
         console.error("Error dispatching job:", error, "with payload:", { job_id, dispatch_date, chalan_no });
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleJobNotOk = async (items: any[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to mark as not OK.");
+      return;
+    }
+
+    const { value: reason } = await Swal.fire({
+      title: "Reason for Not OK",
+      input: "textarea",
+      inputPlaceholder: "Enter the reason why this job is not OK...",
+      inputAttributes: {
+        "aria-label": "Type your reason here",
+      },
+      showCancelButton: true,
+      confirmButtonText: "Submit",
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      inputValidator: (value) => {
+        if (!value) {
+          return "You need to provide a reason!";
+        }
+      },
+    });
+
+    if (reason) {
+      const job_id = items[0]?.jobId || items[0]?.job_id || items[0]?.job?.id;
+      const updated_by = storage.getUserId();
+
+      if (!job_id) {
+        toast.error("Job ID not found for the selected items.");
+        console.error("Could not find 'jobId', 'job_id', or 'job.id' on the first item:", items[0]);
+        return;
+      }
+
+      if (!updated_by) {
+        toast.error("User ID not found. Please log in again.");
+        return;
+      }
+
+      try {
+        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, { reason, updated_by });
+        toast.success("Job marked as Not OK successfully");
+        fetchData();
+      } catch (error) {
+        const errorMessage = (error as any).response?.data?.error || (error as any).response?.data?.message || (error as Error).message || "An unknown error occurred";
+        console.error("Error marking job as Not OK:", error, "with payload:", { reason, updated_by });
+        toast.error(errorMessage);
+      }
+    }
+  };
+
+  const handleRework = async (items: any[]) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `You want to send this job for rework?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, Rework it!",
+    });
+
+    if (result.isConfirmed) {
+      const job_id = items[0]?.jobId || items[0]?.job_id || items[0]?.job?.id;
+      const updated_by = storage.getUserId();
+
+      if (!job_id) {
+        toast.error("Job ID not found for the selected items.");
+        return;
+      }
+
+      if (!updated_by) {
+        toast.error("User ID not found. Please log in again.");
+        return;
+      }
+
+      try {
+        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, { updated_by });
+        toast.success("Job sent for rework successfully");
+        fetchData();
+      } catch (error) {
+        const errorMessage = (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
+        console.error("Error sending job for rework:", error);
         toast.error(errorMessage);
       }
     }
@@ -210,7 +300,10 @@ export default function ReviewPage() {
                               <button onClick={(e) => { e.stopPropagation(); handleOK(items); }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
                                 OK
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleNotOk(items); }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+                              <button onClick={(e) => { e.stopPropagation(); handleJobNotOk(items); }} className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm">
+                                Not OK
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleRework(items); }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
                                 Rework
                               </button>
                             </div>
