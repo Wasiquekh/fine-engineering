@@ -1,170 +1,168 @@
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import { BiSolidHome } from "react-icons/bi";
-import { MdOutlineBarChart, MdOutlineInventory2, MdWorkOutline, MdDesignServices, MdViewKanban, MdPendingActions, MdPrecisionManufacturing } from "react-icons/md";
-import { TbCategoryFilled, TbDeviceMobileDollar } from "react-icons/tb";
-import { HiWrenchScrewdriver } from "react-icons/hi2";
-import { FaMoneyCheckDollar } from "react-icons/fa6";
-import { BsCreditCard2Back } from "react-icons/bs";
-import { BiSolidUser } from "react-icons/bi";
-import { IoMdSettings } from "react-icons/io";
-import { usePathname, useSearchParams } from "next/navigation";
+import {
+  MdOutlineInventory2,
+  MdWorkOutline,
+  MdDesignServices,
+  MdPendingActions,
+  MdPrecisionManufacturing,
+  MdOutlineDashboard,
+  MdOutlinePeopleOutline,
+  MdCategory,
+  MdOutlineSwapHoriz,
+} from "react-icons/md";
+import { TbDeviceMobileDollar } from "react-icons/tb";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import StorageManager from "../../provider/StorageManager";
 import AxiosProvider from "../../provider/AxiosProvider";
-import { useRouter } from "next/navigation";
 import { FaChevronDown } from "react-icons/fa";
 import { useState, useEffect } from "react";
-import { AiOutlineDashboard } from "react-icons/ai";
-import { RiHistoryLine } from "react-icons/ri";
-import { FaUserEdit } from "react-icons/fa";
-import { MdOutlineSwitchAccount } from "react-icons/md";
-import { RiContactsBook3Fill } from "react-icons/ri";
-import { SiGoogleadsense } from "react-icons/si";
-import { ImQuotesLeft } from "react-icons/im";
-import { AiFillProduct } from "react-icons/ai";
-import { MdOutlineDashboard } from "react-icons/md";
-import { MdOutlinePeopleOutline } from "react-icons/md";
-import { MdCategory } from "react-icons/md";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
+
 const LeftSideBar: React.FC = () => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // permissions (kept as-is)
   const permissions = storage.getUserPermissions();
   const hasCustomerView = permissions?.some(
     (perm) => perm.name === "customer.view"
   );
-  const hasCustomerAdd = permissions?.some(
-    (perm) => perm.name === "customer.add"
-  );
-  const hasCustomerDelete = permissions?.some(
-    (perm) => perm.name === "customer.delete"
-  );
-  const hasCustomerEdit = permissions?.some(
-    (perm) => perm.name === "customer.edit"
-  );
-  const hasCustomerAudit = permissions?.some(
-    (perm) => perm.name === "customer.audit"
-  );
   const hasSystemUserView = permissions?.some(
     (perm) => perm.name === "systemuser.view"
-  );
-  const hasSystemUserAdd = permissions?.some(
-    (perm) => perm.name === "systemuser.add"
-  );
-  const hasSystemUserDelete = permissions?.some(
-    (perm) => perm.name === "systemuser.delete"
-  );
-  const hasSystemUserEdit = permissions?.some(
-    (perm) => perm.name === "systemuser.edit"
-  );
-  const hasSystemUserAudit = permissions?.some(
-    (perm) => perm.name === "systemuser.audit"
   );
   const hasUserActivityView = permissions?.some(
     (perm) => perm.name === "useractivity.view"
   );
-  const router = useRouter();
 
   const handleLogout = async () => {
     localStorage.clear();
     try {
-      const response = await axiosProvider.post("/fineengg_erp/logout", {});
+      await axiosProvider.post("/fineengg_erp/logout", {});
       localStorage.clear();
       window.location.href = "/";
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error logging out:", error);
+      window.location.href = "/";
     }
   };
-  const activePaths = [
-    "/crm/total-quotes",
-    "/crm/total-contacts",
-    "/crm/total-accounts",
-    "/crm/total-leads",
-    "/crm/get-product",
-    "/crm/get-category",
-  ];
 
-  const isActive = activePaths.includes(pathname);
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState<boolean>(isActive);
-  const toggleSubmenu = (): void => {
-    setIsSubmenuOpen((prev) => !prev);
-  };
-  const [isProductionOpen, setIsProductionOpen] = useState<boolean>(
-    pathname.includes("/production_planning") || pathname === "/category" || pathname.includes("/po-services")
-  );
-  const [isAmarEquipmentOpen, setIsAmarEquipmentOpen] = useState<boolean>(
-    pathname.includes("/production_planning") || pathname.includes("/po-services")
-  );
-  const [isPOOpen, setIsPOOpen] = useState<boolean>(pathname.includes("/po-services"));
-  const [isProductionDropdownOpen, setIsProductionDropdownOpen] = useState<boolean>(
-    pathname.includes("/production") && !pathname.includes("/production_planning")
-  );
-  const [isProduction1Open, setIsProduction1Open] = useState<boolean>(
-    pathname.includes("/production_module") || pathname === "/review"
-  );
-  const [isUrgentOpen, setIsUrgentOpen] = useState<boolean>(false);
-  const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
-  const [isQCOpen, setIsQCOpen] = useState<boolean>(pathname === "/qc");
-
-  useEffect(() => {
-    const isUrgentPage = pathname.includes("/production_module") && searchParams.get("urgent") === "true";
-    if (isUrgentPage) setIsUrgentOpen(true);
-
-    const isReviewPage = pathname === "/review" || (pathname.includes("/production_module") && searchParams.get("review") === "true");
-    if (isReviewPage) setIsReviewOpen(true);
-  }, [pathname, searchParams]);
+  // ---------- OPEN STATE LOGIC (FIXED) ----------
   const [isInventoryOpen, setIsInventoryOpen] = useState<boolean>(
     pathname.includes("/inventory")
   );
   const [isInventory1Open, setIsInventory1Open] = useState<boolean>(false);
 
+  const [isProductionOpen, setIsProductionOpen] = useState<boolean>(
+    pathname.includes("/production_planning") ||
+      pathname === "/category" ||
+      pathname.includes("/po-services") ||
+      pathname.includes("/vendors")
+  );
+
+  const [isAmarEquipmentOpen, setIsAmarEquipmentOpen] = useState<boolean>(
+    pathname.includes("/production_planning") ||
+      pathname.includes("/po-services")
+  );
+  const [isPOOpen, setIsPOOpen] = useState<boolean>(
+    pathname.includes("/po-services")
+  );
+
+  const [isProductionDropdownOpen, setIsProductionDropdownOpen] =
+    useState<boolean>(
+      pathname.includes("/production") &&
+        !pathname.includes("/production_planning")
+    );
+
+  const [isProduction1Open, setIsProduction1Open] = useState<boolean>(
+    pathname.includes("/production_module") ||
+      pathname.startsWith("/review") ||
+      pathname.startsWith("/qc")
+  );
+
+  const [isUrgentOpen, setIsUrgentOpen] = useState<boolean>(false);
+
+  // Review open if any review route
+  const [isReviewOpen, setIsReviewOpen] = useState<boolean>(
+    pathname.startsWith("/review")
+  );
+
+  // QC open if any qc route
+  const [isQCOpen, setIsQCOpen] = useState<boolean>(pathname.startsWith("/qc"));
+
+  useEffect(() => {
+    const isUrgentPage =
+      pathname.includes("/production_module") &&
+      searchParams.get("urgent") === "true";
+    if (isUrgentPage) setIsUrgentOpen(true);
+
+    if (pathname.startsWith("/review")) setIsReviewOpen(true);
+    if (pathname.startsWith("/qc")) setIsQCOpen(true);
+  }, [pathname, searchParams]);
+
   return (
-    <div className="w-full hidden md:w-[17%]  md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0  h-screen fixed top-0 left-0">
-      {/* SIDE LEFT BAR TOP SECTION */}
+    <div className="w-full hidden md:w-[17%] md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0 h-screen fixed top-0 left-0">
+      {/* TOP */}
       <div className="z-10 overflow-y-auto custom-scrollbar">
         <Link href="/customer">
-          <div className=" flex gap-2 mb-12 px-0 py-2">
+          <div className="flex gap-2 mb-12 px-0 py-2">
             <Image
               src="/images/fine-engineering-logo.jpeg"
-              alt="Description of image"
+              alt="Fine Engineering"
               width={500}
               height={500}
-              className=" w-full h-auto"
+              className="w-full h-auto"
             />
           </div>
         </Link>
-        {/* MENU WITH ICONS */}
+
+        {/* Dashboard */}
         <Link href="/dashboard">
           <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
+            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
               pathname === "/dashboard"
                 ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                 : ""
             }`}
           >
-            <MdOutlineDashboard className=" w-6 h-6   " />
-            <p className="">Dashboard</p>
+            <MdOutlineDashboard className="w-6 h-6" />
+            <p>Dashboard</p>
           </div>
         </Link>
+        <Link href="/material-movement">
+          <div
+            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
+              pathname === "/material-movement"
+                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+                : ""
+            }`}
+          >
+            <MdOutlineSwapHoriz className="w-6 h-6" />
+            <p>Material Movement</p>
+          </div>
+        </Link>
+
+        {/* Inventory */}
         <div
           onClick={() => setIsInventoryOpen(!isInventoryOpen)}
-          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
+          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
             pathname.includes("/inventory")
               ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
               : ""
           }`}
         >
-          <MdOutlineInventory2 className=" w-6 h-6   " />
-          <p className="">Inventory</p>
+          <MdOutlineInventory2 className="w-6 h-6" />
+          <p>Inventory</p>
           <FaChevronDown
-            className={`ml-auto w-3 h-3 transition-transform ${
-              isInventoryOpen ? "rotate-180" : ""
-            }`}
+            className={`ml-auto w-3 h-3 ${isInventoryOpen ? "rotate-180" : ""}`}
           />
         </div>
+
         {isInventoryOpen && (
           <div className="pl-4 mb-4 flex flex-col gap-1">
             <div
@@ -176,61 +174,60 @@ const LeftSideBar: React.FC = () => {
                 Inventory 1
               </p>
               <FaChevronDown
-                className={`ml-auto w-3 h-3 transition-transform ${isInventory1Open ? "rotate-180" : ""}`}
+                className={`ml-auto w-3 h-3 ${
+                  isInventory1Open ? "rotate-180" : ""
+                }`}
               />
             </div>
+
             {isInventory1Open && (
               <div className="pl-4 flex flex-col gap-1">
                 <Link href="/inventory">
                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                     <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Inventory</p>
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                      Inventory
+                    </p>
                   </div>
                 </Link>
+
                 <Link href="/inventory_material_approve">
                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                     <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Approved</p>
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                      Material Approved
+                    </p>
                   </div>
                 </Link>
               </div>
             )}
-            <Link href="/inventory">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  Inventory 2
-                </p>
-              </div>
-            </Link>
-            <Link href="/inventory">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  Inventory 3
-                </p>
-              </div>
-            </Link>
           </div>
         )}
+
+        {/* Production Planning */}
         <div
           onClick={() => setIsProductionOpen(!isProductionOpen)}
-          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-            pathname.includes("/production_planning") || pathname === "/category" || pathname.includes("/po-services")
+          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
+            pathname.includes("/production_planning") ||
+            pathname === "/category" ||
+            pathname.includes("/po-services") ||
+            pathname.includes("/vendors")
               ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
               : ""
           }`}
         >
-          <TbDeviceMobileDollar className=" w-6 h-6   " />
-          <p className="">Production Planning</p>
+          <TbDeviceMobileDollar className="w-6 h-6" />
+          <p>Production Planning</p>
           <FaChevronDown
-            className={`ml-auto w-3 h-3 transition-transform ${
+            className={`ml-auto w-3 h-3 ${
               isProductionOpen ? "rotate-180" : ""
             }`}
           />
         </div>
+
         {isProductionOpen && (
           <div className="pl-4 mb-4 flex flex-col gap-1">
+            {/* Vendors root */}
             <Link href="/vendors">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -239,6 +236,17 @@ const LeftSideBar: React.FC = () => {
                 </p>
               </div>
             </Link>
+
+            {/* ✅ NEW: Outsource */}
+            <Link href="/vendors/outsource?filter=JOB_SERVICE">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Outsource
+                </p>
+              </div>
+            </Link>
+
             <Link href="/category">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -247,6 +255,8 @@ const LeftSideBar: React.FC = () => {
                 </p>
               </div>
             </Link>
+
+            {/* Amar Equipment */}
             <div
               onClick={() => setIsAmarEquipmentOpen(!isAmarEquipmentOpen)}
               className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
@@ -256,11 +266,12 @@ const LeftSideBar: React.FC = () => {
                 Amar Equipment
               </p>
               <FaChevronDown
-                className={`ml-auto w-3 h-3 transition-transform ${
+                className={`ml-auto w-3 h-3 ${
                   isAmarEquipmentOpen ? "rotate-180" : ""
                 }`}
               />
             </div>
+
             {isAmarEquipmentOpen && (
               <div className="pl-4 flex flex-col gap-1">
                 <Link href="/production_planning?filter=JOB_SERVICE&client=Amar%20Equipment">
@@ -271,6 +282,7 @@ const LeftSideBar: React.FC = () => {
                     </p>
                   </div>
                 </Link>
+
                 <Link href="/production_planning?filter=TSO_SERVICE&client=Amar%20Equipment">
                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                     <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -279,14 +291,7 @@ const LeftSideBar: React.FC = () => {
                     </p>
                   </div>
                 </Link>
-                <Link href="/production_planning?filter=KANBAN&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                      Kanban
-                    </p>
-                  </div>
-                </Link>
+
                 <div
                   onClick={() => setIsPOOpen(!isPOOpen)}
                   className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
@@ -296,11 +301,12 @@ const LeftSideBar: React.FC = () => {
                     P/O
                   </p>
                   <FaChevronDown
-                    className={`ml-auto w-3 h-3 transition-transform ${
+                    className={`ml-auto w-3 h-3 ${
                       isPOOpen ? "rotate-180" : ""
                     }`}
                   />
                 </div>
+
                 {isPOOpen && (
                   <div className="pl-4 flex flex-col gap-1">
                     <Link href="/po-services?filter=FINE">
@@ -311,6 +317,7 @@ const LeftSideBar: React.FC = () => {
                         </p>
                       </div>
                     </Link>
+
                     <Link href="/po-services?filter=PRESS_FLOW">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -323,32 +330,28 @@ const LeftSideBar: React.FC = () => {
                 )}
               </div>
             )}
-            <Link href="/production_planning?client=Amar%20Biosystem">
-              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                  Amar Biosystem
-                </p>
-              </div>
-            </Link>
           </div>
         )}
+
+        {/* Production */}
         <div
           onClick={() => setIsProductionDropdownOpen(!isProductionDropdownOpen)}
-          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-            pathname.includes("/production") && !pathname.includes("/production_planning")
+          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
+            pathname.includes("/production") &&
+            !pathname.includes("/production_planning")
               ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
               : ""
           }`}
         >
-          <MdPrecisionManufacturing className=" w-6 h-6   " />
-          <p className="">Production</p>
+          <MdPrecisionManufacturing className="w-6 h-6" />
+          <p>Production</p>
           <FaChevronDown
-            className={`ml-auto w-3 h-3 transition-transform ${
+            className={`ml-auto w-3 h-3 ${
               isProductionDropdownOpen ? "rotate-180" : ""
             }`}
           />
         </div>
+
         {isProductionDropdownOpen && (
           <div className="pl-4 mb-4 flex flex-col gap-1">
             <div
@@ -360,93 +363,116 @@ const LeftSideBar: React.FC = () => {
                 Production 1
               </p>
               <FaChevronDown
-                className={`ml-auto w-3 h-3 transition-transform ${isProduction1Open ? "rotate-180" : ""}`}
+                className={`ml-auto w-3 h-3 ${
+                  isProduction1Open ? "rotate-180" : ""
+                }`}
               />
             </div>
+
             {isProduction1Open && (
-                <div className="pl-4 flex flex-col gap-1">
-                  <div
-                    onClick={() => setIsUrgentOpen(!isUrgentOpen)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                  >
-                    <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Urgent</p>
-                    <FaChevronDown
-                      className={`ml-auto w-3 h-3 transition-transform ${
-                        isUrgentOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </div>
-                  {isUrgentOpen && (
-                    <div className="pl-4 flex flex-col gap-1">
-                      <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                          <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                            Job Service
-                          </p>
-                        </div>
-                      </Link>
-                      <Link href="/production_module_2?filter=TSO_SERVICE&client=Amar%20Equipment&urgent=true">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                            TSO Service
-                          </p>
-                        </div>
-                      </Link>
-                      <Link href="/production_module_3?filter=KANBAN&client=Amar%20Equipment&urgent=true">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                            Kanban
-                          </p>
-                        </div>
-                      </Link>
-                    </div>
-                  )}
-                  <div
-                    onClick={() => setIsReviewOpen(!isReviewOpen)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                  >
-                    <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Review</p>
-                    <FaChevronDown
-                      className={`ml-auto w-3 h-3 transition-transform ${
-                        isReviewOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </div>
-                  {isReviewOpen && (
-                    <div className="pl-4 flex flex-col gap-1">
-                      <Link href="/review?filter=JOB_SERVICE">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                          <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                            Job Service
-                          </p>
-                        </div>
-                      </Link>
-                      <Link href="/review?filter=TSO_SERVICE">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                            TSO Service
-                          </p>
-                        </div>
-                      </Link>
-                      <Link href="/review?filter=KANBAN">
-                        <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                          <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                          <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
-                            Kanban
-                          </p>
-                        </div>
-                      </Link>
-                    </div>
-                  )}
+              <div className="pl-4 flex flex-col gap-1">
+                {/* Urgent */}
+                <div
+                  onClick={() => setIsUrgentOpen(!isUrgentOpen)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                >
+                  <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                    Urgent
+                  </p>
+                  <FaChevronDown
+                    className={`ml-auto w-3 h-3 ${
+                      isUrgentOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </div>
+
+                {isUrgentOpen && (
+                  <div className="pl-4 flex flex-col gap-1">
+                    <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                          Job Service
+                        </p>
+                      </div>
+                    </Link>
+
+                    <Link href="/production_module_2?filter=TSO_SERVICE&client=Amar%20Equipment&urgent=true">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                          TSO Service
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+
+                {/* Review */}
+                {/* ================= REVIEW (MAIN LEVEL) ================= */}
+                <div
+                  onClick={() => setIsReviewOpen(!isReviewOpen)}
+                  className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
+                    pathname.startsWith("/review")
+                      ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+                      : ""
+                  }`}
+                >
+                  <MdPendingActions className="w-6 h-6" />
+                  <p>Review</p>
+                  <FaChevronDown
+                    className={`ml-auto w-3 h-3 ${
+                      isReviewOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </div>
+
+                {isReviewOpen && (
+                  <div className="pl-4 mb-4 flex flex-col gap-1">
+                    {/* Main Review */}
+                    <Link href="/review?filter=JOB_SERVICE">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                          Job Service
+                        </p>
+                      </div>
+                    </Link>
+
+                    <Link href="/review?filter=TSO_SERVICE">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                          TSO Service
+                        </p>
+                      </div>
+                    </Link>
+
+                    {/* ✅ Welding Review */}
+                    <Link href="/review/welding?filter=JOB_SERVICE">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                          Welding
+                        </p>
+                      </div>
+                    </Link>
+
+                    {/* ✅ Vendor Review */}
+                    <Link href="/review/vendor?filter=JOB_SERVICE">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                          Vendor
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
+
             <Link href="/production/production-2">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -455,6 +481,7 @@ const LeftSideBar: React.FC = () => {
                 </p>
               </div>
             </Link>
+
             <Link href="/production/production-3">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -465,24 +492,25 @@ const LeftSideBar: React.FC = () => {
             </Link>
           </div>
         )}
+        {/* ================= QC (MAIN LEVEL) ================= */}
         <div
           onClick={() => setIsQCOpen(!isQCOpen)}
-          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-            pathname === "/qc"
+          className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
+            pathname.startsWith("/qc")
               ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
               : ""
           }`}
         >
-          <MdPrecisionManufacturing className=" w-6 h-6   " />
-          <p className="">QC</p>
+          <MdPrecisionManufacturing className="w-6 h-6" />
+          <p>QC</p>
           <FaChevronDown
-            className={`ml-auto w-3 h-3 transition-transform ${
-              isQCOpen ? "rotate-180" : ""
-            }`}
+            className={`ml-auto w-3 h-3 ${isQCOpen ? "rotate-180" : ""}`}
           />
         </div>
+
         {isQCOpen && (
           <div className="pl-4 mb-4 flex flex-col gap-1">
+            {/* Main QC */}
             <Link href="/qc?filter=JOB_SERVICE">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -491,6 +519,7 @@ const LeftSideBar: React.FC = () => {
                 </p>
               </div>
             </Link>
+
             <Link href="/qc?filter=TSO_SERVICE">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                 <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -499,113 +528,49 @@ const LeftSideBar: React.FC = () => {
                 </p>
               </div>
             </Link>
-            <Link href="/qc?filter=KANBAN">
+
+            {/* ✅ QC Welding */}
+            <Link href="/qc/welding?filter=JOB_SERVICE">
               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Welding
+                </p>
+              </div>
+            </Link>
+
+            {/* ✅ QC Vendor */}
+            <Link href="/qc/vendor?filter=JOB_SERVICE">
+              <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">
+                  Vendor
+                </p>
               </div>
             </Link>
           </div>
         )}
-        {/* <Link href="/point-of-services">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/point-of-services"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <HiWrenchScrewdriver className=" w-6 h-6   " />
-            <p className=""> Point of Services</p>
-          </div>
-        </Link>
-        <Link href="/payment-terminal">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/payment-terminal"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <FaMoneyCheckDollar className=" w-6 h-6   " />
-            <p className=""> Payment Terminal</p>
-          </div>
-        </Link>
-        <Link href="/cards">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/cards"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <BsCreditCard2Back className=" w-6 h-6   " />
-            <p className=""> Credit Cards</p>
-          </div>
-        </Link>
-
-        <Link href="/usermanagement">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/usermanagement" || pathname === "/useradd"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <FaUserEdit className=" w-6 h-6   " />
-            <p className=""> User Management</p>
-          </div>
-        </Link>
-
-        <Link href="/user-activity">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/user-activity"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <RiHistoryLine className=" w-6 h-6   " />
-            <p className=""> User Activity</p>
-          </div>
-        </Link>
-
-        <Link href="/setting">
-          <div
-            className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] relative cursor-pointer text-base leading-normal font-medium text-firstBlack  hover:bg-sideBarHoverbg active:bg-sideBarHoverbgPressed hover:text-primary-600 ${
-              pathname === "/setting"
-                ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
-                : ""
-            }`}
-          >
-            <IoMdSettings className=" w-6 h-6   " />
-            <p className="">Setting</p>
-          </div>
-        </Link> */}
       </div>
-      {/* END SIDE LEFT BAR TOP SECTION */}
 
-      {/*  SIDE LEFT BAR BOTTOM SECTION */}
-      <div className=" flex gap-2 items-center px-3 py-2 z-10 ">
-        <div>
-          <Image
-            src="/images/logoutIcon.svg"
-            alt="logout Icon"
-            width={24}
-            height={24}
-          />
-        </div>
+      {/* BOTTOM */}
+      <div className="flex gap-2 items-center px-3 py-2 z-10">
+        <Image
+          src="/images/logoutIcon.svg"
+          alt="logout Icon"
+          width={24}
+          height={24}
+        />
         <div
-          className=" text-base font-semibold leading-normal text-[#EB5757] cursor-pointer"
+          className="text-base font-semibold leading-normal text-[#EB5757] cursor-pointer"
           onClick={handleLogout}
         >
           Logout
         </div>
       </div>
-      {/*  END SIDE LEFT BAR BOTTOM SECTION */}
+
       <Image
         src="/images/sideBarDesign.svg"
-        alt="logout Icon"
+        alt="sidebar design"
         width={100}
         height={100}
         className="w-full absolute bottom-0 right-0 -mb-24"
