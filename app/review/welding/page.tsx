@@ -19,7 +19,7 @@ export default function ReviewWeldingPage() {
     try {
       const res = await axiosProvider.get(`/fineengg_erp/assign-to-worker`, {
         params: { status: "in-review", review_for: "welding" },
-      });
+      }as any);
       setData(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to load review/welding");

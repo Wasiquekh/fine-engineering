@@ -5,6 +5,7 @@ import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
 import { toast } from "react-toastify";
+import { AxiosHeaders } from "axios";
 
 const axiosProvider = new AxiosProvider();
 
@@ -58,7 +59,10 @@ export default function MaterialMovementPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get("/fineengg_erp/material-movement", { params });
+      const res = await axiosProvider.get("/fineengg_erp/material-movement", { 
+        params,
+        headers: new AxiosHeaders()
+      });
       const list = Array.isArray(res?.data?.data) ? res.data.data : [];
       setRows(list);
 

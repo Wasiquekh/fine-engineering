@@ -32,9 +32,9 @@ export default function QcVendorPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get(`/fineengg_erp/assign-to-worker`, {
-        params: { status },
-      });
+      const res = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+        params: { status }
+      } as any);     
       setRows(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to load QC/Vendor");
