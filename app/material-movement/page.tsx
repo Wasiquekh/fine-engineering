@@ -85,12 +85,19 @@ export default function MaterialMovementPage() {
   const statusBadge = (s?: string) => {
     const v = s || "-";
     const base = "px-2 py-1 rounded text-xs font-semibold";
+    
+    // Color coding for different statuses
     if (v === "in-progress") return <span className={`${base} bg-blue-100 text-blue-700`}>{v}</span>;
     if (v === "in-review") return <span className={`${base} bg-yellow-100 text-yellow-800`}>{v}</span>;
+    if (v === "machine") return <span className={`${base} bg-indigo-100 text-indigo-700`}>{v}</span>; // Distinct indigo color for machine status
     if (v.includes("qc")) return <span className={`${base} bg-green-100 text-green-700`}>{v}</span>;
     if (v === "vendor-outsource") return <span className={`${base} bg-purple-100 text-purple-700`}>{v}</span>;
     if (v === "completed") return <span className={`${base} bg-gray-200 text-gray-700`}>{v}</span>;
     if (v === "rejected" || v === "not-ok") return <span className={`${base} bg-red-100 text-red-700`}>{v}</span>;
+    if (v === "ready-for-qc") return <span className={`${base} bg-cyan-100 text-cyan-700`}>{v}</span>;
+    if (v === "in-welding") return <span className={`${base} bg-orange-100 text-orange-700`}>{v}</span>;
+    if (v === "in-vendor") return <span className={`${base} bg-pink-100 text-pink-700`}>{v}</span>;
+    
     return <span className={`${base} bg-gray-100 text-gray-700`}>{v}</span>;
   };
 
@@ -136,6 +143,7 @@ export default function MaterialMovementPage() {
                 <option value="">All Status</option>
                 <option value="in-progress">in-progress</option>
                 <option value="in-review">in-review</option>
+                <option value="machine">machine</option> {/* Added machine status */}
                 <option value="ready-for-qc">ready-for-qc</option>
                 <option value="qc-welding">qc-welding</option>
                 <option value="in-welding">in-welding</option>
