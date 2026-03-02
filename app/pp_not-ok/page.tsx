@@ -20,7 +20,7 @@ export default function ReviewPage() {
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get(`/fineengg_erp/assign-to-worker?job_type=${filterParam}&status=ready-for-qc`);
+      const response = await axiosProvider.get(`/fineengg_erp/assign-to-worker?job_type=${filterParam}&status=not-ok`);
       const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
       setData(fetchedData);
     } catch (error) {
@@ -102,38 +102,23 @@ export default function ReviewPage() {
       }
     }
   };
-
-  const handleJobNotOk = async (items: any[]) => {
-    if (!items || items.length === 0) {
-      toast.error("No items to mark as not OK.");
-      return;
-    }
-
-    const { value: reason } = await Swal.fire({
-      title: "Reason for Not OK",
-      input: "textarea",
-      inputPlaceholder: "Enter the reason why this job is not OK...",
-      inputAttributes: {
-        "aria-label": "Type your reason here",
-      },
+  const handleJobRejected = async (items: any[]) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `You want to reject this job?`,
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Submit",
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      inputValidator: (value) => {
-        if (!value) {
-          return "You need to provide a reason!";
-        }
-      },
+      confirmButtonText: "Yes, Reject Job!",
     });
 
-    if (reason) {
+    if (result.isConfirmed) {
       const job_id = items[0]?.jobId || items[0]?.job_id || items[0]?.job?.id;
       const updated_by = storage.getUserId();
 
       if (!job_id) {
         toast.error("Job ID not found for the selected items.");
-        console.error("Could not find 'jobId', 'job_id', or 'job.id' on the first item:", items[0]);
         return;
       }
 
@@ -143,17 +128,52 @@ export default function ReviewPage() {
       }
 
       try {
-        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, { reason, updated_by });
-        toast.success("Job marked as Not OK successfully");
+        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject-not-ok`, { updated_by });
+        toast.success("Job Rejected successfully");
         fetchData();
       } catch (error) {
-        const errorMessage = (error as any).response?.data?.error || (error as any).response?.data?.message || (error as Error).message || "An unknown error occurred";
-        console.error("Error marking job as Not OK:", error, "with payload:", { reason, updated_by });
+        const errorMessage = (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
+        console.error("Error rejecting job:", error);
         toast.error(errorMessage);
       }
     }
   };
+  const handleJobBackToQC = async (items: any[]) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `You want to send this job back to QC?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, Send Back to QC!",
+    });
 
+    if (result.isConfirmed) {
+      const job_id = items[0]?.jobId || items[0]?.job_id || items[0]?.job?.id;
+      const updated_by = storage.getUserId();
+
+      if (!job_id) {
+        toast.error("Job ID not found for the selected items.");
+        return;
+      }
+
+      if (!updated_by) {
+        toast.error("User ID not found. Please log in again.");
+        return;
+      }
+
+      try {
+        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, { updated_by });
+        toast.success("Job sent back to QC successfully");
+        fetchData();
+      } catch (error) {
+        const errorMessage = (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
+        console.error("Error sending job back to QC:", error);
+        toast.error(errorMessage);
+      }
+    }
+  };
   const handleRework = async (items: any[]) => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -273,14 +293,15 @@ export default function ReviewPage() {
                           <td className="px-2 py-2 border border-tableBorder"></td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <div className="flex items-center gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleOK(items); }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
-                                OK
+                              <button onClick={(e) => { e.stopPropagation(); handleJobBackToQC(items); }} className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm">
+                                QC
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleJobNotOk(items); }} className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm">
-                                Not OK
-                              </button>
+                              {/* rework sahi hai */}
                               <button onClick={(e) => { e.stopPropagation(); handleRework(items); }} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
                                 Rework
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleJobRejected(items); }} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+                                Reject
                               </button>
                             </div>
                           </td>
