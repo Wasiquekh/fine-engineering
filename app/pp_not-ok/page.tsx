@@ -200,7 +200,7 @@ export default function ReviewPage() {
       }
 
       try {
-        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, { updated_by });
+        await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject`, { updated_by });
         toast.success("Job sent for rework successfully");
         fetchData();
       } catch (error) {
