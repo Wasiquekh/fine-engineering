@@ -121,6 +121,8 @@ const LeftSideBar: React.FC = () => {
     pathname.includes("/inventory")
   );
   const [isInventory1Open, setIsInventory1Open] = useState<boolean>(false);
+  const [isMaterialApprovedOpen, setIsMaterialApprovedOpen] = useState<boolean>(false);
+  const [isMaterialApprovedAmarOpen, setIsMaterialApprovedAmarOpen] = useState<boolean>(false);
 
   return (
     <div className="w-full hidden md:w-[17%]  md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0  h-screen fixed top-0 left-0">
@@ -185,15 +187,55 @@ const LeftSideBar: React.FC = () => {
                 <Link href="/inventory">
                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                     <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Inventory</p>
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Data</p>
                   </div>
                 </Link>
-                <Link href="/inventory_material_approve">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Approved</p>
+                <div
+                  onClick={() => setIsMaterialApprovedOpen(!isMaterialApprovedOpen)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                >
+                  <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Approved</p>
+                  <FaChevronDown
+                    className={`ml-auto w-3 h-3 transition-transform ${isMaterialApprovedOpen ? "rotate-180" : ""}`}
+                  />
+                </div>
+                {isMaterialApprovedOpen && (
+                  <div className="pl-4 flex flex-col gap-1">
+                    <div
+                      onClick={() => setIsMaterialApprovedAmarOpen(!isMaterialApprovedAmarOpen)}
+                      className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                    >
+                      <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                      <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Equipment</p>
+                      <FaChevronDown
+                        className={`ml-auto w-3 h-3 transition-transform ${isMaterialApprovedAmarOpen ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                    {isMaterialApprovedAmarOpen && (
+                      <div className="pl-4 flex flex-col gap-1">
+                        <Link href="/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Equipment">
+                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                            <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                          </div>
+                        </Link>
+                        <Link href="/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Equipment">
+                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                            <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                          </div>
+                        </Link>
+                        <Link href="/inventory_material_approve?filter=KANBAN&client=Amar%20Equipment">
+                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                            <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                          </div>
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                </Link>
+                )}
               </div>
             )}
             <Link href="/inventory">

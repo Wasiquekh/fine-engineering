@@ -1,10 +1,9 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
-import { HiCheck } from "react-icons/hi";
-import StorageManager from "../../provider/StorageManager";
+import { HiCheck, HiX } from "react-icons/hi";
 import LeftSideBar from "../component/LeftSideBar";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
@@ -17,8 +16,11 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const clientParam = searchParams.get("client");
+  const filterParam = searchParams.get("filter");
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (items: any[]) => {
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "Do you want to approve this job?",
@@ -29,22 +31,22 @@ export default function Home() {
       confirmButtonText: "Yes, approve it!",
       cancelButtonText: "Cancel",
     });
-
+  
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.post(`/fineengg_erp/jobs/${id}/approve`, {});
-
-        if (response.data.success) {
-          toast.success("Job approved successfully");
-          setData((prevData: any) =>
-            prevData.map((item: any) =>
-              item.id === id ? { ...item, is_approve: 1 } : item
-            )
-          );
-          fetchData();
-        } else {
-          toast.error("Failed to approve job");
+        const itemsToApprove = items.filter(item => !item.is_approve && !item.is_rejected);
+        if (itemsToApprove.length === 0) {
+          toast.info("All items in this job are already approved.");
+          return;
         }
+  
+        const approvalPromises = itemsToApprove.map(item =>
+          axiosProvider.post(`/fineengg_erp/jobs/${item.id}/approve`, {})
+        );
+  
+        await Promise.all(approvalPromises);
+        toast.success("Job approved successfully");
+        fetchData();
       } catch (error: any) {
         console.error("Error approving job:", error);
         toast.error("Failed to approve job");
@@ -52,12 +54,52 @@ export default function Home() {
     }
   };
 
+  const handleNotApprove = async (items: any[]) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to mark this job as not approved?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, do not approve!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const itemsToNotApprove = items.filter((item) => !item.is_approve && !item.is_rejected);
+        if (itemsToNotApprove.length === 0) {
+          toast.info("No pending items to mark as not approved.");
+          return;
+        }
+
+        const notApprovePromises = itemsToNotApprove.map((item) =>
+          axiosProvider.post(`/fineengg_erp/jobs/${item.id}/not-approve`, {})
+        );
+
+        await Promise.all(notApprovePromises);
+        toast.success("Job marked as not approved.");
+        fetchData();
+      } catch (error: any) {
+        console.error("Error rejecting job:", error);
+        toast.error("Failed to mark as not approved.");
+      }
+    }
+  };
+
+  const handleJobNoClick = (jobNo: string) => {
+    if (!jobNo) return;
+    router.push(`/inventory_material_approve/${encodeURIComponent(jobNo)}`);
+  };
+
   const fetchData = async () => {
     try {
       const response = await axiosProvider.get("/fineengg_erp/jobs");
       const updatedData = response.data.data.map((item: any) => ({
         ...item,
-        is_approve: item.is_approved ? 1 : 0,
+        is_approve: item.job_status === 'approved' ? 1 : 0,
+        is_rejected: item.job_status === 'not-approved' ? 1 : 0,
       }));
       setData(updatedData);
     } catch (error: any) {
@@ -66,10 +108,61 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (filterParam) {
+      setActiveFilter(filterParam);
+    }
+  }, [filterParam]);
+
   const filteredData = useMemo(() => {
-    if (activeFilter === "ALL") return data;
-    return data.filter((item: any) => item.job_type === activeFilter);
-  }, [data, activeFilter]);
+    let currentData = data;
+    if (clientParam) {
+      currentData = currentData.filter((item) => item.client_name === clientParam);
+    }
+    if (activeFilter === "ALL") return currentData;
+    return currentData.filter((item: any) => item.job_type === activeFilter);
+  }, [data, activeFilter, clientParam]);
+
+  const groupedData = useMemo(() => {
+    if (!filteredData || filteredData.length === 0) return [];
+
+    const groups = filteredData.reduce((acc: { [key: string]: any }, item: any) => {
+      const { job_no } = item;
+      if (!job_no) return acc;
+
+      if (!acc[job_no]) {
+        acc[job_no] = {
+          job_no: item.job_no,
+          job_type: item.job_type,
+          job_category: item.job_category,
+          items: [],
+          is_approve: 1,
+          is_rejected: 1,
+          total_qty: 0,
+          jo_numbers_list: new Set(),
+        };
+      }
+
+      acc[job_no].items.push(item);
+      if (!item.is_approve) {
+        acc[job_no].is_approve = 0;
+      }
+      if (!item.is_rejected) {
+        acc[job_no].is_rejected = 0;
+      }
+      acc[job_no].total_qty += Number(item.qty) || 0;
+      if (item.jo_number) {
+        acc[job_no].jo_numbers_list.add(item.jo_number);
+      }
+
+      return acc;
+    }, {});
+
+    return Object.values(groups).map(group => ({
+      ...group,
+      jo_numbers: Array.from(group.jo_numbers_list).join(', '),
+    }));
+  }, [filteredData]);
 
   useEffect(() => {
     fetchData();
@@ -189,26 +282,6 @@ export default function Home() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item Description
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item No
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
                           Quantity
                         </div>
                       </div>
@@ -216,26 +289,6 @@ export default function Home() {
                     <th
                       scope="col"
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          MOC
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Bin Location
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
@@ -256,10 +309,10 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.length === 0 ? (
+                  {groupedData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={7}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -268,80 +321,81 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item: any) => (
+                    groupedData.map((group: any) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
-                        key={item.id}
+                        key={group.job_no}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
+                          <button
+                            onClick={() => handleJobNoClick(group.job_no)}
+                            className="text-blue-600 hover:underline text-left"
+                          >
+                            <p className="text-base leading-normal">{group.job_no || "N/A"}</p>
+                          </button>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
-                            {item.job_no || "N/A"}
+                            {group.jo_numbers || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
-                            {item.jo_number || "N/A"}
+                            {group.job_type}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
-                            {item.job_type}
+                            {group.job_category || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
-                            {item.job_category || "N/A"}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.item_description}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.item_no}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.qty}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.moc}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.bin_location}
+                            {group.total_qty}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <span
                             className={`px-2 py-1 rounded text-sm ${
-                              item.is_approve
+                              group.is_approve
                                 ? "bg-green-100 text-green-600"
+                                : group.is_rejected
+                                ? "bg-red-100 text-red-600"
                                 : "bg-yellow-100 text-yellow-600"
                             }`}
                           >
-                            {item.is_approve ? "Approved" : "Pending"}
+                            {group.is_approve ? "Approved" : (group.is_rejected ? "Not Approved" : "Pending")}
                           </span>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => !item.is_approve && handleApprove(item.id)}
-                              disabled={!!item.is_approve}
+                              onClick={() => !group.is_approve && !group.is_rejected && handleApprove(group.items)}
+                              disabled={!!group.is_approve || !!group.is_rejected}
                               className={`p-1.5 rounded transition-colors ${
-                                item.is_approve
+                                group.is_approve
                                   ? "bg-green-100 text-green-600 cursor-not-allowed"
+                                  : group.is_rejected
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                   : "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
                               }`}
-                              title={item.is_approve ? "Approved" : "Approve"}
+                              title={group.is_approve ? "Approved" : "Approve"}
                             >
                               <HiCheck className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => !group.is_approve && !group.is_rejected && handleNotApprove(group.items)}
+                              disabled={!!group.is_approve || !!group.is_rejected}
+                              className={`p-1.5 rounded transition-colors ${
+                                group.is_rejected
+                                  ? "bg-red-100 text-red-600 cursor-not-allowed"
+                                  : group.is_approve
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : "bg-red-100 text-red-600 hover:bg-red-200"
+                              }`}
+                              title={group.is_rejected ? "Not Approved" : "Not Approve"}
+                            >
+                              <HiX className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
