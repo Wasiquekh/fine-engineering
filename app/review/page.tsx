@@ -17,8 +17,12 @@ export default function ReviewPage() {
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get(`/fineengg_erp/assign-to-worker?job_type=${filterParam}&status=in-review`);
-      const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
+      const response = await axiosProvider.get(
+        `/fineengg_erp/assign-to-worker?job_type=${filterParam}&status=in-review`
+      );
+      const fetchedData = Array.isArray(response.data.data)
+        ? response.data.data
+        : [];
       setData(fetchedData);
     } catch (error) {
       console.error("Error fetching review data:", error);
@@ -28,6 +32,74 @@ export default function ReviewPage() {
   useEffect(() => {
     fetchData();
   }, [filterParam]);
+  const handleMachine = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Machine?",
+      text: "Send back to In-Progress?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Machine",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axiosProvider.post(
+          `/fineengg_erp/assign-to-worker/${id}/reject`,
+          null
+        );
+        toast.success("Moved to In-Progress");
+        fetchData();
+      } catch (e) {
+        toast.error("Failed to move to In-Progress");
+      }
+    }
+  };
+
+  const handleWelding = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Welding?",
+      text: "Send to QC Welding queue?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Welding",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axiosProvider.post(
+          `/fineengg_erp/assign-to-worker/${id}/welding`,
+          null
+        );
+        toast.success("Moved to QC Welding");
+        fetchData();
+      } catch (e) {
+        toast.error("Failed to move to QC Welding");
+      }
+    }
+  };
+
+  const handleVendor = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Vendor Outsource?",
+      text: "Send to Vendor Outsource queue (Production Planning will assign vendor).",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Vendor",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axiosProvider.post(
+          `/fineengg_erp/assign-to-worker/${id}/vendor`,
+          null
+        );
+        toast.success("Moved to Vendor Outsource");
+        fetchData();
+      } catch (e) {
+        toast.error("Failed to move to Vendor Outsource");
+      }
+    }
+  };
 
   const handleQc = async (id: string) => {
     const result = await Swal.fire({
@@ -42,7 +114,10 @@ export default function ReviewPage() {
 
     if (result.isConfirmed) {
       try {
-        await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/ready-for-qc`, null);
+        await axiosProvider.post(
+          `/fineengg_erp/assign-to-worker/${id}/ready-for-qc`,
+          null
+        );
         toast.success("Marked as Ready for QC successfully");
         fetchData();
       } catch (error) {
@@ -65,7 +140,10 @@ export default function ReviewPage() {
 
     if (result.isConfirmed) {
       try {
-        await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/reject`, null);
+        await axiosProvider.post(
+          `/fineengg_erp/assign-to-worker/${id}/reject`,
+          null
+        );
         toast.success("Rejected successfully");
         fetchData();
       } catch (error) {
@@ -97,28 +175,52 @@ export default function ReviewPage() {
                   <th scope="col" className="p-3 border border-tableBorder">
                     Serial No
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Item No
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Machine Category
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Machine Size
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Machine Code
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Worker Name
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Quantity
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Assigning Date
                   </th>
-                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                  <th
+                    scope="col"
+                    className="px-2 py-0 border border-tableBorder"
+                  >
                     Action
                   </th>
                 </tr>
@@ -126,45 +228,88 @@ export default function ReviewPage() {
               <tbody>
                 {data.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-6 text-center border border-tableBorder">
+                    <td
+                      colSpan={9}
+                      className="px-4 py-6 text-center border border-tableBorder"
+                    >
                       <p className="text-[#666666] text-base">No data found</p>
                     </td>
                   </tr>
                 ) : (
                   data.map((item: any) => (
-                    <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                    <tr
+                      key={item.id}
+                      className="border border-tableBorder bg-white hover:bg-primary-100"
+                    >
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.serial_no || "-"}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.serial_no || "-"}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.item_no}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.item_no}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.machine_category}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.machine_category}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.machine_size}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.machine_size}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.machine_code}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.machine_code}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.worker_name}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.worker_name}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.quantity_no}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.quantity_no}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
-                        <p className="text-[#232323] text-base leading-normal">{item.assigning_date}</p>
+                        <p className="text-[#232323] text-base leading-normal">
+                          {item.assigning_date}
+                        </p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
                         <div className="flex items-center gap-2">
-                            <button onClick={() => handleQc(item.id)} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
-                                QC
-                            </button>
-                            <button onClick={() => handleReject(item.id)} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
-                                Reject
-                            </button>
+                          <button
+                            onClick={() => handleQc(item.id)}
+                            className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                          >
+                            QC
+                          </button>
+
+                          <button
+                            onClick={() => handleMachine(item.id)}
+                            className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
+                          >
+                            Machine
+                          </button>
+
+                          <button
+                            onClick={() => handleWelding(item.id)}
+                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                          >
+                            Welding
+                          </button>
+
+                          <button
+                            onClick={() => handleVendor(item.id)}
+                            className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                          >
+                            Vendor
+                          </button>
                         </div>
                       </td>
                     </tr>

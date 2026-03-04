@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -31,12 +31,14 @@
     "react-toastify": "^10.0.6",
     "react-tooltip": "^5.28.0",
     "recharts": "^2.15.1",
+    "sharp": "^0.34.5",
     "sweetalert2": "^11.14.4",
     "yup": "^1.6.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
     "@types/react": "^18.3.12",
+    "cross-env": "^10.1.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.6",
     "postcss": "^8",
