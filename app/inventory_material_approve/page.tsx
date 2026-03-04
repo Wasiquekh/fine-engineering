@@ -12,7 +12,7 @@ import Swal from "sweetalert2";
 const axiosProvider = new AxiosProvider();
 
 export default function Home() {
-  const [data, setData] = useState<any | []>([]);
+  const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
   const router = useRouter();
@@ -126,7 +126,18 @@ export default function Home() {
   const groupedData = useMemo(() => {
     if (!filteredData || filteredData.length === 0) return [];
 
-    const groups = filteredData.reduce((acc: { [key: string]: any }, item: any) => {
+    interface JobGroup {
+      job_no: string;
+      job_type: string;
+      job_category: string;
+      items: any[];
+      is_approve: number;
+      is_rejected: number;
+      total_qty: number;
+      jo_numbers_list: Set<string>;
+    }
+
+    const groups = filteredData.reduce((acc: Record<string, JobGroup>, item: any) => {
       const { job_no } = item;
       if (!job_no) return acc;
 
@@ -139,7 +150,7 @@ export default function Home() {
           is_approve: 1,
           is_rejected: 1,
           total_qty: 0,
-          jo_numbers_list: new Set(),
+          jo_numbers_list: new Set<string>(),
         };
       }
 
@@ -156,9 +167,9 @@ export default function Home() {
       }
 
       return acc;
-    }, {});
+    }, {} as Record<string, JobGroup>);
 
-    return Object.values(groups).map(group => ({
+    return Object.values(groups).map((group: JobGroup) => ({
       ...group,
       jo_numbers: Array.from(group.jo_numbers_list).join(', '),
     }));
