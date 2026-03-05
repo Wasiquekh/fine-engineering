@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
@@ -14,6 +14,7 @@ export default function ReviewPage() {
   const [data, setData] = useState<any[]>([]);
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const clientParam = searchParams.get("client");
 
   const fetchData = async () => {
     try {
@@ -32,6 +33,14 @@ export default function ReviewPage() {
   useEffect(() => {
     fetchData();
   }, [filterParam]);
+
+  const filteredData = useMemo(() => {
+    if (!clientParam) {
+      return data;
+    }
+    return data.filter(item => item.client_name === clientParam);
+  }, [data, clientParam]);
+
   const handleMachine = async (id: string) => {
     const result = await Swal.fire({
       title: "Machine?",
@@ -226,7 +235,7 @@ export default function ReviewPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.length === 0 ? (
+                {filteredData.length === 0 ? (
                   <tr>
                     <td
                       colSpan={9}
@@ -236,7 +245,7 @@ export default function ReviewPage() {
                     </td>
                   </tr>
                 ) : (
-                  data.map((item: any) => (
+                  filteredData.map((item: any) => (
                     <tr
                       key={item.id}
                       className="border border-tableBorder bg-white hover:bg-primary-100"
