@@ -597,14 +597,14 @@ const LeftSideBar: React.FC = () => {
                           </div>
                         </Link>
 
-                        <Link href="/review/welding?filter=JOB_SERVICE&client=Amar%20Equipment">
+                        <Link href="/review/welding?filter=JOB_SERVICE">
                           <div className={itemCls(pathname === "/review/welding" && client === "Amar Equipment")}>
                             <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Equipment")} />
                             <p className={textCls(pathname === "/review/welding" && client === "Amar Equipment")}>Welding</p>
                           </div>
                         </Link>
 
-                        <Link href="/review/vendor?filter=JOB_SERVICE&client=Amar%20Equipment">
+                        <Link href="/review/vendor?filter=JOB_SERVICE">
                           <div className={itemCls(pathname === "/review/vendor" && client === "Amar Equipment")}>
                             <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Equipment")} />
                             <p className={textCls(pathname === "/review/vendor" && client === "Amar Equipment")}>Vendor</p>
