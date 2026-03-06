@@ -1,40 +1,85 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import StorageManager from "../../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 
 const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
 
 type Row = {
   id: string;
   serial_no?: string;
   item_no?: number;
-  quantity_no?: number; // ✅ pending qty for current row
+  quantity_no?: number;
   assigning_date?: string;
   vendor_name?: string | null;
   status?: string;
+  jo_no?: string | null;
+  job_id?: string | null;
+  jobId?: string | null;
+  job?: {
+    id?: string | null;
+  } | null;
 };
 
 export default function QcVendorPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [tab, setTab] = useState<"outgoing" | "incoming">("outgoing");
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
 
-  // ✅ vendor statuses only
+  const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const client = searchParams.get("client") || "";
+  const REVIEW_FOR = "vendor";
+
   const status = useMemo(() => {
     return tab === "outgoing" ? "qc-vendor" : "in-vendor";
   }, [tab]);
+
+  const getJobId = (r: Row) => r.jobId || r.job_id || r.job?.id;
+
+  const buildQS = () => {
+    const q = new URLSearchParams();
+    q.set("filter", filterParam);
+    if (client) q.set("client", client);
+    q.set("review_for", REVIEW_FOR);
+    return q;
+  };
+
+  const goNotOkPage = () => {
+    const q = buildQS();
+    router.push(`/pp_not-ok/vendor?${q.toString()}`);
+  };
+
+  const goReworkPage = () => {
+    const q = buildQS();
+    router.push(`/production_module?${q.toString()}`);
+  };
+
+  const goReviewPage = () => {
+    const q = buildQS();
+    router.push(`/review/vendor?${q.toString()}`);
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const res = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
-        params: { status }
-      } as any);     
+        params: {
+          status,
+          job_type: filterParam,
+          ...(client ? { client } : {}),
+        },
+      } as any);
+
       setRows(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to load QC/Vendor");
@@ -47,7 +92,94 @@ export default function QcVendorPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [status, filterParam, client]);
+
+  const askDecision = async () => {
+    const decision = await Swal.fire({
+      title: "QC Result?",
+      text: "Select what to do next",
+      icon: "question",
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: "OK",
+      denyButtonText: "Not OK",
+      cancelButtonText: "Rework",
+      confirmButtonColor: "#22c55e",
+      denyButtonColor: "#f59e0b",
+      cancelButtonColor: "#ef4444",
+    });
+
+    if (decision.isConfirmed) return "ok" as const;
+    if (decision.isDenied) return "not_ok" as const;
+    if (decision.dismiss === Swal.DismissReason.cancel) return "rework" as const;
+    return "none" as const;
+  };
+
+  const doNotOk = async (r: Row) => {
+    const { value: reason } = await Swal.fire({
+      title: "Reason for Not OK",
+      input: "textarea",
+      inputPlaceholder: "Enter reason...",
+      showCancelButton: true,
+      confirmButtonText: "Submit",
+      confirmButtonColor: "#d33",
+    });
+
+    if (!reason) return;
+
+    const job_id = getJobId(r);
+    const updated_by = storage.getUserId();
+
+    if (!job_id || !updated_by) {
+      toast.error("Job ID / User ID missing");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, {
+        reason,
+        updated_by,
+        review_for: REVIEW_FOR,
+      });
+
+      toast.success("Marked Not OK");
+      goNotOkPage();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Not OK failed");
+    }
+  };
+
+  const doRework = async (r: Row) => {
+    const job_id = getJobId(r);
+    const updated_by = storage.getUserId();
+
+    if (!job_id || !updated_by) {
+      toast.error("Job ID / User ID missing");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Send for rework?",
+      text: "This job will go back to machine module.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Rework",
+      confirmButtonColor: "#ef4444",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, {
+        updated_by,
+      });
+
+      toast.success("Sent for Rework");
+      goReworkPage();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Rework failed");
+    }
+  };
 
   const openOutgoingForm = async (r: Row) => {
     const maxQty = Number(r.quantity_no ?? 0);
@@ -69,11 +201,17 @@ export default function QcVendorPage() {
         const qc_quantity = Number(
           (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
         );
-        const gatepass_no = (document.getElementById("gatepass_no") as HTMLInputElement)?.value?.trim();
+        const gatepass_no = (
+          document.getElementById("gatepass_no") as HTMLInputElement
+        )?.value?.trim();
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
-        if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
-        if (qc_quantity > maxQty) return Swal.showValidationMessage(`QC Quantity cannot exceed ${maxQty}`);
+        if (!qc_quantity || qc_quantity <= 0) {
+          return Swal.showValidationMessage("QC Quantity required");
+        }
+        if (qc_quantity > maxQty) {
+          return Swal.showValidationMessage(`QC Quantity cannot exceed ${maxQty}`);
+        }
         if (!gatepass_no) return Swal.showValidationMessage("Gatepass No required");
 
         return { qc_date, qc_quantity, gatepass_no };
@@ -83,7 +221,11 @@ export default function QcVendorPage() {
     if (!value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/qc-outgoing`, value);
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/qc-outgoing`, {
+        ...value,
+        review_for: REVIEW_FOR,
+      });
+
       toast.success(
         value.qc_quantity < maxQty
           ? `Partial outgoing saved (${value.qc_quantity}). Remaining will stay pending.`
@@ -116,8 +258,12 @@ export default function QcVendorPage() {
         );
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
-        if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
-        if (qc_quantity > maxQty) return Swal.showValidationMessage(`Incoming qty cannot exceed ${maxQty}`);
+        if (!qc_quantity || qc_quantity <= 0) {
+          return Swal.showValidationMessage("QC Quantity required");
+        }
+        if (qc_quantity > maxQty) {
+          return Swal.showValidationMessage(`Incoming qty cannot exceed ${maxQty}`);
+        }
 
         return { qc_date, qc_quantity };
       },
@@ -126,16 +272,32 @@ export default function QcVendorPage() {
     if (!value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/qc-incoming`, value);
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/qc-incoming`, {
+        ...value,
+        review_for: REVIEW_FOR,
+      });
+
       toast.success(
         value.qc_quantity < maxQty
           ? `Partial incoming saved (${value.qc_quantity}). Remaining will stay in-vendor.`
           : "Incoming saved → moved to Review/Vendor"
       );
-      fetchData();
+      goReviewPage();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Incoming submit failed");
     }
+  };
+
+  const handleAction = async (r: Row) => {
+    const d = await askDecision();
+
+    if (d === "ok") {
+      if (tab === "outgoing") return openOutgoingForm(r);
+      return openIncomingForm(r);
+    }
+
+    if (d === "not_ok") return doNotOk(r);
+    if (d === "rework") return doRework(r);
   };
 
   return (
@@ -182,6 +344,7 @@ export default function QcVendorPage() {
               <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-gray-50">
                   <tr className="text-gray-600">
+                    <th className="text-left font-semibold px-4 py-3">JO No</th>
                     <th className="text-left font-semibold px-4 py-3">Serial No</th>
                     <th className="text-left font-semibold px-4 py-3">Item No</th>
                     <th className="text-left font-semibold px-4 py-3">Vendor Name</th>
@@ -194,40 +357,34 @@ export default function QcVendorPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                      <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
                         Loading...
                       </td>
                     </tr>
                   ) : rows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                      <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                         No vendor items found.
                       </td>
                     </tr>
                   ) : (
                     rows.map((r) => (
                       <tr key={r.id} className="border-b last:border-b-0">
+                        <td className="px-4 py-4">{r.jo_no || "-"}</td>
                         <td className="px-4 py-4">{r.serial_no || "-"}</td>
                         <td className="px-4 py-4">{r.item_no ?? "-"}</td>
                         <td className="px-4 py-4">{r.vendor_name || "-"}</td>
                         <td className="px-4 py-4 font-semibold">{r.quantity_no ?? "-"}</td>
                         <td className="px-4 py-4">{r.assigning_date || "-"}</td>
                         <td className="px-4 py-4 text-right">
-                          {tab === "outgoing" ? (
-                            <button
-                              onClick={() => openOutgoingForm(r)}
-                              className="px-4 py-2 rounded-md bg-blue-600 text-white font-semibold hover:opacity-90"
-                            >
-                              Fill Outgoing
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => openIncomingForm(r)}
-                              className="px-4 py-2 rounded-md bg-green-600 text-white font-semibold hover:opacity-90"
-                            >
-                              Fill Incoming
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleAction(r)}
+                            className={`px-4 py-2 rounded-md text-white font-semibold hover:opacity-90 ${
+                              tab === "outgoing" ? "bg-blue-600" : "bg-green-600"
+                            }`}
+                          >
+                            {tab === "outgoing" ? "Fill Outgoing" : "Fill Incoming"}
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -236,7 +393,7 @@ export default function QcVendorPage() {
               </table>
 
               <div className="text-xs text-gray-500 mt-3">
-                ✅ Partial incoming/outgoing supported. Incoming moves to <b>Review/Vendor</b> with <b>review_for=vendor</b>.
+                ✅ Click action to choose <b>OK</b>, <b>Not OK</b>, or <b>Rework</b>. Incoming OK moves to <b>Review/Vendor</b> with <b>review_for=vendor</b>.
               </div>
             </div>
           </div>
