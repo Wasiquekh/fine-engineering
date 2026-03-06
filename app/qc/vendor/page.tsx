@@ -14,18 +14,16 @@ const storage = new StorageManager();
 
 type Row = {
   id: string;
+  jo_no?: string | null;
   serial_no?: string;
   item_no?: number;
   quantity_no?: number;
   assigning_date?: string;
   vendor_name?: string | null;
   status?: string;
-  jo_no?: string | null;
   job_id?: string | null;
   jobId?: string | null;
-  job?: {
-    id?: string | null;
-  } | null;
+  job?: { id?: string | null } | null;
 };
 
 export default function QcVendorPage() {
@@ -91,7 +89,6 @@ export default function QcVendorPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, filterParam, client]);
 
   const askDecision = async () => {
@@ -173,7 +170,6 @@ export default function QcVendorPage() {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, {
         updated_by,
       });
-
       toast.success("Sent for Rework");
       goReworkPage();
     } catch (e: any) {
@@ -198,20 +194,12 @@ export default function QcVendorPage() {
       confirmButtonText: "Submit Outgoing",
       preConfirm: () => {
         const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
-        const qc_quantity = Number(
-          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
-        );
-        const gatepass_no = (
-          document.getElementById("gatepass_no") as HTMLInputElement
-        )?.value?.trim();
+        const qc_quantity = Number((document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0);
+        const gatepass_no = (document.getElementById("gatepass_no") as HTMLInputElement)?.value?.trim();
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
-        if (!qc_quantity || qc_quantity <= 0) {
-          return Swal.showValidationMessage("QC Quantity required");
-        }
-        if (qc_quantity > maxQty) {
-          return Swal.showValidationMessage(`QC Quantity cannot exceed ${maxQty}`);
-        }
+        if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
+        if (qc_quantity > maxQty) return Swal.showValidationMessage(`QC Quantity cannot exceed ${maxQty}`);
         if (!gatepass_no) return Swal.showValidationMessage("Gatepass No required");
 
         return { qc_date, qc_quantity, gatepass_no };
@@ -253,17 +241,11 @@ export default function QcVendorPage() {
       confirmButtonText: "Submit Incoming",
       preConfirm: () => {
         const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
-        const qc_quantity = Number(
-          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
-        );
+        const qc_quantity = Number((document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0);
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
-        if (!qc_quantity || qc_quantity <= 0) {
-          return Swal.showValidationMessage("QC Quantity required");
-        }
-        if (qc_quantity > maxQty) {
-          return Swal.showValidationMessage(`Incoming qty cannot exceed ${maxQty}`);
-        }
+        if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
+        if (qc_quantity > maxQty) return Swal.showValidationMessage(`Incoming qty cannot exceed ${maxQty}`);
 
         return { qc_date, qc_quantity };
       },
@@ -393,7 +375,7 @@ export default function QcVendorPage() {
               </table>
 
               <div className="text-xs text-gray-500 mt-3">
-                ✅ Click action to choose <b>OK</b>, <b>Not OK</b>, or <b>Rework</b>. Incoming OK moves to <b>Review/Vendor</b> with <b>review_for=vendor</b>.
+                ✅ Vendor Not OK goes to <b>/pp_not-ok/vendor</b>. QC from that page returns to <b>/qc/vendor</b>.
               </div>
             </div>
           </div>

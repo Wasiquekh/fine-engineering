@@ -88,7 +88,6 @@ export default function NotOkVendorPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterParam, client]);
 
   const groupedData = useMemo(() => {
@@ -124,15 +123,8 @@ export default function NotOkVendorPage() {
     const job_id = getJobId(items);
     const updated_by = storage.getUserId();
 
-    if (!job_id) {
-      toast.error("Job ID not found.");
-      return;
-    }
-
-    if (!updated_by) {
-      toast.error("User ID not found. Please login again.");
-      return;
-    }
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, {
@@ -143,7 +135,6 @@ export default function NotOkVendorPage() {
       toast.success("Job sent back to QC Vendor successfully");
       goQcVendorPage();
     } catch (error: any) {
-      console.error("Error sending job back to QC:", error);
       toast.error(error?.response?.data?.error || "Failed to send back to QC");
     }
   };
@@ -164,15 +155,8 @@ export default function NotOkVendorPage() {
     const job_id = getJobId(items);
     const updated_by = storage.getUserId();
 
-    if (!job_id) {
-      toast.error("Job ID not found.");
-      return;
-    }
-
-    if (!updated_by) {
-      toast.error("User ID not found. Please login again.");
-      return;
-    }
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, { updated_by });
@@ -180,7 +164,6 @@ export default function NotOkVendorPage() {
       fetchData();
       setSelectedJo(null);
     } catch (error: any) {
-      console.error("Error sending job for rework:", error);
       toast.error(error?.response?.data?.error || "Rework failed");
     }
   };
@@ -201,15 +184,8 @@ export default function NotOkVendorPage() {
     const job_id = getJobId(items);
     const updated_by = storage.getUserId();
 
-    if (!job_id) {
-      toast.error("Job ID not found.");
-      return;
-    }
-
-    if (!updated_by) {
-      toast.error("User ID not found. Please login again.");
-      return;
-    }
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject-not-ok`, {
@@ -221,7 +197,6 @@ export default function NotOkVendorPage() {
       fetchData();
       setSelectedJo(null);
     } catch (error: any) {
-      console.error("Error rejecting job:", error);
       toast.error(error?.response?.data?.error || "Reject failed");
     }
   };
@@ -416,9 +391,7 @@ export default function NotOkVendorPage() {
                               <td className="px-2 py-2 border border-tableBorder">{jobCategory}</td>
                               <td className="px-2 py-2 border border-tableBorder">{items.length}</td>
                               <td className="px-2 py-2 border border-tableBorder">{totalQty}</td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {assigningDate || "-"}
-                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">{assigningDate || "-"}</td>
                             </tr>
                           );
                         })

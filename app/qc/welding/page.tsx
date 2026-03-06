@@ -1,28 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import StorageManager from "../../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
-import { useRouter, useSearchParams } from "next/navigation";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
 type Row = {
   id: string;
-  jo_no?: string;
+  jo_no?: string | null;
   serial_no?: string;
   item_no?: number;
   quantity_no?: number;
   assigning_date?: string;
   status?: string;
-  job_id?: string;
-  jobId?: string;
-  job?: { id?: string };
+  job_id?: string | null;
+  jobId?: string | null;
+  job?: { id?: string | null } | null;
 };
 
 export default function QcWeldingPage() {
@@ -30,8 +30,8 @@ export default function QcWeldingPage() {
   const searchParams = useSearchParams();
 
   const [tab, setTab] = useState<"outgoing" | "incoming">("outgoing");
-  const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [rows, setRows] = useState<Row[]>([]);
 
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
@@ -40,6 +40,31 @@ export default function QcWeldingPage() {
   const status = useMemo(() => {
     return tab === "outgoing" ? "qc-welding" : "in-welding";
   }, [tab]);
+
+  const getJobId = (r: Row) => r.jobId || r.job_id || r.job?.id;
+
+  const buildQS = () => {
+    const q = new URLSearchParams();
+    q.set("filter", filterParam);
+    if (client) q.set("client", client);
+    q.set("review_for", REVIEW_FOR);
+    return q;
+  };
+
+  const goNotOkPage = () => {
+    const q = buildQS();
+    router.push(`/pp_not-ok/welding?${q.toString()}`);
+  };
+
+  const goReworkPage = () => {
+    const q = buildQS();
+    router.push(`/production_module?${q.toString()}`);
+  };
+
+  const goReviewPage = () => {
+    const q = buildQS();
+    router.push(`/review/welding?${q.toString()}`);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -63,23 +88,7 @@ export default function QcWeldingPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, filterParam, client]);
-
-  const getJobId = (r: Row) => r.jobId || r.job_id || r.job?.id;
-
-  const buildQS = () => {
-    const q = new URLSearchParams();
-    q.set("filter", filterParam);
-    if (client) q.set("client", client);
-    q.set("review_for", REVIEW_FOR);
-    return q;
-  };
-
-  const goNotOkPage = () => {
-    const q = buildQS();
-    router.push(`/pp_not-ok?${q.toString()}`);
-  };
 
   const askDecision = async () => {
     const decision = await Swal.fire({
@@ -117,8 +126,10 @@ export default function QcWeldingPage() {
     const job_id = getJobId(r);
     const updated_by = storage.getUserId();
 
-    if (!job_id) return toast.error("Job ID missing");
-    if (!updated_by) return toast.error("User ID missing");
+    if (!job_id || !updated_by) {
+      toast.error("Job ID / User ID missing");
+      return;
+    }
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, {
@@ -126,6 +137,7 @@ export default function QcWeldingPage() {
         updated_by,
         review_for: REVIEW_FOR,
       });
+
       toast.success("Marked Not OK");
       goNotOkPage();
     } catch (e: any) {
@@ -137,12 +149,14 @@ export default function QcWeldingPage() {
     const job_id = getJobId(r);
     const updated_by = storage.getUserId();
 
-    if (!job_id) return toast.error("Job ID missing");
-    if (!updated_by) return toast.error("User ID missing");
+    if (!job_id || !updated_by) {
+      toast.error("Job ID / User ID missing");
+      return;
+    }
 
     const result = await Swal.fire({
       title: "Send for rework?",
-      text: "This job will go back for rework.",
+      text: "This job will go back to machine module.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Yes, Rework",
@@ -152,9 +166,11 @@ export default function QcWeldingPage() {
     if (!result.isConfirmed) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, { updated_by });
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, {
+        updated_by,
+      });
       toast.success("Sent for Rework");
-      fetchData();
+      goReworkPage();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Rework failed");
     }
@@ -177,9 +193,7 @@ export default function QcWeldingPage() {
       confirmButtonText: "Submit Outgoing",
       preConfirm: () => {
         const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
-        const qc_quantity = Number(
-          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
-        );
+        const qc_quantity = Number((document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0);
         const gatepass_no = (document.getElementById("gatepass_no") as HTMLInputElement)?.value?.trim();
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
@@ -226,9 +240,7 @@ export default function QcWeldingPage() {
       confirmButtonText: "Submit Incoming",
       preConfirm: () => {
         const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
-        const qc_quantity = Number(
-          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
-        );
+        const qc_quantity = Number((document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0);
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
         if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
@@ -251,29 +263,22 @@ export default function QcWeldingPage() {
           ? `Partial incoming saved (${value.qc_quantity}). Remaining will stay in-welding.`
           : "Incoming saved → moved to Review/Welding"
       );
-      fetchData();
+      goReviewPage();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Incoming submit failed");
     }
   };
 
   const handleAction = async (r: Row) => {
-    const decision = await askDecision();
+    const d = await askDecision();
 
-    if (decision === "ok") {
-      if (tab === "outgoing") {
-        return openOutgoingForm(r);
-      }
+    if (d === "ok") {
+      if (tab === "outgoing") return openOutgoingForm(r);
       return openIncomingForm(r);
     }
 
-    if (decision === "not_ok") {
-      return doNotOk(r);
-    }
-
-    if (decision === "rework") {
-      return doRework(r);
-    }
+    if (d === "not_ok") return doNotOk(r);
+    if (d === "rework") return doRework(r);
   };
 
   return (
@@ -317,7 +322,7 @@ export default function QcWeldingPage() {
             </div>
 
             <div className="px-6 pb-6 overflow-auto">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-gray-50">
                   <tr className="text-gray-600">
                     <th className="text-left font-semibold px-4 py-3">JO No</th>
@@ -367,8 +372,7 @@ export default function QcWeldingPage() {
               </table>
 
               <div className="text-xs text-gray-500 mt-3">
-                ✅ On click you will get <b>OK</b>, <b>Not OK</b>, and <b>Rework</b>.  
-                OK opens form, Not OK moves to <b>Not OK / Welding</b>, Rework sends job to rework.
+                ✅ Welding Not OK goes to <b>/pp_not-ok/welding</b>. QC from that page returns to <b>/qc/welding</b>.
               </div>
             </div>
           </div>

@@ -86,7 +86,6 @@ export default function NotOkWeldingPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterParam, client]);
 
   const groupedData = useMemo(() => {
@@ -122,15 +121,8 @@ export default function NotOkWeldingPage() {
     const job_id = getJobId(items);
     const updated_by = storage.getUserId();
 
-    if (!job_id) {
-      toast.error("Job ID not found.");
-      return;
-    }
-
-    if (!updated_by) {
-      toast.error("User ID not found. Please login again.");
-      return;
-    }
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, {
@@ -141,7 +133,6 @@ export default function NotOkWeldingPage() {
       toast.success("Job sent back to QC Welding successfully");
       goQcWeldingPage();
     } catch (error: any) {
-      console.error("Error sending job back to QC:", error);
       toast.error(error?.response?.data?.error || "Failed to send back to QC");
     }
   };
@@ -162,15 +153,8 @@ export default function NotOkWeldingPage() {
     const job_id = getJobId(items);
     const updated_by = storage.getUserId();
 
-    if (!job_id) {
-      toast.error("Job ID not found.");
-      return;
-    }
-
-    if (!updated_by) {
-      toast.error("User ID not found. Please login again.");
-      return;
-    }
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, { updated_by });
@@ -178,7 +162,6 @@ export default function NotOkWeldingPage() {
       fetchData();
       setSelectedJo(null);
     } catch (error: any) {
-      console.error("Error sending job for rework:", error);
       toast.error(error?.response?.data?.error || "Rework failed");
     }
   };
@@ -199,15 +182,8 @@ export default function NotOkWeldingPage() {
     const job_id = getJobId(items);
     const updated_by = storage.getUserId();
 
-    if (!job_id) {
-      toast.error("Job ID not found.");
-      return;
-    }
-
-    if (!updated_by) {
-      toast.error("User ID not found. Please login again.");
-      return;
-    }
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject-not-ok`, {
@@ -219,7 +195,6 @@ export default function NotOkWeldingPage() {
       fetchData();
       setSelectedJo(null);
     } catch (error: any) {
-      console.error("Error rejecting job:", error);
       toast.error(error?.response?.data?.error || "Reject failed");
     }
   };
@@ -287,7 +262,7 @@ export default function NotOkWeldingPage() {
                         return (
                           <tr>
                             <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                              <p className="text-[#666666] text-base">Job not found or has no items.</p>
+                              Job not found or has no items.
                             </td>
                           </tr>
                         );
@@ -350,46 +325,14 @@ export default function NotOkWeldingPage() {
                             items.map((item) => (
                               <tr key={item.id} className="border border-tableBorder bg-gray-50">
                                 <td className="px-2 py-2 border border-tableBorder"></td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.serial_no || "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.item_no ?? "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.machine_category || "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.machine_size || "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.machine_code || "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.worker_name || "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.quantity_no ?? "-"}
-                                  </p>
-                                </td>
-                                <td className="px-2 py-2 border border-tableBorder">
-                                  <p className="text-[#232323] text-base leading-normal">
-                                    {item.assigning_date || "-"}
-                                  </p>
-                                </td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.serial_no || "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.quantity_no ?? "-"}</td>
+                                <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
                                 <td className="px-2 py-2 border border-tableBorder"></td>
                               </tr>
                             ))}
@@ -418,22 +361,19 @@ export default function NotOkWeldingPage() {
                     {loading ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-8 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">Loading...</p>
+                          Loading...
                         </td>
                       </tr>
                     ) : Object.keys(groupedData).length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No data found</p>
+                          No data found
                         </td>
                       </tr>
                     ) : (
                       Object.keys(groupedData).map((jo) => {
                         const items = groupedData[jo];
-                        const totalQty = items.reduce(
-                          (sum, item) => sum + (Number(item.quantity_no) || 0),
-                          0
-                        );
+                        const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
                         const assigningDate = items.length > 0 ? items[0].assigning_date : "N/A";
                         const jobCategory = items.length > 0 ? items[0].job_category : "N/A";
 
@@ -446,22 +386,10 @@ export default function NotOkWeldingPage() {
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-blue-600 text-base leading-normal">{jo}</p>
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base leading-normal">
-                                {jobCategory || "-"}
-                              </p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base leading-normal">{items.length}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base leading-normal">{totalQty}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base leading-normal">
-                                {assigningDate || "-"}
-                              </p>
-                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">{jobCategory || "-"}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{items.length}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{totalQty}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{assigningDate || "-"}</td>
                           </tr>
                         );
                       })
@@ -470,6 +398,10 @@ export default function NotOkWeldingPage() {
                 </table>
               </>
             )}
+
+            <div className="text-xs text-gray-500 mt-3">
+              QC will move the job back to <b>QC • Welding</b>.
+            </div>
           </div>
         </div>
       </div>
