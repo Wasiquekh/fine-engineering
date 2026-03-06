@@ -9,14 +9,13 @@ import StorageManager from "../../provider/StorageManager";
 import { useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
-import { FaChevronDown, FaChevronRight, FaArrowLeft } from "react-icons/fa";
+import { FaChevronDown, FaChevronRight } from "react-icons/fa";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
 export default function NotOkMainPage() {
   const [data, setData] = useState<any[]>([]);
-  const [selectedJo, setSelectedJo] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";

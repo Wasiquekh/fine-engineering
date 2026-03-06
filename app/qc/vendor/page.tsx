@@ -15,12 +15,12 @@ const storage = new StorageManager();
 type Row = {
   id: string;
   jo_no?: string | null;
-  serial_no?: string;
-  item_no?: number;
-  quantity_no?: number;
-  assigning_date?: string;
+  serial_no?: string | null;
+  item_no?: number | null;
+  quantity_no?: number | null;
+  assigning_date?: string | null;
   vendor_name?: string | null;
-  status?: string;
+  status?: string | null;
   job_id?: string | null;
   jobId?: string | null;
   job?: { id?: string | null } | null;
@@ -49,22 +49,19 @@ export default function QcVendorPage() {
     q.set("filter", filterParam);
     if (client) q.set("client", client);
     q.set("review_for", REVIEW_FOR);
-    return q;
+    return q.toString();
   };
 
   const goNotOkPage = () => {
-    const q = buildQS();
-    router.push(`/pp_not-ok/vendor?${q.toString()}`);
+    router.push(`/pp_not-ok/vendor?${buildQS()}`);
   };
 
   const goReworkPage = () => {
-    const q = buildQS();
-    router.push(`/production_module?${q.toString()}`);
+    router.push(`/production_module?${buildQS()}`);
   };
 
   const goReviewPage = () => {
-    const q = buildQS();
-    router.push(`/review/vendor?${q.toString()}`);
+    router.push(`/review/vendor?${buildQS()}`);
   };
 
   const fetchData = async () => {
@@ -80,7 +77,7 @@ export default function QcVendorPage() {
 
       setRows(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to load QC/Vendor");
+      toast.error(e?.response?.data?.error || "Failed to load QC Vendor");
       setRows([]);
     } finally {
       setLoading(false);
@@ -157,7 +154,7 @@ export default function QcVendorPage() {
 
     const result = await Swal.fire({
       title: "Send for rework?",
-      text: "This job will go back to machine module.",
+      text: "This job will go back to production module.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Yes, Rework",
@@ -170,6 +167,7 @@ export default function QcVendorPage() {
       await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, {
         updated_by,
       });
+
       toast.success("Sent for Rework");
       goReworkPage();
     } catch (e: any) {
@@ -194,7 +192,9 @@ export default function QcVendorPage() {
       confirmButtonText: "Submit Outgoing",
       preConfirm: () => {
         const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
-        const qc_quantity = Number((document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0);
+        const qc_quantity = Number(
+          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
+        );
         const gatepass_no = (document.getElementById("gatepass_no") as HTMLInputElement)?.value?.trim();
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
@@ -241,7 +241,9 @@ export default function QcVendorPage() {
       confirmButtonText: "Submit Incoming",
       preConfirm: () => {
         const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
-        const qc_quantity = Number((document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0);
+        const qc_quantity = Number(
+          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
+        );
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
         if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");

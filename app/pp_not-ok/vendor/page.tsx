@@ -55,12 +55,11 @@ export default function NotOkVendorPage() {
     q.set("filter", filterParam);
     if (client) q.set("client", client);
     q.set("review_for", REVIEW_FOR);
-    return q;
+    return q.toString();
   };
 
   const goQcVendorPage = () => {
-    const q = buildQS();
-    router.push(`/qc/vendor?${q.toString()}`);
+    router.push(`/qc/vendor?${buildQS()}`);
   };
 
   const fetchData = async () => {

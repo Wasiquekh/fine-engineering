@@ -53,12 +53,11 @@ export default function NotOkWeldingPage() {
     q.set("filter", filterParam);
     if (client) q.set("client", client);
     q.set("review_for", REVIEW_FOR);
-    return q;
+    return q.toString();
   };
 
   const goQcWeldingPage = () => {
-    const q = buildQS();
-    router.push(`/qc/welding?${q.toString()}`);
+    router.push(`/qc/welding?${buildQS()}`);
   };
 
   const fetchData = async () => {

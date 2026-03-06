@@ -13,7 +13,7 @@ export type MaterialMovementQuery = {
 };
 
 export async function getMaterialMovement(params: MaterialMovementQuery) {
-  const res = await axiosProvider.get("/fineengg_erp/material-movement", { params });
+  const res = await axiosProvider.get("/fineengg_erp/material-movement", { params } as any);
   // expecting { success, data, meta }
   return res?.data;
 }

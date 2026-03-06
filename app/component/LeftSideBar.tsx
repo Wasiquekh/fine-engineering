@@ -33,6 +33,16 @@ const LeftSideBar: React.FC = () => {
   const hasSystemUserView = permissions?.some((perm) => perm.name === "systemuser.view");
   const hasUserActivityView = permissions?.some((perm) => perm.name === "useractivity.view");
 
+  const client = searchParams.get("client") || "";
+  const filter = searchParams.get("filter") || "JOB_SERVICE";
+
+  const isVendorNotOkPage =
+    pathname === "/pp_not-ok/vendor" || pathname.startsWith("/pp_not-ok/vendor");
+  const isWeldingNotOkPage =
+    pathname === "/pp_not-ok/welding" || pathname.startsWith("/pp_not-ok/welding");
+  const isMainNotOkPage =
+    pathname === "/pp_not-ok" || (pathname.startsWith("/pp_not-ok") && !isVendorNotOkPage && !isWeldingNotOkPage);
+
   const handleLogout = async () => {
     localStorage.clear();
     try {
@@ -61,21 +71,27 @@ const LeftSideBar: React.FC = () => {
   const [isAmarEquipmentOpen, setIsAmarEquipmentOpen] = useState<boolean>(
     pathname.includes("/production_planning") ||
       pathname.includes("/po-services") ||
-      (pathname.includes("/pp_not-ok") && searchParams.get("client") === "Amar Equipment")
+      pathname.includes("/pp_not-ok") ||
+      (pathname.includes("/production_module") && client === "Amar Equipment") ||
+      (pathname.startsWith("/review") && client === "Amar Equipment") ||
+      (pathname.startsWith("/qc") && client === "Amar Equipment")
   );
 
   const [isAmarBioOpen, setIsAmarBioOpen] = useState<boolean>(
-    pathname.includes("/production_planning") &&
-      searchParams.get("client") === "Amar Bio"
+    (pathname.includes("/production_planning") && client === "Amar Bio") ||
+      (pathname.includes("/pp_not-ok") && client === "Amar Bio") ||
+      (pathname.includes("/production_module") && client === "Amar Bio") ||
+      (pathname.startsWith("/review") && client === "Amar Bio") ||
+      (pathname.startsWith("/qc") && client === "Amar Bio")
   );
 
   const [isPOOpen, setIsPOOpen] = useState<boolean>(pathname.includes("/po-services"));
 
   const [isNotOkAmarEquipmentOpen, setIsNotOkAmarEquipmentOpen] = useState<boolean>(
-    pathname.includes("/pp_not-ok") && searchParams.get("client") === "Amar Equipment"
+    pathname.includes("/pp_not-ok") && client === "Amar Equipment"
   );
   const [isNotOkAmarBioOpen, setIsNotOkAmarBioOpen] = useState<boolean>(
-    pathname.includes("/pp_not-ok") && searchParams.get("client") === "Amar Bio"
+    pathname.includes("/pp_not-ok") && client === "Amar Bio"
   );
 
   const [isProductionDropdownOpen, setIsProductionDropdownOpen] = useState<boolean>(
@@ -98,8 +114,6 @@ const LeftSideBar: React.FC = () => {
   const [isProdAmarBioReviewOpen, setIsProdAmarBioReviewOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    const client = searchParams.get("client");
-
     if (pathname.includes("/production_module") || pathname.startsWith("/review")) {
       setIsProductionDropdownOpen(true);
       setIsProduction1Open(true);
@@ -121,16 +135,29 @@ const LeftSideBar: React.FC = () => {
 
     if (pathname.startsWith("/pp_not-ok")) {
       setIsProductionOpen(true);
+
       if (client === "Amar Equipment") {
         setIsAmarEquipmentOpen(true);
         setIsNotOkAmarEquipmentOpen(true);
       }
+
       if (client === "Amar Bio") {
         setIsAmarBioOpen(true);
         setIsNotOkAmarBioOpen(true);
       }
     }
-  }, [pathname, searchParams]);
+  }, [pathname, client]);
+
+  const itemCls = (active: boolean) =>
+    `flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${
+      active ? "bg-sideBarHoverbg" : ""
+    }`;
+
+  const textCls = (active: boolean) =>
+    `text-base font-medium ${active ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`;
+
+  const iconCls = (active: boolean) =>
+    `w-5 h-5 ${active ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`;
 
   return (
     <div className="w-full hidden md:w-[17%] md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0 h-screen fixed top-0 left-0">
@@ -307,23 +334,23 @@ const LeftSideBar: React.FC = () => {
             {isAmarEquipmentOpen && (
               <div className="pl-4 flex flex-col gap-1">
                 <Link href="/production_planning?filter=JOB_SERVICE&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                  <div className={itemCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>
+                    <MdWorkOutline className={iconCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "JOB_SERVICE")} />
+                    <p className={textCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>Job Service</p>
                   </div>
                 </Link>
 
                 <Link href="/production_planning?filter=TSO_SERVICE&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                  <div className={itemCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
+                    <MdDesignServices className={iconCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
+                    <p className={textCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
                   </div>
                 </Link>
 
                 <Link href="/production_planning?filter=KANBAN&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                  <div className={itemCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/production_planning" && client === "Amar Equipment" && filter === "KANBAN")}>Kanban</p>
                   </div>
                 </Link>
 
@@ -344,7 +371,6 @@ const LeftSideBar: React.FC = () => {
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Fine</p>
                       </div>
                     </Link>
-
                     <Link href="/po-services?filter=PRESS_FLOW">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
@@ -366,37 +392,37 @@ const LeftSideBar: React.FC = () => {
                 {isNotOkAmarEquipmentOpen && (
                   <div className="pl-4 flex flex-col gap-1">
                     <Link href="/pp_not-ok?filter=JOB_SERVICE&client=Amar%20Equipment">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                      <div className={itemCls(isMainNotOkPage && client === "Amar Equipment" && filter === "JOB_SERVICE")}>
+                        <MdWorkOutline className={iconCls(isMainNotOkPage && client === "Amar Equipment" && filter === "JOB_SERVICE")} />
+                        <p className={textCls(isMainNotOkPage && client === "Amar Equipment" && filter === "JOB_SERVICE")}>Job Service</p>
                       </div>
                     </Link>
 
                     <Link href="/pp_not-ok?filter=TSO_SERVICE&client=Amar%20Equipment">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                      <div className={itemCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
+                        <MdDesignServices className={iconCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
+                        <p className={textCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
                       </div>
                     </Link>
 
                     <Link href="/pp_not-ok?filter=KANBAN&client=Amar%20Equipment">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                      <div className={itemCls(isMainNotOkPage && client === "Amar Equipment" && filter === "KANBAN")}>
+                        <MdViewKanban className={iconCls(isMainNotOkPage && client === "Amar Equipment" && filter === "KANBAN")} />
+                        <p className={textCls(isMainNotOkPage && client === "Amar Equipment" && filter === "KANBAN")}>Kanban</p>
                       </div>
                     </Link>
 
-                    <Link href="/pp_not-ok?filter=JOB_SERVICE&client=Amar%20Equipment&review_for=welding">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Welding</p>
+                    <Link href="/pp_not-ok/welding?filter=JOB_SERVICE&client=Amar%20Equipment">
+                      <div className={itemCls(isWeldingNotOkPage && client === "Amar Equipment")}>
+                        <MdPrecisionManufacturing className={iconCls(isWeldingNotOkPage && client === "Amar Equipment")} />
+                        <p className={textCls(isWeldingNotOkPage && client === "Amar Equipment")}>Welding</p>
                       </div>
                     </Link>
 
-                    <Link href="/pp_not-ok?filter=JOB_SERVICE&client=Amar%20Equipment&review_for=vendor">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendor</p>
+                    <Link href="/pp_not-ok/vendor?filter=JOB_SERVICE&client=Amar%20Equipment">
+                      <div className={itemCls(isVendorNotOkPage && client === "Amar Equipment")}>
+                        <MdOutlinePeopleOutline className={iconCls(isVendorNotOkPage && client === "Amar Equipment")} />
+                        <p className={textCls(isVendorNotOkPage && client === "Amar Equipment")}>Vendor</p>
                       </div>
                     </Link>
                   </div>
@@ -416,23 +442,23 @@ const LeftSideBar: React.FC = () => {
             {isAmarBioOpen && (
               <div className="pl-4 flex flex-col gap-1">
                 <Link href="/production_planning?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                  <div className={itemCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "JOB_SERVICE")}>
+                    <MdWorkOutline className={iconCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "JOB_SERVICE")} />
+                    <p className={textCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
                   </div>
                 </Link>
 
                 <Link href="/production_planning?filter=TSO_SERVICE&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                  <div className={itemCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "TSO_SERVICE")}>
+                    <MdDesignServices className={iconCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "TSO_SERVICE")} />
+                    <p className={textCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
                   </div>
                 </Link>
 
                 <Link href="/production_planning?filter=KANBAN&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                  <div className={itemCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/production_planning" && client === "Amar Bio" && filter === "KANBAN")}>Kanban</p>
                   </div>
                 </Link>
 
@@ -448,37 +474,37 @@ const LeftSideBar: React.FC = () => {
                 {isNotOkAmarBioOpen && (
                   <div className="pl-4 flex flex-col gap-1">
                     <Link href="/pp_not-ok?filter=JOB_SERVICE&client=Amar%20Bio">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                      <div className={itemCls(isMainNotOkPage && client === "Amar Bio" && filter === "JOB_SERVICE")}>
+                        <MdWorkOutline className={iconCls(isMainNotOkPage && client === "Amar Bio" && filter === "JOB_SERVICE")} />
+                        <p className={textCls(isMainNotOkPage && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
                       </div>
                     </Link>
 
                     <Link href="/pp_not-ok?filter=TSO_SERVICE&client=Amar%20Bio">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                      <div className={itemCls(isMainNotOkPage && client === "Amar Bio" && filter === "TSO_SERVICE")}>
+                        <MdDesignServices className={iconCls(isMainNotOkPage && client === "Amar Bio" && filter === "TSO_SERVICE")} />
+                        <p className={textCls(isMainNotOkPage && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
                       </div>
                     </Link>
 
                     <Link href="/pp_not-ok?filter=KANBAN&client=Amar%20Bio">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                      <div className={itemCls(isMainNotOkPage && client === "Amar Bio" && filter === "KANBAN")}>
+                        <MdViewKanban className={iconCls(isMainNotOkPage && client === "Amar Bio" && filter === "KANBAN")} />
+                        <p className={textCls(isMainNotOkPage && client === "Amar Bio" && filter === "KANBAN")}>Kanban</p>
                       </div>
                     </Link>
 
-                    <Link href="/pp_not-ok?filter=JOB_SERVICE&client=Amar%20Bio&review_for=welding">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Welding</p>
+                    <Link href="/pp_not-ok/welding?filter=JOB_SERVICE&client=Amar%20Bio">
+                      <div className={itemCls(isWeldingNotOkPage && client === "Amar Bio")}>
+                        <MdPrecisionManufacturing className={iconCls(isWeldingNotOkPage && client === "Amar Bio")} />
+                        <p className={textCls(isWeldingNotOkPage && client === "Amar Bio")}>Welding</p>
                       </div>
                     </Link>
 
-                    <Link href="/pp_not-ok?filter=JOB_SERVICE&client=Amar%20Bio&review_for=vendor">
-                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendor</p>
+                    <Link href="/pp_not-ok/vendor?filter=JOB_SERVICE&client=Amar%20Bio">
+                      <div className={itemCls(isVendorNotOkPage && client === "Amar Bio")}>
+                        <MdOutlinePeopleOutline className={iconCls(isVendorNotOkPage && client === "Amar Bio")} />
+                        <p className={textCls(isVendorNotOkPage && client === "Amar Bio")}>Vendor</p>
                       </div>
                     </Link>
                   </div>
@@ -551,37 +577,37 @@ const LeftSideBar: React.FC = () => {
                     {isProdAmarEqReviewOpen && (
                       <div className="pl-4 flex flex-col gap-1">
                         <Link href="/review?filter=JOB_SERVICE&client=Amar%20Equipment">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                          <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>
+                            <MdWorkOutline className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "JOB_SERVICE")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>Job Service</p>
                           </div>
                         </Link>
 
                         <Link href="/review?filter=TSO_SERVICE&client=Amar%20Equipment">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                          <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
+                            <MdDesignServices className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
                           </div>
                         </Link>
 
                         <Link href="/review?filter=KANBAN&client=Amar%20Equipment">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                          <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN")}>
+                            <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN")}>Kanban</p>
                           </div>
                         </Link>
 
                         <Link href="/review/welding?filter=JOB_SERVICE&client=Amar%20Equipment">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Welding</p>
+                          <div className={itemCls(pathname === "/review/welding" && client === "Amar Equipment")}>
+                            <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Equipment")} />
+                            <p className={textCls(pathname === "/review/welding" && client === "Amar Equipment")}>Welding</p>
                           </div>
                         </Link>
 
                         <Link href="/review/vendor?filter=JOB_SERVICE&client=Amar%20Equipment">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendor</p>
+                          <div className={itemCls(pathname === "/review/vendor" && client === "Amar Equipment")}>
+                            <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Equipment")} />
+                            <p className={textCls(pathname === "/review/vendor" && client === "Amar Equipment")}>Vendor</p>
                           </div>
                         </Link>
                       </div>
@@ -626,37 +652,37 @@ const LeftSideBar: React.FC = () => {
                     {isProdAmarBioReviewOpen && (
                       <div className="pl-4 flex flex-col gap-1">
                         <Link href="/review?filter=JOB_SERVICE&client=Amar%20Bio">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                          <div className={itemCls(pathname === "/review" && client === "Amar Bio" && filter === "JOB_SERVICE")}>
+                            <MdWorkOutline className={iconCls(pathname === "/review" && client === "Amar Bio" && filter === "JOB_SERVICE")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
                           </div>
                         </Link>
 
                         <Link href="/review?filter=TSO_SERVICE&client=Amar%20Bio">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                          <div className={itemCls(pathname === "/review" && client === "Amar Bio" && filter === "TSO_SERVICE")}>
+                            <MdDesignServices className={iconCls(pathname === "/review" && client === "Amar Bio" && filter === "TSO_SERVICE")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
                           </div>
                         </Link>
 
                         <Link href="/review?filter=KANBAN&client=Amar%20Bio">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                          <div className={itemCls(pathname === "/review" && client === "Amar Bio" && filter === "KANBAN")}>
+                            <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Bio" && filter === "KANBAN")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Bio" && filter === "KANBAN")}>Kanban</p>
                           </div>
                         </Link>
 
                         <Link href="/review/welding?filter=JOB_SERVICE&client=Amar%20Bio">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Welding</p>
+                          <div className={itemCls(pathname === "/review/welding" && client === "Amar Bio")}>
+                            <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Bio")} />
+                            <p className={textCls(pathname === "/review/welding" && client === "Amar Bio")}>Welding</p>
                           </div>
                         </Link>
 
                         <Link href="/review/vendor?filter=JOB_SERVICE&client=Amar%20Bio">
-                          <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                            <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                            <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendor</p>
+                          <div className={itemCls(pathname === "/review/vendor" && client === "Amar Bio")}>
+                            <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Bio")} />
+                            <p className={textCls(pathname === "/review/vendor" && client === "Amar Bio")}>Vendor</p>
                           </div>
                         </Link>
                       </div>
@@ -709,37 +735,37 @@ const LeftSideBar: React.FC = () => {
             {isQCAmarEquipmentOpen && (
               <div className="pl-4 flex flex-col gap-1">
                 <Link href="/qc?filter=JOB_SERVICE&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>
+                    <MdWorkOutline className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "JOB_SERVICE")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>Job Service</p>
                   </div>
                 </Link>
 
                 <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
+                    <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
                   </div>
                 </Link>
 
                 <Link href="/qc?filter=KANBAN&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PO</p>
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>PO</p>
                   </div>
                 </Link>
 
                 <Link href="/qc/welding?filter=JOB_SERVICE&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Welding</p>
+                  <div className={itemCls(pathname === "/qc/welding" && client === "Amar Equipment")}>
+                    <MdPrecisionManufacturing className={iconCls(pathname === "/qc/welding" && client === "Amar Equipment")} />
+                    <p className={textCls(pathname === "/qc/welding" && client === "Amar Equipment")}>Welding</p>
                   </div>
                 </Link>
 
                 <Link href="/qc/vendor?filter=JOB_SERVICE&client=Amar%20Equipment">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendor</p>
+                  <div className={itemCls(pathname === "/qc/vendor" && client === "Amar Equipment")}>
+                    <MdOutlinePeopleOutline className={iconCls(pathname === "/qc/vendor" && client === "Amar Equipment")} />
+                    <p className={textCls(pathname === "/qc/vendor" && client === "Amar Equipment")}>Vendor</p>
                   </div>
                 </Link>
               </div>
@@ -757,37 +783,37 @@ const LeftSideBar: React.FC = () => {
             {isQCAmarBioOpen && (
               <div className="pl-4 flex flex-col gap-1">
                 <Link href="/qc?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Bio" && filter === "JOB_SERVICE")}>
+                    <MdWorkOutline className={iconCls(pathname === "/qc" && client === "Amar Bio" && filter === "JOB_SERVICE")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
                   </div>
                 </Link>
 
                 <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Bio" && filter === "TSO_SERVICE")}>
+                    <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Bio" && filter === "TSO_SERVICE")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
                   </div>
                 </Link>
 
                 <Link href="/qc?filter=KANBAN&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PO</p>
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Bio" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Bio" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Bio" && filter === "KANBAN")}>PO</p>
                   </div>
                 </Link>
 
                 <Link href="/qc/welding?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Welding</p>
+                  <div className={itemCls(pathname === "/qc/welding" && client === "Amar Bio")}>
+                    <MdPrecisionManufacturing className={iconCls(pathname === "/qc/welding" && client === "Amar Bio")} />
+                    <p className={textCls(pathname === "/qc/welding" && client === "Amar Bio")}>Welding</p>
                   </div>
                 </Link>
 
                 <Link href="/qc/vendor?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                    <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendor</p>
+                  <div className={itemCls(pathname === "/qc/vendor" && client === "Amar Bio")}>
+                    <MdOutlinePeopleOutline className={iconCls(pathname === "/qc/vendor" && client === "Amar Bio")} />
+                    <p className={textCls(pathname === "/qc/vendor" && client === "Amar Bio")}>Vendor</p>
                   </div>
                 </Link>
               </div>
