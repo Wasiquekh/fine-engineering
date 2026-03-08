@@ -157,10 +157,6 @@ export default function Home() {
       return currentData;
     }
 
-    if (clientParam) {
-      currentData = currentData.filter((item) => item.client_name === clientParam);
-    }
-
     if (activeFilter === "JOB_SERVICE") {
       return currentData.filter((item) => {
         if (item.job_type !== "JOB_SERVICE") return false;
@@ -223,7 +219,7 @@ export default function Home() {
       return currentData;
     }
     return currentData.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset]);
+  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, currentDataset]);
 
   const handleSubmit = async (values: any) => {
     // Format dates to YYYY-MM-DD format
@@ -419,12 +415,24 @@ export default function Home() {
   const fetchData = async (endpoint?: string) => {
     try {
       let url = endpoint;
+
       if (!url) {
-        url = activeFilter === "JOB_SERVICE" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs";
+        if (activeFilter === "JOB_SERVICE") {
+          url = `/fineengg_erp/categories`;
+
+          // ✅ filter by client from backend
+          if (clientParam) {
+            url += `?client_name=${encodeURIComponent(clientParam)}`;
+          }
+        } else {
+          url = "/fineengg_erp/jobs";
+        }
       }
+
       const response = await axiosProvider.get(url);
       setData(Array.isArray(response.data.data) ? response.data.data : []);
       lastFetchedEndpoint.current = url;
+
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
@@ -526,6 +534,10 @@ export default function Home() {
       if (activeFilter === "JOB_SERVICE") {
         endpoint = "/fineengg_erp/categories";
         dataset = "CATEGORIES";
+        // ✅ add client filter
+        if (clientParam) {
+          endpoint += `?client_name=${encodeURIComponent(clientParam)}`;
+        }
       }
 
       if (currentDataset !== dataset) {
@@ -548,7 +560,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter]);
+  }, [activeFilter, clientParam]);
 
   return (
     <>
@@ -936,7 +948,11 @@ export default function Home() {
                         >
                           <td className="px-2 py-2 border border-tableBorder">
                             <p
-                              onClick={() => router.push(`/production_planning/${encodeURIComponent(item.job_no)}`)}
+                              onClick={() =>
+                                router.push(
+                                  `/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                )
+                              }
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent || item.is_urgent
                                   ? "text-red-600 hover:text-red-800"
@@ -1023,7 +1039,11 @@ export default function Home() {
                             </p>
                           ) : item.job_no ? (
                             <p
-                              onClick={() => router.push(`/production_planning/${encodeURIComponent(item.job_no)}`)}
+                              onClick={() =>
+                                router.push(
+                                  `/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                )
+                              }
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent
                                   ? "text-red-600 hover:text-red-700"
