@@ -40,6 +40,12 @@ const jobCategoryOptions = [
   { value: "TBR", label: "TBR" },
 ];
 
+//client options
+const clientOptions = [
+  { value: "Amar Equipment", label: "Amar Equipment" },
+  { value: "Amar Biosystem", label: "Amar Biosystem" },
+];
+
 // Options for Material Type
 const materialTypeOptions = [{ value: "GST", label: "GST" }];
 
@@ -541,14 +547,15 @@ export default function Home() {
                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                           Client Name
                         </p>
-                        <input
-                          type="text"
+
+                        <SelectInput
                           name="client_name"
                           value={values.client_name}
-                          onChange={(e) => setFieldValue("client_name", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Client Name"
+                          setFieldValue={setFieldValue}
+                          options={clientOptions}
+                          placeholder="Select Client"
                         />
+
                         <ErrorMessage
                           name="client_name"
                           component="div"

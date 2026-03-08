@@ -3,22 +3,49 @@ import Image from "next/image";
 import { useEffect, useState, useMemo } from "react";
 import { HiCheck, HiX } from "react-icons/hi";
 import LeftSideBar from "../component/LeftSideBar";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter,useParams, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
 import Swal from "sweetalert2";
+// import { group } from "console";
 
 const axiosProvider = new AxiosProvider();
+
+  interface JobGroup {
+    job_no: string;
+    job_type: string;
+    job_category: string;
+    items: any[];
+    is_approve: number;
+    is_rejected: number;
+    total_qty: number;
+    jo_numbers: string;
+    jo_numbers_list?: Set<string>;
+  }
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
+  const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const jobNo = params?.job_no as string;
   const clientParam = searchParams.get("client");
   const filterParam = searchParams.get("filter");
+
+const handleJobNoClick = (jobNo: string) => {
+  if (!jobNo) return;
+
+    const params = searchParams.toString();
+
+    router.push(
+      `/inventory_material_approve/${encodeURIComponent(jobNo)}${
+        params ? `?${params}` : ""
+      }`
+    );
+  };
 
   const handleApprove = async (items: any[]) => {
     const result = await Swal.fire({
@@ -88,23 +115,51 @@ export default function Home() {
     }
   };
 
-  const handleJobNoClick = (jobNo: string) => {
-    if (!jobNo) return;
-    router.push(`/inventory_material_approve/${encodeURIComponent(jobNo)}`);
-  };
+  //<p className="text-base leading-normal">{group.job_no || "N/A"}</p>
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/jobs");
+      const params = new URLSearchParams();
+
+      if (jobNo) {
+        params.append("job_no", jobNo);
+      }
+
+      // const clientParam = searchParams.get("client");
+      // const filterParam = searchParams.get("filter");
+      const assignTo = searchParams.get("assign_to");
+      const assignToNot = searchParams.get("assign_to_not");
+
+      if (clientParam) {
+        params.append("client_name", clientParam);
+      }
+
+      if (filterParam) {
+        params.append("job_type", filterParam);
+      }
+
+      if (assignTo) {
+        params.append("assign_to", assignTo);
+      }
+
+      if (assignToNot) {
+        params.append("assign_to_not", assignToNot);
+      }
+
+      const url = `/fineengg_erp/jobs?${params.toString()}`;
+
+      const response = await axiosProvider.get(url);
+
       const updatedData = response.data.data.map((item: any) => ({
         ...item,
-        is_approve: item.job_status === 'approved' ? 1 : 0,
-        is_rejected: item.job_status === 'not-approved' ? 1 : 0,
+        is_approve: item.job_status === "approved" ? 1 : 0,
+        is_rejected: item.job_status === "not-approved" ? 1 : 0,
       }));
+
       setData(updatedData);
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
-      toast.error("Failed to load jobs");
+      toast.error("Failed to load job data");
     }
   };
 
@@ -114,30 +169,12 @@ export default function Home() {
     }
   }, [filterParam]);
 
-  const filteredData = useMemo(() => {
-    let currentData = data;
-    if (clientParam) {
-      currentData = currentData.filter((item) => item.client_name === clientParam);
-    }
-    if (activeFilter === "ALL") return currentData;
-    return currentData.filter((item: any) => item.job_type === activeFilter);
-  }, [data, activeFilter, clientParam]);
+  const filteredData = data;
 
-  const groupedData = useMemo(() => {
+  const groupedData = useMemo<JobGroup[]>(() => {
     if (!filteredData || filteredData.length === 0) return [];
 
-    interface JobGroup {
-      job_no: string;
-      job_type: string;
-      job_category: string;
-      items: any[];
-      is_approve: number;
-      is_rejected: number;
-      total_qty: number;
-      jo_numbers_list: Set<string>;
-    }
-
-    const groups = filteredData.reduce((acc: Record<string, JobGroup>, item: any) => {
+    const groups = filteredData.reduce((acc: Record<string, any>, item: any) => {
       const { job_no } = item;
       if (!job_no) return acc;
 
@@ -169,7 +206,7 @@ export default function Home() {
       return acc;
     }, {} as Record<string, JobGroup>);
 
-    return Object.values(groups).map((group: JobGroup) => ({
+    return Object.values(groups).map((group: any): JobGroup => ({
       ...group,
       jo_numbers: Array.from(group.jo_numbers_list).join(', '),
     }));
@@ -177,7 +214,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [jobNo, searchParams]);
 
   return (
     <>
@@ -332,7 +369,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    groupedData.map((group: any) => (
+                    groupedData.map((group: JobGroup) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={group.job_no}
