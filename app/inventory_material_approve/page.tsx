@@ -31,6 +31,7 @@ export default function Home() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isVendorTab = !!searchParams.get("assign_to_not");
   const jobNo = params?.job_no as string;
   const clientParam = searchParams.get("client");
   const filterParam = searchParams.get("filter");
@@ -67,9 +68,13 @@ const handleJobNoClick = (jobNo: string) => {
           return;
         }
   
-        const approvalPromises = itemsToApprove.map(item =>
-          axiosProvider.post(`/fineengg_erp/jobs/${item.id}/approve`, {})
-        );
+        const approvalPromises = itemsToApprove.map((item) => {
+          const endpoint = isVendorTab
+            ? `/fineengg_erp/jobs/${item.id}/approve-vendors`
+            : `/fineengg_erp/jobs/${item.id}/approve`;
+
+          return axiosProvider.post(endpoint, {});
+        });
   
         await Promise.all(approvalPromises);
         toast.success("Job approved successfully");

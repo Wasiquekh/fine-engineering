@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { HiCheck, HiArrowLeft, HiX } from "react-icons/hi";
 import LeftSideBar from "../../component/LeftSideBar";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
@@ -16,6 +16,8 @@ export default function JobDetailsPage() {
   const [jobInfo, setJobInfo] = useState<any>(null);
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const isVendorTab = !!searchParams.get("assign_to_not");
   const jobNo = params.job_no ? decodeURIComponent(params.job_no as string) : "";
 
   const handleApprove = async (id: string) => {
@@ -32,7 +34,11 @@ export default function JobDetailsPage() {
 
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.post(`/fineengg_erp/jobs/${id}/approve`, { apply_to_group: false });
+        const endpoint = isVendorTab
+          ? `/fineengg_erp/jobs/${id}/approve-vendors`
+          : `/fineengg_erp/jobs/${id}/approve`;
+
+        const response = await axiosProvider.post(endpoint, { apply_to_group: false });
         if (response.data.success) {
           toast.success("Item approved successfully");
           fetchData();
