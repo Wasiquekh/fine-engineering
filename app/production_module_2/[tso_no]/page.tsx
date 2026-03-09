@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
 import LeftSideBar from "../../component/LeftSideBar";
@@ -36,6 +36,9 @@ export default function JobDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const tso_no = params.tso_no as string;
+  const searchParams = useSearchParams();
+  const clientParam = searchParams.get("client");
+  const filterParam = searchParams.get("filter");
 
   const uniqueJobDetails = useMemo(() => {
     const seen = new Set();
@@ -52,15 +55,21 @@ export default function JobDetailsPage() {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?tso_no=${tso_no}`);
+          const params = new URLSearchParams();
+          params.append('tso_no', tso_no);
+          if (clientParam) {
+            params.append('client_name', clientParam);
+          }
+          params.append('assign_to', 'Usmaan');
+
+          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
-            const filteredJobs = fetchedJobs.filter((job: JobDetail) => job.assign_to === "Usmaan");
-            setJobDetails(filteredJobs);
+            setJobDetails(fetchedJobs);
 
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
-            filteredJobs.forEach((job: JobDetail) => {
+            fetchedJobs.forEach((job: JobDetail) => {
               if (job.assign_to) {
                 const isStandard = ["Usmaan", "Ashfaq", "Ramzaan"].includes(job.assign_to);
                 initialAssignments[job.id] = {
@@ -83,7 +92,7 @@ export default function JobDetailsPage() {
       };
       fetchData();
     }
-  }, [tso_no]);
+  }, [tso_no, clientParam]);
 
   const handleAssignmentChange = (id: string, field: string, value: string) => {
     setAssignments((prev) => ({
@@ -196,7 +205,9 @@ export default function JobDetailsPage() {
                           <td className="px-2 py-2 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
-                                href={`/machine_category(tso)/${encodeURIComponent(item.jo_number)}`}
+                                href={`/machine_category(tso)/${encodeURIComponent(
+                                  item.jo_number
+                                )}?filter=${encodeURIComponent(filterParam || "")}&client=${encodeURIComponent(clientParam || "")}`}
                                 className="text-blue-600 hover:underline"
                               >
                                 {item.jo_number}

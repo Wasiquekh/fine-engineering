@@ -38,7 +38,7 @@ export default function Home() {
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
-  const [usmaanJobNos, setUsmaanJobNos] = useState<string[]>([]);
+  //const [usmaanJobNos, setUsmaanJobNos] = useState<Set<string>>(new Set());
   const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
@@ -54,16 +54,16 @@ export default function Home() {
     }
   }, [filterParam]);
 
-  useEffect(() => {
-    fetchUsmaanJobNos();
-  }, []);
+  // useEffect(() => {
+  //   fetchUsmaanJobNos();
+  // }, []);
 
   const filteredData = useMemo(() => {
     let currentData = data;
 
-    if (usmaanJobNos.length > 0) {
-      currentData = currentData.filter((item) => usmaanJobNos.includes(item.job_no));
-    }
+    // if (usmaanJobNos.size > 0) {
+    //   currentData = currentData.filter((item) => usmaanJobNos.has(item.job_no));
+    // }
 
     if (urgentParam === "true") {
       currentData = currentData.filter((item) => item.urgent || item.is_urgent);
@@ -79,9 +79,9 @@ export default function Home() {
       return currentData;
     }
 
-    if (clientParam) {
-      currentData = currentData.filter((item) => item.client_name === clientParam);
-    }
+    // if (clientParam) {
+    //   currentData = currentData.filter((item) => item.client_name === clientParam);
+    // }
 
     if (activeFilter === "JOB_SERVICE") {
       return currentData.filter((item) => {
@@ -111,23 +111,25 @@ export default function Home() {
       return currentData;
     }
     return currentData.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam, usmaanJobNos]);
+  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam]);
 
-  const fetchUsmaanJobNos = async () => {
-  try {
-    const res = await axiosProvider.get(
-      "/fineengg_erp/jobs?assign_to=Usmaan&limit=1000"
-    );
+  // const fetchUsmaanJobNos = async () => {
+  //   try {
+  //     const res = await axiosProvider.get(
+  //       "/fineengg_erp/jobs?assign_to=Usmaan&limit=1000"
+  //     );
 
-    const jobNos = Array.isArray(res.data.data)
-      ? res.data.data.map((job: any) => job.job_no)
-      : [];
+  //     const jobNos = new Set(
+  //       Array.isArray(res.data.data)
+  //         ? res.data.data.map((job: any) => job.job_no)
+  //         : []
+  //     );
 
-    setUsmaanJobNos(jobNos);
-  } catch (err) {
-    console.error("Failed to fetch Usmaan jobs", err);
-  }
-};
+  //     setUsmaanJobNos(jobNos);
+  //   } catch (err) {
+  //     console.error("Failed to fetch Usmaan jobs", err);
+  //   }
+  // };
 
   const fetchCategories = async () => {
     try {
@@ -160,7 +162,8 @@ export default function Home() {
         dataset = "CATEGORIES";
       }
 
-      if (lastFetchedEndpoint.current === endpoint) {
+      const endpointKey = `${endpoint}_${clientParam}_${activeFilter}`;
+      if (lastFetchedEndpoint.current === endpointKey) {
         return;
       }
 
@@ -170,18 +173,27 @@ export default function Home() {
       }
 
       try {
-        const response = await axiosProvider.get(endpoint);
+        let url = endpoint;
+        const params = new URLSearchParams();
+
+        if (clientParam) {
+          params.append("client_name", clientParam);
+        }
+
+        if (endpoint.includes("/fineengg_erp/jobs")) {
+          params.append("assign_to", "Usmaan");
+        }
+
+        const queryString = params.toString();
+        if (queryString) {
+          url += `?${queryString}`;
+        }
+
+        const response = await axiosProvider.get(url);
         if (isMounted) {
           const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
           setData(fetchedData);
-          lastFetchedEndpoint.current = endpoint;
-
-          // if (endpoint.includes("/fineengg_erp/jobs")) {
-          //   const usmaanJobs = fetchedData
-          //     .filter((job: any) => job.assign_to === "Usmaan")
-          //     .map((job: any) => job.job_no);
-          //   setUsmaanJobNos(usmaanJobs);
-          // }
+          lastFetchedEndpoint.current = endpointKey;
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -193,7 +205,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter]);
+  }, [activeFilter, clientParam]);
 
   return (
     <>
@@ -512,7 +524,11 @@ export default function Home() {
                         >
                           <td className="px-2 py-2 border border-tableBorder">
                             <p
-                            onClick={() => router.push(`/production_module/${encodeURIComponent(item.job_no)}`)}
+                            onClick={() =>
+                                router.push(
+                                  `/production_module/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                )
+                              }
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent || item.is_urgent
                                   ? "text-red-600 hover:text-red-800"
@@ -563,7 +579,11 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder">
                           {item.job_no ? (
                             <p
-                              onClick={() => router.push(`/production_planning/${encodeURIComponent(item.job_no)}`)}
+                              onClick={() =>
+                                router.push(
+                                  `/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                )
+                              }
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent_due_date &&
                                 new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))

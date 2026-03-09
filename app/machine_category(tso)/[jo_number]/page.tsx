@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import Image from "next/image";
@@ -44,6 +44,8 @@ export default function JoNumberPage() {
   const router = useRouter();
   const raw_jo_number = Array.isArray(params.jo_number) ? params.jo_number[0] : params.jo_number;
   const jo_number = raw_jo_number ? decodeURIComponent(raw_jo_number) : "";
+  const searchParams = useSearchParams();
+  const clientParam = searchParams.get("client");
 
   const [selectedOption, setSelectedOption] = useState("");
   const [machineSize, setMachineSize] = useState("");
@@ -59,9 +61,16 @@ export default function JoNumberPage() {
     if (!jo_number) return;
     setLoading(true);
     try {
-      const response = await axiosProvider.get(
-        `/fineengg_erp/jobs?job_type=TSO_SERVICE&jo_number=${encodeURIComponent(jo_number)}`
-      );
+      const params = new URLSearchParams({
+        job_type: "TSO_SERVICE",
+        jo_number: encodeURIComponent(jo_number),
+      });
+
+      if (clientParam) {
+        params.append("client_name", clientParam);
+      }
+
+      const response = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
       if (response.data && Array.isArray(response.data.data)) {
         const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
         setJobs(validJobs);
@@ -75,7 +84,7 @@ export default function JoNumberPage() {
     } finally {
       setLoading(false);
     }
-  }, [jo_number]);
+  }, [jo_number, clientParam]);
 
   const fetchAssignedJobs = useCallback(async () => {
     if (!jo_number) return;
