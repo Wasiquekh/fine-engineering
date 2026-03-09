@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import { useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 
@@ -13,12 +14,18 @@ const axiosProvider = new AxiosProvider();
 export default function ReviewWeldingPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const client = searchParams.get("client");
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const res = await axiosProvider.get(`/fineengg_erp/assign-to-worker`, {
-        params: { status: "in-review", review_for: "welding" },
+        params: {
+          status: "in-review",
+          review_for: "welding",
+          ...(client ? { client_name: client } : {}),
+        },
       }as any);
       setData(Array.isArray(res?.data?.data) ? res.data.data : []);
     } catch (e: any) {
@@ -31,7 +38,7 @@ export default function ReviewWeldingPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [client]);
 
   const actionConfirm = async (title: string, text: string, confirm: string) => {
     const r = await Swal.fire({
@@ -87,7 +94,10 @@ export default function ReviewWeldingPage() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="flex items-center justify-between mb-4 px-2">
             <div>
-              <h1 className="text-xl font-semibold text-firstBlack">Review • Welding</h1>
+              <h1 className="text-xl font-semibold text-firstBlack">
+                Review • Welding
+                {client && ` • ${client}`}
+              </h1>
               <p className="text-sm text-gray-500 mt-1">
                 Status: <span className="font-semibold">in-review</span> | review_for:{" "}
                 <span className="font-semibold">welding</span>
