@@ -414,21 +414,21 @@ export default function Home() {
 
   const fetchData = async (endpoint?: string) => {
     try {
-      let url = endpoint;
+      let baseUrl = endpoint;
+      const params = new URLSearchParams();
 
-      if (!url) {
+      if (!baseUrl) {
         if (activeFilter === "JOB_SERVICE") {
-          url = `/fineengg_erp/categories`;
-
-          // ✅ filter by client from backend
-          if (clientParam) {
-            url += `?client_name=${encodeURIComponent(clientParam)}`;
-          }
+          baseUrl = `/fineengg_erp/categories`;
         } else {
-          url = "/fineengg_erp/jobs";
+          baseUrl = "/fineengg_erp/jobs";
         }
       }
 
+      if (clientParam) {
+        params.set("client_name", clientParam);
+      }
+      const url = `${baseUrl}?${params.toString()}`;
       const response = await axiosProvider.get(url);
       setData(Array.isArray(response.data.data) ? response.data.data : []);
       lastFetchedEndpoint.current = url;
@@ -534,17 +534,19 @@ export default function Home() {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      let endpoint = "/fineengg_erp/jobs";
+      let baseUrl = "/fineengg_erp/jobs";
       let dataset: "JOBS" | "CATEGORIES" = "JOBS";
+      const params = new URLSearchParams();
 
       if (activeFilter === "JOB_SERVICE") {
-        endpoint = "/fineengg_erp/categories";
+        baseUrl = "/fineengg_erp/categories";
         dataset = "CATEGORIES";
-        // ✅ add client filter
-        if (clientParam) {
-          endpoint += `?client_name=${encodeURIComponent(clientParam)}`;
-        }
       }
+
+      if (clientParam) {
+        params.set("client_name", clientParam);
+      }
+      const endpoint = `${baseUrl}?${params.toString()}`;
 
       if (currentDataset !== dataset) {
         setCurrentDataset(dataset);
