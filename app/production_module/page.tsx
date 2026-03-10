@@ -130,14 +130,14 @@ export default function Home() {
       const response = await axiosProvider.get(url);
       if (response.data && response.data.data) {
         const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
-        const uniqueCategories = [
-          ...new Map(
+        const uniqueCategories = Array.from(
+          new Map( // Using Array.from to explicitly convert MapIterator to Array
             cats.map((cat: any) => [
               cat.job_category,
               { value: cat.job_category, label: cat.job_category }
             ])
-          ).values()
-        ];
+          ).values() // .values() returns a MapIterator
+        );
 
         setCategories(uniqueCategories);
       }

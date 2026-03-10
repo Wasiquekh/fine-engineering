@@ -38,7 +38,7 @@ type QcRow = {
   } | null;
 };
 
-export default function QcMainPage() {
+export default function ReviewWeldingPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
@@ -75,12 +75,6 @@ export default function QcMainPage() {
       setCategories([]);
     }
   };
-export default function ReviewWeldingPage() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const client = searchParams.get("client");
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -95,9 +89,7 @@ export default function ReviewWeldingPage() {
 
       let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
 
-   
-
-      setData(fetchedData);
+      setData(fetchedData as QcRow[]);
     } catch (error) {
       console.error("Error fetching QC data:", error);
       toast.error("Failed to load QC data");
@@ -433,5 +425,4 @@ export default function ReviewWeldingPage() {
       </div>
     </div>
   );
-}
 }
