@@ -271,6 +271,16 @@ export default function Home() {
     }
 
     try {
+      // Client-side check for duplicate job_no before submission
+      if (values.job_no) { // Only check if job_no is provided in the form
+        const isDuplicate = data.some(
+          (item) => item.job_no === values.job_no
+        );
+        if (isDuplicate) {
+          toast.error(`Job No '${values.job_no}' already exists.`);
+          return; // Prevent form submission
+        }
+      }
       const endpoint = values.job_type === "PENDING_MATERIAL" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs";
       const response = await axiosProvider.post(endpoint, payload);
 
@@ -441,7 +451,12 @@ export default function Home() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      let url = "/fineengg_erp/categories";
+      if (clientParam) {
+        url += `?client_name=${encodeURIComponent(clientParam)}`;
+      }
+
+      const response = await axiosProvider.get(url);
       if (response.data && response.data.data) {
         const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
         const uniqueCategories = [
@@ -529,7 +544,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [clientParam]);
 
   useEffect(() => {
     let isMounted = true;
