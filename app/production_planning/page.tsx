@@ -242,6 +242,7 @@ export default function Home() {
         size: values.size,
         moc: values.moc,
         qty: Number(values.qty),
+        ...(clientParam && { client_name: clientParam }),
       };
     } else {
       // Create payload based on job type
@@ -258,6 +259,7 @@ export default function Home() {
         item_description: values.item_description,
         bin_location: values.bin_location,
         material_remark: values.material_remark || "",
+        ...(clientParam && { client_name: clientParam }),
       };
 
       // Add conditional fields
@@ -556,6 +558,10 @@ export default function Home() {
       if (activeFilter === "JOB_SERVICE") {
         baseUrl = "/fineengg_erp/categories";
         dataset = "CATEGORIES";
+      } else if (activeFilter !== "ALL") {
+        // For TSO_SERVICE and KANBAN, filter by job_type on the backend.
+        // "ALL" should fetch all job types.
+        params.set("job_type", activeFilter);
       }
 
       if (clientParam) {
