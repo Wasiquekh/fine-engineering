@@ -75,6 +75,7 @@ export default function ReviewWeldingPage() {
       setCategories([]);
     }
   };
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -89,7 +90,7 @@ export default function ReviewWeldingPage() {
 
       let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
 
-      setData(fetchedData as QcRow[]);
+      setData(fetchedData);
     } catch (error) {
       console.error("Error fetching QC data:", error);
       toast.error("Failed to load QC data");
@@ -244,7 +245,8 @@ export default function ReviewWeldingPage() {
               {client && ` • ${client}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Status: <span className="font-semibold">in-review</span>
+              Status: <span className="font-semibold">in-review</span> | review_for:{" "}
+              <span className="font-semibold">welding</span>
             </p>
           </div>
 
@@ -277,7 +279,6 @@ export default function ReviewWeldingPage() {
             </div>
           )}
 
-          {/* Rest of the table & UI remains the same */}
           <div className="relative overflow-x-auto sm:rounded-lg">
             {selectedJobNo ? (
               <>
@@ -357,8 +358,6 @@ export default function ReviewWeldingPage() {
               </>
             ) : (
               <>
-                {/* <h2 className="text-xl font-bold mb-4">Jobs Ready for QC</h2> */}
-
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
