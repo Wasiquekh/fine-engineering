@@ -75,6 +75,11 @@ export default function QcMainPage() {
       setCategories([]);
     }
   };
+export default function ReviewWeldingPage() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const client = searchParams.get("client");
 
   const fetchData = async () => {
     setLoading(true);
@@ -428,4 +433,5 @@ export default function QcMainPage() {
       </div>
     </div>
   );
+}
 }

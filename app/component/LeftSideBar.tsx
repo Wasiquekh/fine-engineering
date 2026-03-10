@@ -632,14 +632,14 @@ const LeftSideBar: React.FC = () => {
 
                 {isProdAmarBioOpen && (
                   <div className="pl-4 flex flex-col gap-1">
-                    <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Bio&urgent=true">
+                    <Link href="/production_module?filter=JOB_SERVICE&client=Amar%20Biosystem&urgent=true">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Urgent/Job</p>
                       </div>
                     </Link>
 
-                    <Link href="/production_module_2?filter=TSO_SERVICE&client=Amar%20Bio&urgent=true">
+                    <Link href="/production_module_2?filter=TSO_SERVICE&client=Amar%20Biosystem&urgent=true">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Urgent/TSO</p>
@@ -657,38 +657,38 @@ const LeftSideBar: React.FC = () => {
 
                     {isProdAmarBioReviewOpen && (
                       <div className="pl-4 flex flex-col gap-1">
-                        <Link href="/review?filter=JOB_SERVICE&client=Amar%20Bio">
-                          <div className={itemCls(pathname === "/review" && client === "Amar Bio" && filter === "JOB_SERVICE")}>
-                            <MdWorkOutline className={iconCls(pathname === "/review" && client === "Amar Bio" && filter === "JOB_SERVICE")} />
-                            <p className={textCls(pathname === "/review" && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
+                        <Link href="/review?filter=JOB_SERVICE&client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/review" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>
+                            <MdWorkOutline className={iconCls(pathname === "/review" && client === "Amar Biosystem" && filter === "JOB_SERVICE")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>Job Service</p>
                           </div>
                         </Link>
 
-                        <Link href="/review?filter=TSO_SERVICE&client=Amar%20Bio">
-                          <div className={itemCls(pathname === "/review" && client === "Amar Bio" && filter === "TSO_SERVICE")}>
-                            <MdDesignServices className={iconCls(pathname === "/review" && client === "Amar Bio" && filter === "TSO_SERVICE")} />
-                            <p className={textCls(pathname === "/review" && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
+                        <Link href="/review?filter=TSO_SERVICE&client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
+                            <MdDesignServices className={iconCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>TSO Service</p>
                           </div>
                         </Link>
 
-                        <Link href="/review?filter=KANBAN&client=Amar%20Bio">
-                          <div className={itemCls(pathname === "/review" && client === "Amar Bio" && filter === "KANBAN")}>
-                            <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Bio" && filter === "KANBAN")} />
-                            <p className={textCls(pathname === "/review" && client === "Amar Bio" && filter === "KANBAN")}>Kanban</p>
+                        <Link href="/review?filter=KANBAN&client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN")}>
+                            <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN")} />
+                            <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN")}>Kanban</p>
                           </div>
                         </Link>
 
-                        <Link href="/review/welding?filter=JOB_SERVICE&client=Amar%20Bio">
-                          <div className={itemCls(pathname === "/review/welding" && client === "Amar Bio")}>
-                            <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Bio")} />
-                            <p className={textCls(pathname === "/review/welding" && client === "Amar Bio")}>Welding</p>
+                        <Link href="/review/welding?filter=JOB_SERVICE&client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/review/welding" && client === "Amar Biosystem")}>
+                            <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Biosystem")} />
+                            <p className={textCls(pathname === "/review/welding" && client === "Amar Biosystem")}>Welding</p>
                           </div>
                         </Link>
 
-                        <Link href="/review/vendor?filter=JOB_SERVICE&client=Amar%20Bio">
-                          <div className={itemCls(pathname === "/review/vendor" && client === "Amar Bio")}>
-                            <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Bio")} />
-                            <p className={textCls(pathname === "/review/vendor" && client === "Amar Bio")}>Vendor</p>
+                        <Link href="/review/vendor?filter=JOB_SERVICE&client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/review/vendor" && client === "Amar Biosystem")}>
+                            <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Biosystem")} />
+                            <p className={textCls(pathname === "/review/vendor" && client === "Amar Biosystem")}>Vendor</p>
                           </div>
                         </Link>
                       </div>
@@ -788,38 +788,38 @@ const LeftSideBar: React.FC = () => {
 
             {isQCAmarBioOpen && (
               <div className="pl-4 flex flex-col gap-1">
-                <Link href="/qc?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className={itemCls(pathname === "/qc" && client === "Amar Bio" && filter === "JOB_SERVICE")}>
-                    <MdWorkOutline className={iconCls(pathname === "/qc" && client === "Amar Bio" && filter === "JOB_SERVICE")} />
-                    <p className={textCls(pathname === "/qc" && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
+                <Link href="/qc?filter=JOB_SERVICE&client=Amar%20Biosystem">
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>
+                    <MdWorkOutline className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "JOB_SERVICE")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>Job Service</p>
                   </div>
                 </Link>
 
-                <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Bio">
-                  <div className={itemCls(pathname === "/qc" && client === "Amar Bio" && filter === "TSO_SERVICE")}>
-                    <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Bio" && filter === "TSO_SERVICE")} />
-                    <p className={textCls(pathname === "/qc" && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
+                <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Biosystem">
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
+                    <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>TSO Service</p>
                   </div>
                 </Link>
 
-                <Link href="/qc?filter=KANBAN&client=Amar%20Bio">
-                  <div className={itemCls(pathname === "/qc" && client === "Amar Bio" && filter === "KANBAN")}>
-                    <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Bio" && filter === "KANBAN")} />
-                    <p className={textCls(pathname === "/qc" && client === "Amar Bio" && filter === "KANBAN")}>PO</p>
+                <Link href="/qc?filter=KANBAN&client=Amar%20Biosystem">
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>PO</p>
                   </div>
                 </Link>
 
-                <Link href="/qc/welding?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className={itemCls(pathname === "/qc/welding" && client === "Amar Bio")}>
-                    <MdPrecisionManufacturing className={iconCls(pathname === "/qc/welding" && client === "Amar Bio")} />
-                    <p className={textCls(pathname === "/qc/welding" && client === "Amar Bio")}>Welding</p>
+                <Link href="/qc/welding?filter=JOB_SERVICE&client=Amar%20Biosystem">
+                  <div className={itemCls(pathname === "/qc/welding" && client === "Amar Biosystem")}>
+                    <MdPrecisionManufacturing className={iconCls(pathname === "/qc/welding" && client === "Amar Biosystem")} />
+                    <p className={textCls(pathname === "/qc/welding" && client === "Amar Biosystem")}>Welding</p>
                   </div>
                 </Link>
 
-                <Link href="/qc/vendor?filter=JOB_SERVICE&client=Amar%20Bio">
-                  <div className={itemCls(pathname === "/qc/vendor" && client === "Amar Bio")}>
-                    <MdOutlinePeopleOutline className={iconCls(pathname === "/qc/vendor" && client === "Amar Bio")} />
-                    <p className={textCls(pathname === "/qc/vendor" && client === "Amar Bio")}>Vendor</p>
+                <Link href="/qc/vendor?filter=JOB_SERVICE&client=Amar%20Biosystem">
+                  <div className={itemCls(pathname === "/qc/vendor" && client === "Amar Biosystem")}>
+                    <MdOutlinePeopleOutline className={iconCls(pathname === "/qc/vendor" && client === "Amar Biosystem")} />
+                    <p className={textCls(pathname === "/qc/vendor" && client === "Amar Biosystem")}>Vendor</p>
                   </div>
                 </Link>
               </div>

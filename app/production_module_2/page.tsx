@@ -38,7 +38,6 @@ export default function Home() {
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
-  const [usmaanJobNos, setUsmaanJobNos] = useState<string[]>([]);
   const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
@@ -53,95 +52,6 @@ export default function Home() {
       setActiveFilter(filterParam);
     }
   }, [filterParam]);
-
-  useEffect(() => {
-    fetchUsmaanJobNos();
-  }, []);
-
-  const filteredData = useMemo(() => {
-    let currentData = data;
-
-    if (usmaanJobNos.length > 0) {
-      currentData = currentData.filter((item) => usmaanJobNos.includes(item.job_no));
-    }
-
-    if (urgentParam === "true") {
-      currentData = currentData.filter((item) => item.urgent || item.is_urgent);
-    }
-
-    if (currentDataset === "CATEGORIES") {
-      if (jobServiceCategoryFilter === "URGENT_TAB") {
-        return currentData.filter((item) => item.urgent || item.is_urgent);
-      }
-      if (jobServiceCategoryFilter !== "ALL") {
-        return currentData.filter((item) => item.job_category === jobServiceCategoryFilter);
-      }
-      return currentData;
-    }
-
-    if (clientParam) {
-      currentData = currentData.filter((item) => item.client_name === clientParam);
-    }
-
-    if (activeFilter === "JOB_SERVICE") {
-      return currentData.filter((item) => {
-        if (item.job_type !== "JOB_SERVICE") return false;
-        if (jobServiceCategoryFilter === "URGENT_TAB") {
-          return item.urgent;
-        }
-        if (jobServiceCategoryFilter !== "ALL" && item.job_category !== jobServiceCategoryFilter) return false;
-        return true;
-      });
-    }
-    if (activeFilter === "TSO_SERVICE") {
-      const tsoData = currentData.filter((item) => {
-        if (item.job_type !== "TSO_SERVICE") return false;
-        if (tsoSubFilter === "ALL") return true;
-        return item.job_category === tsoSubFilter;
-      });
-
-      const uniqueTsoData: any[] = [];
-      const seenTsoNos = new Set();
-
-      tsoData.forEach((item) => {
-        if (item.tso_no && !seenTsoNos.has(item.tso_no)) {
-          seenTsoNos.add(item.tso_no);
-          uniqueTsoData.push(item);
-        } else if (!item.tso_no) {
-          uniqueTsoData.push(item);
-        }
-      });
-
-      return uniqueTsoData;
-    }
-    if (activeFilter === "KANBAN") {
-      return currentData.filter((item) => {
-        if (item.job_type !== "KANBAN") return false;
-        if (kanbanSubFilter === "ALL") return true;
-        return item.job_category === kanbanSubFilter;
-      });
-    }
-    if (activeFilter === "ALL") {
-      return currentData;
-    }
-    return currentData.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam, usmaanJobNos]);
-
-  const fetchUsmaanJobNos = async () => {
-  try {
-    const res = await axiosProvider.get(
-      "/fineengg_erp/jobs?assign_to=Usmaan&limit=1000"
-    );
-
-    const jobNos = Array.isArray(res.data.data)
-      ? res.data.data.map((job: any) => job.job_no)
-      : [];
-
-    setUsmaanJobNos(jobNos);
-  } catch (err) {
-    console.error("Failed to fetch Usmaan jobs", err);
-  }
-};
 
   const fetchCategories = async () => {
     try {
@@ -165,49 +75,82 @@ export default function Home() {
 
   useEffect(() => {
     let isMounted = true;
-    const loadData = async () => {
-      let endpoint = "/fineengg_erp/jobs";
-      let dataset: "JOBS" | "CATEGORIES" = "JOBS";
 
+    const determineAndSetDataset = () => {
+      let dataset: "JOBS" | "CATEGORIES" = "JOBS";
       if (activeFilter === "JOB_SERVICE") {
-        endpoint = "/fineengg_erp/categories";
         dataset = "CATEGORIES";
       }
 
-      if (lastFetchedEndpoint.current === endpoint) {
-        return;
-      }
-
-      if (currentDataset !== dataset) {
+      if (isMounted && currentDataset !== dataset) {
         setCurrentDataset(dataset);
         setData([]);
       }
+    };
 
+    const fetchData = async () => {
       try {
-        const response = await axiosProvider.get(endpoint);
+        let baseUrl = "/fineengg_erp/jobs";
+        const params = new URLSearchParams();
+
+        // Always filter by Usmaan for this module
+        params.append("assign_to", "Usmaan");
+
+        // Determine base endpoint
+        if (activeFilter === "JOB_SERVICE") {
+          baseUrl = "/fineengg_erp/categories";
+        } else if (activeFilter !== "ALL") {
+          params.append("job_type", activeFilter);
+        }
+
+        // Add client filter
+        if (clientParam) {
+          params.append("client_name", clientParam);
+        }
+
+        // Add urgent filter
+        if (urgentParam === "true") {
+          params.append("urgent", "true");
+        }
+
+        // Add sub-category filters
+        if (activeFilter === "TSO_SERVICE") {
+          params.append("group_by", "tso_no");
+          if (tsoSubFilter !== "ALL") {
+            params.append("job_category", tsoSubFilter);
+          }
+        } else if (activeFilter === "KANBAN") {
+          params.append("group_by", "jo_number");
+          if (kanbanSubFilter !== "ALL") {
+            params.append("job_category", kanbanSubFilter);
+          }
+        } else if (activeFilter === "JOB_SERVICE") {
+          if (jobServiceCategoryFilter !== "ALL") {
+            params.append("job_category", jobServiceCategoryFilter);
+          }
+        }
+
+        const queryString = params.toString();
+        const fullUrl = `${baseUrl}${queryString ? `?${queryString}` : ""}`;
+
+        const response = await axiosProvider.get(fullUrl);
         if (isMounted) {
           const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
           setData(fetchedData);
-          lastFetchedEndpoint.current = endpoint;
-
-          // if (endpoint.includes("/fineengg_erp/jobs")) {
-          //   const usmaanJobs = fetchedData
-          //     .filter((job: any) => job.assign_to === "Usmaan")
-          //     .map((job: any) => job.job_no);
-          //   setUsmaanJobNos(usmaanJobs);
-          // }
+          lastFetchedEndpoint.current = fullUrl;
         }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
 
-    loadData();
+    determineAndSetDataset();
+    fetchData();
 
     return () => {
       isMounted = false;
     };
-  }, [activeFilter]);
+  }, [activeFilter, clientParam, urgentParam, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter]);
 
   return (
     <>
@@ -506,7 +449,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.length === 0 ? (
+                  {data.length === 0 ? (
                     <tr>
                       <td
                         colSpan={11}
@@ -518,7 +461,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item: any) => (
+                    data.map((item: any) => (
                       currentDataset === "CATEGORIES" ? (
                         <tr
                           className="border border-tableBorder bg-white hover:bg-primary-100"
@@ -526,7 +469,11 @@ export default function Home() {
                         >
                           <td className="px-2 py-2 border border-tableBorder">
                             <p
-                            onClick={() => router.push(`/production_module_2/${encodeURIComponent(item.job_no)}`)}
+                            onClick={() => 
+                              router.push(
+                                  `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                )
+                              }
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent || item.is_urgent
                                   ? "text-red-600 hover:text-red-800"
@@ -577,7 +524,11 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder">
                           {activeFilter === "TSO_SERVICE" ? (
                             <p
-                              onClick={() => router.push(`/tso_details/${encodeURIComponent(item.tso_no)}`)}
+                              onClick={() => 
+                              router.push(
+                                  `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                )
+                              }
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent_due_date &&
                                 new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))

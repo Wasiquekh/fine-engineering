@@ -52,7 +52,11 @@ export default function QcMainPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      const response = await axiosProvider.get("/fineengg_erp/categories", {
+        params: {
+          ...(client ? { client_name: client } : {}),
+        },
+      } as any);
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -104,7 +108,7 @@ export default function QcMainPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     setSelectedJobNo(null);
