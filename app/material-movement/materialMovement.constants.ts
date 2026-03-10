@@ -1,45 +1,105 @@
+// materialMovement.constants.ts
 export const STAGE_OPTIONS = [
   "All Status",
   "Lathe",
   "cnc",
-  "UMC",
-  "Drilling",
+  "umc",
   "Milling",
+  "Drilling",
   "Vendor",
   "Welding",
   "QC",
   "Completed",
 ];
 
-export const SIZE_OPTIONS = ["small", "medium", "large"];
+export const SIZE_OPTIONS = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
+];
 
-export const LATHE_CNC_CODES = {
-  small: ["SFL1","SFL2","SFL3","SFL4","SFL5","SFL6","SFL7","SFL8","SFL9"],
-  medium: ["MFL1","MFL2","MFL3"],
-  large: ["LFL1","LFL2","LFL3","LFL4"],
+// Machine code options
+export const MACHINE_CODES = {
+  small: Array.from({ length: 9 }, (_, i) => ({ value: `SFL${i + 1}`, label: `SFL${i + 1}` })),
+  medium: Array.from({ length: 3 }, (_, i) => ({ value: `MFL${i + 1}`, label: `MFL${i + 1}` })),
+  large: Array.from({ length: 4 }, (_, i) => ({ value: `LFL${i + 1}`, label: `LFL${i + 1}` })),
 };
 
-export const UMC_CODES = ["FVMC01"];
+export const UMC_CODES = [{ value: "FVMC01", label: "FVMC01" }];
+export const MILLING_CODES = [{ value: "FML01", label: "FML01" }];
+export const DRILLING_CODES = [{ value: "FDL01", label: "FDL01" }];
 
-export const MILLING_CODES = ["FML01"];
-
-export const DRILLING_CODES = ["FDL01"];
-
-export const VENDOR_OPTIONS = ["In Vendor", "Outsource"];
+export const VENDOR_OPTIONS = [
+  { value: "in-vendor", label: "In Vendor" },
+  { value: "outsource", label: "Outsource" },
+];
 
 export const WELDING_OPTIONS = [
-  "In Welding",
-  "Ready for QC"
+  { value: "in-welding", label: "In Welding" },
+  { value: "ready-for-qc", label: "Ready for QC" },
 ];
 
 export const QC_OPTIONS = [
-  "Ready for QC",
-  "QC of Welding",
-  "QC of Vendor",
-  "Not-ok",
-  "Rejected",
+  { value: "ready-for-qc", label: "Ready for QC" },
+  { value: "qc-welding", label: "QC of Welding" },
+  { value: "qc-vendor", label: "QC of Vendor" },
+  { value: "not-ok", label: "Not-ok" },
+  { value: "rejected", label: "Rejected" },
 ];
 
-export const REVIEW_FOR_OPTIONS = ["Welding", "Vendor"];
+export const REVIEW_FOR_OPTIONS = [
+  { value: "welding", label: "Welding" },
+  { value: "vendor", label: "Vendor" },
+];
 
-export const DOC_OPTIONS = ["Job", "TSO", "Kanban", "PO"];
+export const DOC_OPTIONS = [
+  { value: "JOB_SERVICE", label: "Job" },
+  { value: "TSO_SERVICE", label: "TSO" },
+  { value: "KANBAN", label: "Kanban" },
+  { value: "PO", label: "PO" },
+];
+
+// TSO Service Categories
+export const TSO_SERVICE_CATEGORIES = [
+  { value: "drawing", label: "Drawing" },
+  { value: "sample", label: "Sample" },
+];
+
+// Kanban Categories
+export const KANBAN_CATEGORIES = [
+  { value: "VESSEL", label: "VESSEL" },
+  { value: "HEAD", label: "HEAD" },
+  { value: "CLAMP", label: "CLAMP" },
+  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
+  { value: "HEATER_PLATE", label: "HEATER PLATE" },
+  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
+  { value: "HEATER_SHELL", label: "HEATER SHELL" },
+  { value: "OUTER_RING", label: "OUTER RING" },
+  { value: "COOLING_COIL", label: "COOLING COIL" },
+  { value: "SPARGER", label: "SPARGER" },
+  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
+  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
+];
+
+// Worker options based on machine category and size
+export const WORKER_OPTIONS = {
+  Lathe: {
+    small: ["Naseem", "Sanjay", "Choto bhai", "Ali bhai", "Gufran bhai", "Mahtab alam", "Jamaluddeen", "Javed bhai", "Hasib shekh"],
+    medium: ["Shoakat ali", "Mohd Jumriti anshari", "Usman bhai"],
+    large: ["Partab", "Mujeeb bhai", "Rangi lala", "Mahtab mota bhai"],
+  },
+  cnc: {
+    small: ["Ramjan ali", "Mustafa", "Akramuddeen", "Sufyan"],
+    medium: ["Ziyaul mustafa", "Mufeed alam"],
+    large: ["Aqif khan"],
+  },
+  umc: {
+    default: ["Rajnish kumar"],
+  },
+  Milling: {
+    default: ["Ramakanat"],
+  },
+  Drilling: {
+    default: ["Rahman"],
+  },
+};
