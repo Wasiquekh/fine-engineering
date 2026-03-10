@@ -444,11 +444,17 @@ export default function Home() {
       const response = await axiosProvider.get("/fineengg_erp/categories");
       if (response.data && response.data.data) {
         const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
-        const formattedCats = cats.map((cat: any) => ({
-          value: cat.job_category,
-          label: cat.job_category
-        }));
-        setCategories(formattedCats);
+        const uniqueCategories = [
+          ...new Map(
+            cats.map((cat: any) => [
+              cat.job_category,
+              { value: cat.job_category, label: cat.job_category }
+            ])
+          ).values()
+        ];
+
+        setCategories(uniqueCategories);
+        
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
