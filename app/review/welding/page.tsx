@@ -38,7 +38,7 @@ type QcRow = {
   } | null;
 };
 
-export default function QcMainPage() {
+export default function ReviewWeldingPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
@@ -75,11 +75,6 @@ export default function QcMainPage() {
       setCategories([]);
     }
   };
-export default function ReviewWeldingPage() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const searchParams = useSearchParams();
-  const client = searchParams.get("client");
 
   const fetchData = async () => {
     setLoading(true);
@@ -94,8 +89,6 @@ export default function ReviewWeldingPage() {
       } as any);
 
       let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
-
-   
 
       setData(fetchedData);
     } catch (error) {
@@ -252,7 +245,8 @@ export default function ReviewWeldingPage() {
               {client && ` • ${client}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Status: <span className="font-semibold">in-review</span>
+              Status: <span className="font-semibold">in-review</span> | review_for:{" "}
+              <span className="font-semibold">welding</span>
             </p>
           </div>
 
@@ -285,7 +279,6 @@ export default function ReviewWeldingPage() {
             </div>
           )}
 
-          {/* Rest of the table & UI remains the same */}
           <div className="relative overflow-x-auto sm:rounded-lg">
             {selectedJobNo ? (
               <>
@@ -365,8 +358,6 @@ export default function ReviewWeldingPage() {
               </>
             ) : (
               <>
-                {/* <h2 className="text-xl font-bold mb-4">Jobs Ready for QC</h2> */}
-
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
@@ -433,5 +424,4 @@ export default function ReviewWeldingPage() {
       </div>
     </div>
   );
-}
 }
