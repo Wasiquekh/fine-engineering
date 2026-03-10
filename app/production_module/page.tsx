@@ -30,15 +30,51 @@ const kanbanCategory = [
   { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
 
+interface FilterTab {
+  value: string;
+  label: string;
+}
+
+interface FilterTabsProps {
+  options: FilterTab[];
+  activeTab: string;
+  onTabClick: (value: string) => void;
+  showAllTab?: boolean;
+}
+
+const FilterTabs: React.FC<FilterTabsProps> = ({ options, activeTab, onTabClick, showAllTab = true }) => (
+  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+    {showAllTab && (
+      <button
+        onClick={() => onTabClick("ALL")}
+        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+          activeTab === "ALL" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"
+        }`}
+      >
+        All
+      </button>
+    )}
+    {options.map((cat) => (
+      <button
+        key={cat.value}
+        onClick={() => onTabClick(cat.value)}
+        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+          activeTab === cat.value ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"
+        }`}
+      >
+        {cat.label}
+      </button>
+    ))}
+  </div>
+);
+
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
-  const [currentDataset, setCurrentDataset] = useState<"JOBS" | "CATEGORIES">("JOBS");
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
-  //const [usmaanJobNos, setUsmaanJobNos] = useState<Set<string>>(new Set());
   const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
@@ -46,6 +82,10 @@ export default function Home() {
   const filterParam = searchParams.get("filter");
   const clientParam = searchParams.get("client");
   const urgentParam = searchParams.get("urgent");
+  const assignToParam = searchParams.get("assign_to");
+
+  // This module should always display jobs, not a category summary.
+  const isCategoriesDataset = false;
 
   useEffect(() => {
     if (filterParam) {
@@ -54,93 +94,52 @@ export default function Home() {
     }
   }, [filterParam]);
 
-  // useEffect(() => {
-  //   fetchUsmaanJobNos();
-  // }, []);
-
   const filteredData = useMemo(() => {
-    let currentData = data;
+    // With backend filtering, the data is pre-filtered. We only need to
+    // handle tasks like de-duplication on the client side.
+    // De-duplicate by job_no to show only one entry per job
+    const uniqueData: any[] = [];
+    const seenJobNos = new Set<string>();
 
-    // if (usmaanJobNos.size > 0) {
-    //   currentData = currentData.filter((item) => usmaanJobNos.has(item.job_no));
-    // }
-
-    if (urgentParam === "true") {
-      currentData = currentData.filter((item) => item.urgent || item.is_urgent);
-    }
-
-    if (currentDataset === "CATEGORIES") {
-      if (jobServiceCategoryFilter === "URGENT_TAB") {
-        return currentData.filter((item) => item.urgent || item.is_urgent);
+    data.forEach((item) => {
+      if (item.job_no && !seenJobNos.has(item.job_no)) {
+        seenJobNos.add(item.job_no);
+        uniqueData.push(item);
+      } else if (!item.job_no) {
+        uniqueData.push(item);
       }
-      if (jobServiceCategoryFilter !== "ALL") {
-        return currentData.filter((item) => item.job_category === jobServiceCategoryFilter);
-      }
-      return currentData;
-    }
+    });
 
-    // if (clientParam) {
-    //   currentData = currentData.filter((item) => item.client_name === clientParam);
-    // }
-
-    if (activeFilter === "JOB_SERVICE") {
-      return currentData.filter((item) => {
-        if (item.job_type !== "JOB_SERVICE") return false;
-        if (jobServiceCategoryFilter === "URGENT_TAB") {
-          return item.urgent;
-        }
-        if (jobServiceCategoryFilter !== "ALL" && item.job_category !== jobServiceCategoryFilter) return false;
-        return true;
-      });
-    }
-    if (activeFilter === "TSO_SERVICE") {
-      return currentData.filter((item) => {
-        if (item.job_type !== "TSO_SERVICE") return false;
-        if (tsoSubFilter === "ALL") return true;
-        return item.job_category === tsoSubFilter;
-      });
-    }
-    if (activeFilter === "KANBAN") {
-      return currentData.filter((item) => {
-        if (item.job_type !== "KANBAN") return false;
-        if (kanbanSubFilter === "ALL") return true;
-        return item.job_category === kanbanSubFilter;
-      });
-    }
-    if (activeFilter === "ALL") {
-      return currentData;
-    }
-    return currentData.filter((item) => item.job_type === activeFilter);
-  }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, clientParam, currentDataset, urgentParam]);
-
-  // const fetchUsmaanJobNos = async () => {
-  //   try {
-  //     const res = await axiosProvider.get(
-  //       "/fineengg_erp/jobs?assign_to=Usmaan&limit=1000"
-  //     );
-
-  //     const jobNos = new Set(
-  //       Array.isArray(res.data.data)
-  //         ? res.data.data.map((job: any) => job.job_no)
-  //         : []
-  //     );
-
-  //     setUsmaanJobNos(jobNos);
-  //   } catch (err) {
-  //     console.error("Failed to fetch Usmaan jobs", err);
-  //   }
-  // };
+    return uniqueData;
+  }, [data]);
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      const params = new URLSearchParams();
+      if (clientParam) {
+        params.append("client_name", clientParam);
+      }
+      if (assignToParam) {
+        params.append("assign_to", assignToParam);
+      }
+      let url = "/fineengg_erp/categories";
+      const queryString = params.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+      const response = await axiosProvider.get(url);
       if (response.data && response.data.data) {
         const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
-        const formattedCats = cats.map((cat: any) => ({
-          value: cat.job_category,
-          label: cat.job_category
-        }));
-        setCategories(formattedCats);
+        const uniqueCategories = [
+          ...new Map(
+            cats.map((cat: any) => [
+              cat.job_category,
+              { value: cat.job_category, label: cat.job_category }
+            ])
+          ).values()
+        ];
+
+        setCategories(uniqueCategories);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -149,54 +148,58 @@ export default function Home() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [clientParam, assignToParam]);
 
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      let endpoint = "/fineengg_erp/jobs";
-      let dataset: "JOBS" | "CATEGORIES" = "JOBS";
+      // This component always fetches jobs. Categories are for filter tabs only.
+      const endpoint = "/fineengg_erp/jobs";
+      const params = new URLSearchParams();
 
-      if (activeFilter === "JOB_SERVICE") {
-        endpoint = "/fineengg_erp/categories";
-        dataset = "CATEGORIES";
+      if (clientParam) {
+        params.append("client_name", clientParam);
+      }
+      if (assignToParam) {
+        params.append("assign_to", assignToParam);
+      }
+      if (urgentParam === "true") {
+        params.append("is_urgent", "true");
       }
 
-      const endpointKey = `${endpoint}_${clientParam}_${activeFilter}`;
-      if (lastFetchedEndpoint.current === endpointKey) {
+      if (activeFilter !== "ALL") {
+        params.append("job_type", activeFilter);
+
+        // Add the appropriate sub-filter for job_category
+        if (activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter !== "ALL") {
+          params.append("job_category", jobServiceCategoryFilter);
+        } else if (activeFilter === "TSO_SERVICE" && tsoSubFilter !== "ALL") {
+          params.append("job_category", tsoSubFilter);
+        } else if (activeFilter === "KANBAN" && kanbanSubFilter !== "ALL") {
+          params.append("job_category", kanbanSubFilter);
+        }
+      }
+
+      const queryString = params.toString();
+      const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+
+      if (lastFetchedEndpoint.current === url) {
         return;
       }
+      lastFetchedEndpoint.current = url;
 
-      if (currentDataset !== dataset) {
-        setCurrentDataset(dataset);
-        setData([]);
-      }
+      // Clear data for new fetch to show loading state
+      setData([]);
 
       try {
-        let url = endpoint;
-        const params = new URLSearchParams();
-
-        if (clientParam) {
-          params.append("client_name", clientParam);
-        }
-
-        if (endpoint.includes("/fineengg_erp/jobs")) {
-          params.append("assign_to", "Usmaan");
-        }
-
-        const queryString = params.toString();
-        if (queryString) {
-          url += `?${queryString}`;
-        }
-
         const response = await axiosProvider.get(url);
         if (isMounted) {
           const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
           setData(fetchedData);
-          lastFetchedEndpoint.current = endpointKey;
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+        if (isMounted) setData([]); // Clear data on error
       }
     };
 
@@ -205,7 +208,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter, clientParam]);
+  }, [activeFilter, clientParam, assignToParam, urgentParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
   return (
     <>
@@ -232,98 +235,27 @@ export default function Home() {
               <div className="flex items-center gap-4 max-w-full min-w-0">
                 {/* TSO Service Tabs */}
                 {activeFilter === "TSO_SERVICE" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
-                    <button
-                      onClick={() => setTsoSubFilter("ALL")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                        tsoSubFilter === "ALL"
-                          ? "bg-primary-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      All
-                    </button>
-                    {tsoServiceCategory.map((cat) => (
-                      <button
-                        key={cat.value}
-                        onClick={() => setTsoSubFilter(cat.value)}
-                        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                          tsoSubFilter === cat.value
-                            ? "bg-primary-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
+                  <FilterTabs
+                    options={tsoServiceCategory}
+                    activeTab={tsoSubFilter}
+                    onTabClick={setTsoSubFilter}
+                  />
                 )}
                 {/* Kanban Tabs */}
                 {activeFilter === "KANBAN" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
-                    <button
-                      onClick={() => setKanbanSubFilter("ALL")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                        kanbanSubFilter === "ALL"
-                          ? "bg-primary-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      All
-                    </button>
-                    {kanbanCategory.map((cat) => (
-                      <button
-                        key={cat.value}
-                        onClick={() => setKanbanSubFilter(cat.value)}
-                        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                          kanbanSubFilter === cat.value
-                            ? "bg-primary-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
+                  <FilterTabs
+                    options={kanbanCategory}
+                    activeTab={kanbanSubFilter}
+                    onTabClick={setKanbanSubFilter}
+                  />
                 )}
                 {/* Job Service Tabs */}
                 {activeFilter === "JOB_SERVICE" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
-                    <button
-                      onClick={() => setJobServiceCategoryFilter("ALL")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                        jobServiceCategoryFilter === "ALL"
-                          ? "bg-primary-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      All
-                    </button>
-                    
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.value}
-                        onClick={() => setJobServiceCategoryFilter(cat.value)}
-                        className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                          jobServiceCategoryFilter === cat.value
-                            ? "bg-primary-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                    {/* <button
-                      onClick={() => setJobServiceCategoryFilter("URGENT_TAB")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                        jobServiceCategoryFilter === "URGENT_TAB"
-                          ? "bg-primary-600 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      Urgent
-                    </button> */}
-                  </div>
+                  <FilterTabs
+                    options={categories}
+                    activeTab={jobServiceCategoryFilter}
+                    onTabClick={setJobServiceCategoryFilter}
+                  />
                 )}
               </div>
 
@@ -334,7 +266,7 @@ export default function Home() {
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    {currentDataset === "CATEGORIES" ? (
+                    {isCategoriesDataset ? (
                       <>
                         <th scope="col" className="p-3 border border-tableBorder">
                           <div className="flex items-center gap-2">
@@ -517,7 +449,7 @@ export default function Home() {
                     </tr>
                   ) : (
                     filteredData.map((item: any) => (
-                      currentDataset === "CATEGORIES" ? (
+                      isCategoriesDataset ? (
                         <tr
                           className="border border-tableBorder bg-white hover:bg-primary-100"
                           key={item.id}

@@ -271,6 +271,16 @@ export default function Home() {
     }
 
     try {
+      // Client-side check for duplicate job_no before submission
+      if (values.job_no) { // Only check if job_no is provided in the form
+        const isDuplicate = data.some(
+          (item) => item.job_no === values.job_no
+        );
+        if (isDuplicate) {
+          toast.error(`Job No '${values.job_no}' already exists.`);
+          return; // Prevent form submission
+        }
+      }
       const endpoint = values.job_type === "PENDING_MATERIAL" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs";
       const response = await axiosProvider.post(endpoint, payload);
 
@@ -414,21 +424,21 @@ export default function Home() {
 
   const fetchData = async (endpoint?: string) => {
     try {
-      let url = endpoint;
+      let baseUrl = endpoint;
+      const params = new URLSearchParams();
 
-      if (!url) {
+      if (!baseUrl) {
         if (activeFilter === "JOB_SERVICE") {
-          url = `/fineengg_erp/categories`;
-
-          // ✅ filter by client from backend
-          if (clientParam) {
-            url += `?client_name=${encodeURIComponent(clientParam)}`;
-          }
+          baseUrl = `/fineengg_erp/categories`;
         } else {
-          url = "/fineengg_erp/jobs";
+          baseUrl = "/fineengg_erp/jobs";
         }
       }
 
+      if (clientParam) {
+        params.set("client_name", clientParam);
+      }
+      const url = `${baseUrl}?${params.toString()}`;
       const response = await axiosProvider.get(url);
       setData(Array.isArray(response.data.data) ? response.data.data : []);
       lastFetchedEndpoint.current = url;
@@ -441,14 +451,25 @@ export default function Home() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      let url = "/fineengg_erp/categories";
+      if (clientParam) {
+        url += `?client_name=${encodeURIComponent(clientParam)}`;
+      }
+
+      const response = await axiosProvider.get(url);
       if (response.data && response.data.data) {
         const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
-        const formattedCats = cats.map((cat: any) => ({
-          value: cat.job_category,
-          label: cat.job_category
-        }));
-        setCategories(formattedCats);
+        const uniqueCategories = [
+          ...new Map(
+            cats.map((cat: any) => [
+              cat.job_category,
+              { value: cat.job_category, label: cat.job_category }
+            ])
+          ).values()
+        ];
+
+        setCategories(uniqueCategories);
+        
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -523,22 +544,24 @@ export default function Home() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [clientParam]);
 
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      let endpoint = "/fineengg_erp/jobs";
+      let baseUrl = "/fineengg_erp/jobs";
       let dataset: "JOBS" | "CATEGORIES" = "JOBS";
+      const params = new URLSearchParams();
 
       if (activeFilter === "JOB_SERVICE") {
-        endpoint = "/fineengg_erp/categories";
+        baseUrl = "/fineengg_erp/categories";
         dataset = "CATEGORIES";
-        // ✅ add client filter
-        if (clientParam) {
-          endpoint += `?client_name=${encodeURIComponent(clientParam)}`;
-        }
       }
+
+      if (clientParam) {
+        params.set("client_name", clientParam);
+      }
+      const endpoint = `${baseUrl}?${params.toString()}`;
 
       if (currentDataset !== dataset) {
         setCurrentDataset(dataset);
