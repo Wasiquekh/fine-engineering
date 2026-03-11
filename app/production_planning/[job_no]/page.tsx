@@ -110,7 +110,7 @@ export default function JobDetailsPage() {
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
             fetchedJobs.forEach((job: JobDetail) => {
               if (job.assign_to) {
-                const isStandard = ["Usmaan", "Ashfaq", "Ramzaan"].includes(job.assign_to);
+                const isStandard = ["Usmaan", "Ashfaq", "Ramzaan", "Riyaaz"].includes(job.assign_to);
                 initialAssignments[job.id] = {
                   assignTo: isStandard ? job.assign_to : "Others",
                   otherName: isStandard ? "" : job.assign_to,
@@ -467,6 +467,7 @@ export default function JobDetailsPage() {
                                       <option value="Usmaan">Usmaan</option>
                                       <option value="Ashfaq">Ashfaq</option>
                                       <option value="Ramzaan">Ramzaan</option>
+                                      <option value="Riyaaz">Riyaaz</option>
                                       <option value="Others">Others</option>
                                     </select>
                                   ))}
