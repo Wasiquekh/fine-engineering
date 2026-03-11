@@ -513,7 +513,7 @@ export default function Home() {
                             <p
                               onClick={() =>
                                 router.push(
-                                  `/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                  `/production_module/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
                                 )
                               }
                               className={`text-base leading-normal cursor-pointer underline ${
