@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
@@ -22,7 +22,17 @@ type Row = {
   status?: string | null;
   job_id?: string | null;
   jobId?: string | null;
-  job?: { id?: string | null } | null;
+  job_type?: string | null;  // Added to track job type
+  job_category?: string | null; // Added for category
+  tso_no?: string | null; // Added for TSO
+  job_no?: string | null; // Added for Job Service/Kanban
+  job?: { 
+    id?: string | null;
+    job_type?: string | null;
+    tso_no?: string | null;
+    job_no?: string | null;
+    job_category?: string | null;
+  } | null;
 };
 
 export default function QcWeldingPage() {
@@ -32,6 +42,7 @@ export default function QcWeldingPage() {
   const [tab, setTab] = useState<"outgoing" | "incoming">("outgoing");
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [jobTypeFilter, setJobTypeFilter] = useState<string>("ALL");
 
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
@@ -43,11 +54,16 @@ export default function QcWeldingPage() {
 
   const getJobId = (r: Row) => r.jobId || r.job_id || r.job?.id;
 
-  const buildQS = () => {
+  const buildQS = (additionalParams?: Record<string, string>) => {
     const q = new URLSearchParams();
     q.set("filter", filterParam);
     if (client) q.set("client", client);
     q.set("review_for", REVIEW_FOR);
+    if (additionalParams) {
+      Object.entries(additionalParams).forEach(([key, value]) => {
+        q.set(key, value);
+      });
+    }
     return q.toString();
   };
 
@@ -66,15 +82,32 @@ export default function QcWeldingPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
-        params: {
-          status,
-          job_type: filterParam,
-          ...(client ? { client } : {}),
-        },
-      } as any);
+      // Fetch ALL job types
+      const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
+      let allRows: Row[] = [];
 
-      setRows(Array.isArray(res?.data?.data) ? res.data.data : []);
+      for (const jobType of jobTypes) {
+        const res = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+          params: {
+            status,
+            job_type: jobType,
+            ...(client ? { client_name: client } : {}),
+          },
+        } as any);
+
+        const fetchedData = Array.isArray(res?.data?.data) ? res.data.data : [];
+        
+        // Add job_type to each item
+        const dataWithJobType = fetchedData.map((item: any) => ({
+          ...item,
+          job_type: jobType
+        }));
+        
+        allRows = [...allRows, ...dataWithJobType];
+      }
+
+      console.log(`Fetched ${allRows.length} items for ${status}`);
+      setRows(allRows);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to load QC Welding");
       setRows([]);
@@ -85,7 +118,13 @@ export default function QcWeldingPage() {
 
   useEffect(() => {
     fetchData();
-  }, [status, filterParam, client]);
+  }, [status, client]); // Removed filterParam dependency since we're fetching all types
+
+  // Filter by job type if selected
+  const filteredRows = useMemo(() => {
+    if (jobTypeFilter === "ALL") return rows;
+    return rows.filter(row => (row.job_type || row.job?.job_type) === jobTypeFilter);
+  }, [rows, jobTypeFilter]);
 
   const askDecision = async () => {
     const decision = await Swal.fire({
@@ -181,6 +220,7 @@ export default function QcWeldingPage() {
       title: "QC Welding • Outgoing",
       html: `
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
+          Job Type: <b>${r.job_type || r.job?.job_type || 'N/A'}</b><br/>
           Pending Qty: <b>${maxQty}</b>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
@@ -231,6 +271,7 @@ export default function QcWeldingPage() {
       title: "QC Welding • Incoming",
       html: `
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
+          Job Type: <b>${r.job_type || r.job?.job_type || 'N/A'}</b><br/>
           Pending Qty: <b>${maxQty}</b>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
@@ -283,6 +324,39 @@ export default function QcWeldingPage() {
     if (d === "rework") return doRework(r);
   };
 
+  // Get job type badge color
+  const getJobTypeBadge = (jobType: string | null | undefined) => {
+    switch(jobType) {
+      case "TSO_SERVICE":
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
+      case "KANBAN":
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
+      case "JOB_SERVICE":
+        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">-</span>;
+    }
+  };
+
+  // Count by job type
+  const countsByType = useMemo(() => {
+    const counts = {
+      JOB_SERVICE: 0,
+      TSO_SERVICE: 0,
+      KANBAN: 0,
+      TOTAL: rows.length
+    };
+    
+    rows.forEach(row => {
+      const type = row.job_type || row.job?.job_type;
+      if (type === "JOB_SERVICE") counts.JOB_SERVICE++;
+      else if (type === "TSO_SERVICE") counts.TSO_SERVICE++;
+      else if (type === "KANBAN") counts.KANBAN++;
+    });
+    
+    return counts;
+  }, [rows]);
+
   return (
     <div className="min-h-screen bg-[#F5F7FB]">
       <LeftSideBar />
@@ -297,39 +371,61 @@ export default function QcWeldingPage() {
                 <p className="text-sm text-gray-500 mt-1">
                   Outgoing = <b>qc-welding</b> | Incoming = <b>in-welding</b>
                 </p>
+                <div className="flex gap-3 mt-2 text-xs">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">TSO: {countsByType.TSO_SERVICE}</span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">KANBAN: {countsByType.KANBAN}</span>
+                  <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">TOTAL: {countsByType.TOTAL}</span>
+                </div>
               </div>
 
-              <div className="inline-flex rounded-lg bg-gray-100 p-1">
-                <button
-                  onClick={() => setTab("outgoing")}
-                  className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                    tab === "outgoing"
-                      ? "bg-primary-600 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-white"
-                  }`}
+              <div className="flex gap-2">
+                {/* Job Type Filter */}
+                <select
+                  value={jobTypeFilter}
+                  onChange={(e) => setJobTypeFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  Outgoing
-                </button>
-                <button
-                  onClick={() => setTab("incoming")}
-                  className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                    tab === "incoming"
-                      ? "bg-primary-600 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-white"
-                  }`}
-                >
-                  Incoming
-                </button>
+                  <option value="ALL">All Types</option>
+                  <option value="JOB_SERVICE">JOB_SERVICE</option>
+                  <option value="TSO_SERVICE">TSO_SERVICE</option>
+                  <option value="KANBAN">KANBAN</option>
+                </select>
+
+                <div className="inline-flex rounded-lg bg-gray-100 p-1">
+                  <button
+                    onClick={() => setTab("outgoing")}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                      tab === "outgoing"
+                        ? "bg-primary-600 text-white shadow-sm"
+                        : "text-gray-700 hover:bg-white"
+                    }`}
+                  >
+                    Outgoing
+                  </button>
+                  <button
+                    onClick={() => setTab("incoming")}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                      tab === "incoming"
+                        ? "bg-primary-600 text-white shadow-sm"
+                        : "text-gray-700 hover:bg-white"
+                    }`}
+                  >
+                    Incoming
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="px-6 pb-6 overflow-auto">
-              <table className="w-full min-w-[1000px] text-sm">
+              <table className="w-full min-w-[1100px] text-sm">
                 <thead className="bg-gray-50">
                   <tr className="text-gray-600">
+                    <th className="text-left font-semibold px-4 py-3">Type</th>
                     <th className="text-left font-semibold px-4 py-3">JO No</th>
                     <th className="text-left font-semibold px-4 py-3">Serial No</th>
                     <th className="text-left font-semibold px-4 py-3">Item No</th>
+                    <th className="text-left font-semibold px-4 py-3">Category</th>
                     <th className="text-left font-semibold px-4 py-3">Pending Qty</th>
                     <th className="text-left font-semibold px-4 py-3">Assigning Date</th>
                     <th className="text-right font-semibold px-4 py-3">Action</th>
@@ -339,22 +435,26 @@ export default function QcWeldingPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                      <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
                         Loading...
                       </td>
                     </tr>
-                  ) : rows.length === 0 ? (
+                  ) : filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
-                        No welding items found.
+                      <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                        No welding items found for the selected filters.
                       </td>
                     </tr>
                   ) : (
-                    rows.map((r) => (
-                      <tr key={r.id} className="border-b last:border-b-0">
-                        <td className="px-4 py-4">{r.jo_no || "-"}</td>
+                    filteredRows.map((r) => (
+                      <tr key={r.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                        <td className="px-4 py-4">
+                          {getJobTypeBadge(r.job_type || r.job?.job_type)}
+                        </td>
+                        <td className="px-4 py-4 font-medium">{r.jo_no || "-"}</td>
                         <td className="px-4 py-4">{r.serial_no || "-"}</td>
                         <td className="px-4 py-4">{r.item_no ?? "-"}</td>
+                        <td className="px-4 py-4">{r.job_category || r.job?.job_category || "-"}</td>
                         <td className="px-4 py-4 font-semibold">{r.quantity_no ?? "-"}</td>
                         <td className="px-4 py-4">{r.assigning_date || "-"}</td>
                         <td className="px-4 py-4 text-right">
@@ -373,8 +473,9 @@ export default function QcWeldingPage() {
                 </tbody>
               </table>
 
-              <div className="text-xs text-gray-500 mt-3">
-                ✅ Welding Not OK goes to <b>/pp_not-ok/welding</b>. QC from that page returns to <b>/qc/welding</b>.
+              <div className="text-xs text-gray-500 mt-3 space-y-1">
+                <p>✅ Welding Not OK goes to <b>/pp_not-ok/welding</b>. QC from that page returns to <b>/qc/welding</b>.</p>
+                <p>📊 Showing all job types: JOB_SERVICE, TSO_SERVICE, KANBAN</p>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
@@ -16,8 +16,8 @@ const storage = new StorageManager();
 
 // TSO Service Categories
 const tsoServiceCategory = [
-  { value: "drawing", label: "Drawing" },
-  { value: "sample", label: "Sample" },
+  { value: "Drawing", label: "Drawing" },
+  { value: "Sample", label: "Sample" },
 ];
 
 // Kanban Categories
@@ -40,6 +40,7 @@ type QcRow = {
   id: string;
   job_id?: string | null;
   job_no?: string | null;
+  tso_no?: string | null;  // Added tso_no
   jo_no?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
@@ -51,9 +52,11 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
+  status?: string | null;  // Added status
   job?: {
     id?: string | null;
     job_no?: string | null;
+    tso_no?: string | null;  // Added tso_no to nested job
     job_category?: string | null;
     client_name?: string | null;
   } | null;
@@ -72,6 +75,9 @@ export default function QcMainPage() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
+  const assignTo = searchParams.get("assign_to") || "";
+
+  console.log("URL Parameters:", { filterParam, client, assignTo });
 
   const fetchCategories = async () => {
     try {
@@ -107,20 +113,31 @@ export default function QcMainPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      console.log("Fetching with params:", {
+        job_type: filterParam,
+        status: "in-review",
+        client_name: client,
+        assign_to: assignTo
+      });
+
       const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
         params: {
           job_type: filterParam,
           status: "in-review",
           ...(client ? { client_name: client } : {}),
+          ...(assignTo ? { assign_to: assignTo } : {}),
         },
       } as any);
 
-      let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
+      console.log("API Response:", response?.data);
 
-      if (filterParam === "JOB_SERVICE") {
-        fetchedData = fetchedData.filter(
-          (item: any) => item?.review_for !== "vendor" && item?.review_for !== "welding"
-        );
+      let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
+      
+      console.log("Fetched Data length:", fetchedData.length);
+      
+      if (fetchedData.length > 0) {
+        console.log("Sample data item:", fetchedData[0]);
+        console.log("Available job categories:", [...new Set(fetchedData.map(item => item.job_category || item.job?.job_category))]);
       }
 
       setData(fetchedData);
@@ -140,7 +157,7 @@ export default function QcMainPage() {
   useEffect(() => {
     setSelectedJobNo(null);
     fetchData();
-  }, [filterParam, client]);
+  }, [filterParam, client, assignTo]);
 
   const filteredData = useMemo(() => {
     let currentData = [...data];
@@ -156,7 +173,7 @@ export default function QcMainPage() {
       if (tsoSubFilter !== "ALL") {
         currentData = currentData.filter((item) => {
           const category = item.job_category || item.job?.job_category || "";
-          return category === tsoSubFilter;
+          return category.toLowerCase() === tsoSubFilter.toLowerCase();
         });
       }
     } else if (filterParam === "KANBAN") {
@@ -171,17 +188,34 @@ export default function QcMainPage() {
     return currentData;
   }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
-  const jobNumbers = useMemo(() => {
-    const jobs = new Set<string>();
+  // Get unique identifiers based on filter type
+  const jobIdentifiers = useMemo(() => {
+    const ids = new Set<string>();
+    
     filteredData.forEach((item) => {
-      const jobNo = item.job_no || item.job?.job_no;
-      if (jobNo) jobs.add(jobNo);
+      if (filterParam === "TSO_SERVICE") {
+        // For TSO_SERVICE, use tso_no
+        const tsoNo = item.tso_no || item.job?.tso_no;
+        if (tsoNo) ids.add(tsoNo);
+      } else {
+        // For JOB_SERVICE and KANBAN, use job_no
+        const jobNo = item.job_no || item.job?.job_no;
+        if (jobNo) ids.add(jobNo);
+      }
     });
-    return Array.from(jobs);
-  }, [filteredData]);
+    
+    return Array.from(ids);
+  }, [filteredData, filterParam]);
 
-  const getJoGroupsForJob = (jobNo: string) => {
-    const items = filteredData.filter((item) => (item.job_no || item.job?.job_no) === jobNo);
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = filteredData.filter((item) => {
+      if (filterParam === "TSO_SERVICE") {
+        return (item.tso_no || item.job?.tso_no) === identifier;
+      } else {
+        return (item.job_no || item.job?.job_no) === identifier;
+      }
+    });
+    
     const groups: Record<string, QcRow[]> = {};
 
     items.forEach((item) => {
@@ -204,8 +238,14 @@ export default function QcMainPage() {
       }
     > = {};
 
-    jobNumbers.forEach((jobNo) => {
-      const items = filteredData.filter((item) => (item.job_no || item.job?.job_no) === jobNo);
+    jobIdentifiers.forEach((identifier) => {
+      const items = filteredData.filter((item) => {
+        if (filterParam === "TSO_SERVICE") {
+          return (item.tso_no || item.job?.tso_no) === identifier;
+        } else {
+          return (item.job_no || item.job?.job_no) === identifier;
+        }
+      });
 
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
@@ -221,7 +261,7 @@ export default function QcMainPage() {
 
       const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
 
-      summary[jobNo] = {
+      summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
@@ -230,7 +270,7 @@ export default function QcMainPage() {
     });
 
     return summary;
-  }, [filteredData, jobNumbers]);
+  }, [filteredData, jobIdentifiers, filterParam]);
 
   const uniqueCategories = useMemo(() => {
     if (filterParam === "JOB_SERVICE") return categories;
@@ -238,7 +278,8 @@ export default function QcMainPage() {
     if (filterParam === "KANBAN") return kanbanCategory;
     return [];
   }, [filterParam, categories]);
-   const actionConfirm = async (title: string, text: string, confirm: string) => {
+
+  const actionConfirm = async (title: string, text: string, confirm: string) => {
     const r = await Swal.fire({
       title,
       text,
@@ -249,7 +290,7 @@ export default function QcMainPage() {
     return r.isConfirmed;
   };
 
-const postAction = async (id: string, endpoint: string, successMsg: string) => {
+  const postAction = async (id: string, endpoint: string, successMsg: string) => {
     try {
       await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/${endpoint}`, null);
       toast.success(successMsg);
@@ -280,6 +321,14 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
     postAction(id, "vendor", "Moved to Vendor Outsource");
   };
 
+  // Get display name for identifier
+  const getIdentifierDisplayName = (identifier: string) => {
+    if (filterParam === "TSO_SERVICE") {
+      return `TSO: ${identifier}`;
+    }
+    return identifier;
+  };
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -301,9 +350,10 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
             <h1 className="text-xl font-semibold text-firstBlack">
               Review • {filterParam.replace("_", " ")}
               {client && ` • ${client}`}
+              {assignTo && ` • ${assignTo}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Status: <span className="font-semibold">review</span>
+              Status: <span className="font-semibold">in-review</span>
             </p>
           </div>
 
@@ -375,7 +425,9 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
                   Back to Jobs
                 </button>
 
-                <h2 className="text-xl font-bold mb-4">Job: {selectedJobNo}</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
@@ -394,51 +446,48 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
                   </thead>
 
                   <tbody>
-                    {Object.entries(getJoGroupsForJob(selectedJobNo)).length === 0 ? (
+                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
                         <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No JO data found</p>
                         </td>
                       </tr>
                     ) : (
-                      Object.entries(getJoGroupsForJob(selectedJobNo)).map(([jo, items]) => (
-                        <>
-                          <tr key={`${jo}-head`} className="border border-tableBorder bg-white hover:bg-primary-100">
+                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
+                        <Fragment key={jo}>
+                          <tr className="border border-tableBorder bg-white hover:bg-primary-100">
                             <td className="px-2 py-2 border border-tableBorder font-medium">
                               {jo}
                             </td>
                             <td colSpan={8} className="px-2 py-2 border border-tableBorder"></td>
-                             <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <button
-                                    onClick={() => handleQc(items[0].id)}
-                                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                                  >
-                                    QC
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleMachine(items[0].id)}
-                                    className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
-                                  >
-                                    Machine
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleWelding(items[0].id)}
-                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                                  >
-                                    Welding
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleVendor(items[0].id)}
-                                    className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
-                                  >
-                                    Vendor
-                                  </button>
-                                </div>
-                              </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                  onClick={() => handleQc(items[0].id)}
+                                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                                >
+                                  QC
+                                </button>
+                                <button
+                                  onClick={() => handleMachine(items[0].id)}
+                                  className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
+                                >
+                                  Machine
+                                </button>
+                                <button
+                                  onClick={() => handleWelding(items[0].id)}
+                                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+                                >
+                                  Welding
+                                </button>
+                                <button
+                                  onClick={() => handleVendor(items[0].id)}
+                                  className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
+                                >
+                                  Vendor
+                                </button>
+                              </div>
+                            </td>
                           </tr>
 
                           {items.map((item) => (
@@ -455,7 +504,7 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
                               <td className="px-2 py-2 border border-tableBorder"></td>
                             </tr>
                           ))}
-                        </>
+                        </Fragment>
                       ))
                     )}
                   </tbody>
@@ -463,13 +512,17 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Jobs Review</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {filterParam === "TSO_SERVICE" ? "TSO Review" : "Jobs Review"}
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">Job No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Job Category</th>
+                      <th className="p-3 border border-tableBorder">
+                        {filterParam === "TSO_SERVICE" ? "TSO No" : "Job No"}
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
@@ -483,24 +536,24 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
-                    ) : jobNumbers.length === 0 ? (
+                    ) : jobIdentifiers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
                     ) : (
-                      jobNumbers.map((jobNo) => {
-                        const summary = jobSummary[jobNo];
+                      jobIdentifiers.map((identifier) => {
+                        const summary = jobSummary[identifier];
 
                         return (
                           <tr
-                            key={jobNo}
+                            key={identifier}
                             className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
-                            onClick={() => setSelectedJobNo(jobNo)}
+                            onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">{jobNo}</p>
+                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.jobCategory}</p>
@@ -525,7 +578,7 @@ const postAction = async (id: string, endpoint: string, successMsg: string) => {
           </div>
 
           <div className="text-xs text-gray-500 mt-3 px-2">
-            Total Jobs: {jobNumbers.length} | Total Items: {filteredData.length}
+            Total {filterParam === "TSO_SERVICE" ? "TSOs" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
           </div>
         </div>
       </div>
