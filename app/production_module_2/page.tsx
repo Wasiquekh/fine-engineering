@@ -527,7 +527,7 @@ export default function Home() {
                             </p>
                           ) : item.job_no ? (
                             <p
-                              onClick={() => router.push(`/production_planning/${encodeURIComponent(item.job_no)}`)}
+                              onClick={() => router.push(`/production_module_2/${encodeURIComponent(item.job_no)}`)}
                               className={`text-base leading-normal cursor-pointer underline ${
                                 item.urgent_due_date &&
                                 new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
