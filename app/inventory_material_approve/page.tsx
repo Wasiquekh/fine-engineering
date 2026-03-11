@@ -13,7 +13,7 @@ import Swal from "sweetalert2";
 const axiosProvider = new AxiosProvider();
 
   interface JobGroup {
-    job_no: string;
+    groupId: string;
     job_type: string;
     job_category: string;
     items: any[];
@@ -36,16 +36,34 @@ export default function Home() {
   const clientParam = searchParams.get("client");
   const filterParam = searchParams.get("filter");
 
-const handleJobNoClick = (jobNo: string) => {
-  if (!jobNo) return;
+  const handleFilterChange = (newFilter: string) => {
+    const currentParams = new URLSearchParams(searchParams.toString());
+    if (newFilter === "ALL") {
+      currentParams.delete("filter");
+    } else {
+      currentParams.set("filter", newFilter);
+    }
+    router.push(`/inventory_material_approve?${currentParams.toString()}`);
+  };
+
+  const handleGroupClick = (group: JobGroup) => {
+    if (!group || !group.groupId) return;
+
+    const { groupId, job_type } = group;
 
     const params = searchParams.toString();
+    const queryString = params ? `?${params}` : "";
 
-    router.push(
-      `/inventory_material_approve/${encodeURIComponent(jobNo)}${
-        params ? `?${params}` : ""
-      }`
-    );
+    if (job_type === "TSO_SERVICE") {
+      router.push(`/tso_approve/${encodeURIComponent(groupId)}${queryString}`);
+    } else if (job_type === "KANBAN") {
+      router.push(`/kanban_approve/${encodeURIComponent(groupId)}${queryString}`);
+    } else {
+      // Default behavior for JOB_SERVICE or other types
+      router.push(
+        `/inventory_material_approve/${encodeURIComponent(groupId)}${queryString}`
+      );
+    }
   };
 
   const handleApprove = async (items: any[]) => {
@@ -171,6 +189,8 @@ const handleJobNoClick = (jobNo: string) => {
   useEffect(() => {
     if (filterParam) {
       setActiveFilter(filterParam);
+    } else {
+      setActiveFilter("ALL");
     }
   }, [filterParam]);
 
@@ -180,12 +200,27 @@ const handleJobNoClick = (jobNo: string) => {
     if (!filteredData || filteredData.length === 0) return [];
 
     const groups = filteredData.reduce((acc: Record<string, any>, item: any) => {
-      const { job_no } = item;
-      if (!job_no) return acc;
+      const { job_type, job_no, tso_no, jo_number } = item;
+      let groupKey: string | null = null;
 
-      if (!acc[job_no]) {
-        acc[job_no] = {
-          job_no: item.job_no,
+      if (job_type === "JOB_SERVICE") {
+        groupKey = job_no;
+      } else if (job_type === "TSO_SERVICE") {
+        groupKey = tso_no;
+      } else if (job_type === "KANBAN") {
+        groupKey = jo_number;
+      } else {
+        // Fallback for items that might not have a job_type but have a job_no
+        groupKey = job_no;
+      }
+
+      if (!groupKey) {
+        return acc; // Skip items that cannot be grouped
+      }
+
+      if (!acc[groupKey]) {
+        acc[groupKey] = {
+          groupId: groupKey, // The identifier for the group
           job_type: item.job_type,
           job_category: item.job_category,
           items: [],
@@ -196,16 +231,16 @@ const handleJobNoClick = (jobNo: string) => {
         };
       }
 
-      acc[job_no].items.push(item);
+      acc[groupKey].items.push(item);
       if (!item.is_approve) {
-        acc[job_no].is_approve = 0;
+        acc[groupKey].is_approve = 0;
       }
       if (!item.is_rejected) {
-        acc[job_no].is_rejected = 0;
+        acc[groupKey].is_rejected = 0;
       }
-      acc[job_no].total_qty += Number(item.qty) || 0;
+      acc[groupKey].total_qty += Number(item.qty) || 0;
       if (item.jo_number) {
-        acc[job_no].jo_numbers_list.add(item.jo_number);
+        acc[groupKey].jo_numbers_list.add(item.jo_number);
       }
 
       return acc;
@@ -213,7 +248,7 @@ const handleJobNoClick = (jobNo: string) => {
 
     return Object.values(groups).map((group: any): JobGroup => ({
       ...group,
-      jo_numbers: Array.from(group.jo_numbers_list).join(', '),
+      jo_numbers: Array.from(group.jo_numbers_list).join(", "),
     }));
   }, [filteredData]);
 
@@ -247,7 +282,7 @@ const handleJobNoClick = (jobNo: string) => {
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                   <button
-                    onClick={() => setActiveFilter("ALL")}
+                    onClick={() => handleFilterChange("ALL")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "ALL"
                         ? "bg-primary-600 text-white"
@@ -257,7 +292,7 @@ const handleJobNoClick = (jobNo: string) => {
                     All
                   </button>
                   <button
-                    onClick={() => setActiveFilter("JOB_SERVICE")}
+                    onClick={() => handleFilterChange("JOB_SERVICE")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "JOB_SERVICE"
                         ? "bg-primary-600 text-white"
@@ -267,7 +302,7 @@ const handleJobNoClick = (jobNo: string) => {
                     Job Service
                   </button>
                   <button
-                    onClick={() => setActiveFilter("TSO_SERVICE")}
+                    onClick={() => handleFilterChange("TSO_SERVICE")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "TSO_SERVICE"
                         ? "bg-primary-600 text-white"
@@ -277,7 +312,7 @@ const handleJobNoClick = (jobNo: string) => {
                     TSO Service
                   </button>
                   <button
-                    onClick={() => setActiveFilter("KANBAN")}
+                    onClick={() => handleFilterChange("KANBAN")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "KANBAN"
                         ? "bg-primary-600 text-white"
@@ -295,20 +330,26 @@ const handleJobNoClick = (jobNo: string) => {
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job No
+                          {activeFilter === "TSO_SERVICE"
+                            ? "TSO No"
+                            : activeFilter === "KANBAN"
+                            ? "J/O Number"
+                            : "Job No"}
                         </div>
                       </div>
                     </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          J/O Number
+                    {activeFilter !== "KANBAN" && (
+                      <th
+                        scope="col"
+                        className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-firstBlack text-base leading-normal">
+                            J/O Number
+                          </div>
                         </div>
-                      </div>
-                    </th>
+                      </th>
+                    )}
                     <th
                       scope="col"
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
@@ -365,7 +406,7 @@ const handleJobNoClick = (jobNo: string) => {
                   {groupedData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={activeFilter === "KANBAN" ? 6 : 7}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -377,21 +418,23 @@ const handleJobNoClick = (jobNo: string) => {
                     groupedData.map((group: JobGroup) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
-                        key={group.job_no}
+                        key={group.groupId}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
                           <button
-                            onClick={() => handleJobNoClick(group.job_no)}
+                            onClick={() => handleGroupClick(group)}
                             className="text-blue-600 hover:underline text-left"
                           >
-                            <p className="text-base leading-normal">{group.job_no || "N/A"}</p>
+                            <p className="text-base leading-normal">{group.groupId || "N/A"}</p>
                           </button>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {group.jo_numbers || "N/A"}
-                          </p>
-                        </td>
+                        {activeFilter !== "KANBAN" && (
+                          <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                            <p className="text-[#232323] text-base leading-normal">
+                              {group.jo_numbers || "N/A"}
+                            </p>
+                          </td>
+                        )}
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
                             {group.job_type}
