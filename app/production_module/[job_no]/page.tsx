@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
 import LeftSideBar from "../../component/LeftSideBar";
@@ -35,7 +35,10 @@ export default function JobDetailsPage() {
   }>({});
   const params = useParams();
   const router = useRouter();
-  const job_no = params.job_no as string;
+  const searchParams = useSearchParams();
+  const job_no = decodeURIComponent(params.job_no as string);
+  const client = searchParams.get("client");
+  const filter = searchParams.get("filter");
 
   const uniqueJobDetails = useMemo(() => {
     const seen = new Set();
@@ -52,15 +55,26 @@ export default function JobDetailsPage() {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?job_no=${job_no}`);
+          const urlParams = new URLSearchParams({
+            job_no: job_no,
+            assign_to: "Usmaan",
+          });
+
+          if (client) {
+            urlParams.append("client_name", client);
+          }
+
+          if (filter && filter !== "ALL") {
+            urlParams.append("job_type", filter);
+          }
+          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?${urlParams.toString()}`);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
-            const filteredJobs = fetchedJobs.filter((job: JobDetail) => job.assign_to === "Usmaan");
-            setJobDetails(filteredJobs);
+            setJobDetails(fetchedJobs);
 
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
-            filteredJobs.forEach((job: JobDetail) => {
+            fetchedJobs.forEach((job: JobDetail) => {
               if (job.assign_to) {
                 const isStandard = ["Usmaan", "Ashfaq", "Ramzaan"].includes(job.assign_to);
                 initialAssignments[job.id] = {
@@ -83,7 +97,7 @@ export default function JobDetailsPage() {
       };
       fetchData();
     }
-  }, [job_no]);
+  }, [job_no, client, filter]);
 
   const handleAssignmentChange = (id: string, field: string, value: string) => {
     setAssignments((prev) => ({

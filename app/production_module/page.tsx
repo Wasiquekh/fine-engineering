@@ -97,20 +97,22 @@ export default function Home() {
   const filteredData = useMemo(() => {
     // With backend filtering, the data is pre-filtered. We only need to
     // handle tasks like de-duplication on the client side.
-    // De-duplicate by job_no to show only one entry per job
-    const uniqueData: any[] = [];
-    const seenJobNos = new Set<string>();
+    // De-duplicate by job_no to show only one entry per job.
+    // Using a Map is a cleaner way to get unique items by a key.
+    const uniqueJobs = new Map<string, any>();
+    const itemsWithoutJob: any[] = [];
 
     data.forEach((item) => {
-      if (item.job_no && !seenJobNos.has(item.job_no)) {
-        seenJobNos.add(item.job_no);
-        uniqueData.push(item);
-      } else if (!item.job_no) {
-        uniqueData.push(item);
+      if (item.job_no) {
+        if (!uniqueJobs.has(item.job_no)) {
+          uniqueJobs.set(item.job_no, item);
+        }
+      } else {
+        itemsWithoutJob.push(item);
       }
     });
 
-    return uniqueData;
+    return [...Array.from(uniqueJobs.values()), ...itemsWithoutJob];
   }, [data]);
 
   const fetchCategories = async () => {
