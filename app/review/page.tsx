@@ -14,33 +14,10 @@ import { FaArrowLeft } from "react-icons/fa";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
-// TSO Service Categories
-const tsoServiceCategory = [
-  { value: "Drawing", label: "Drawing" },
-  { value: "Sample", label: "Sample" },
-];
-
-// Kanban Categories
-const kanbanCategory = [
-  { value: "VESSEL", label: "VESSEL" },
-  { value: "HEAD", label: "HEAD" },
-  { value: "CLAMP", label: "CLAMP" },
-  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
-  { value: "HEATER_PLATE", label: "HEATER PLATE" },
-  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
-  { value: "HEATER_SHELL", label: "HEATER SHELL" },
-  { value: "OUTER_RING", label: "OUTER RING" },
-  { value: "COOLING_COIL", label: "COOLING COIL" },
-  { value: "SPARGER", label: "SPARGER" },
-  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
-  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
-];
-
 type QcRow = {
   id: string;
   job_id?: string | null;
   job_no?: string | null;
-  tso_no?: string | null;  // Added tso_no
   jo_no?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
@@ -52,11 +29,10 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
-  status?: string | null;  // Added status
+  status?: string | null;
   job?: {
     id?: string | null;
     job_no?: string | null;
-    tso_no?: string | null;  // Added tso_no to nested job
     job_category?: string | null;
     client_name?: string | null;
   } | null;
@@ -66,10 +42,7 @@ export default function QcMainPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
-
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
-  const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
-  const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
 
   const searchParams = useSearchParams();
@@ -113,8 +86,8 @@ export default function QcMainPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      console.log("Fetching with params:", {
-        job_type: filterParam,
+      console.log("Fetching JOB_SERVICE data with params:", {
+        job_type: "JOB_SERVICE",
         status: "in-review",
         client_name: client,
         assign_to: assignTo
@@ -122,7 +95,7 @@ export default function QcMainPage() {
 
       const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
         params: {
-          job_type: filterParam,
+          job_type: "JOB_SERVICE",
           status: "in-review",
           ...(client ? { client_name: client } : {}),
           ...(assignTo ? { assign_to: assignTo } : {}),
@@ -162,58 +135,31 @@ export default function QcMainPage() {
   const filteredData = useMemo(() => {
     let currentData = [...data];
 
-    if (filterParam === "JOB_SERVICE") {
-      if (jobServiceCategoryFilter !== "ALL") {
-        currentData = currentData.filter((item) => {
-          const category = item.job_category || item.job?.job_category || "";
-          return category === jobServiceCategoryFilter;
-        });
-      }
-    } else if (filterParam === "TSO_SERVICE") {
-      if (tsoSubFilter !== "ALL") {
-        currentData = currentData.filter((item) => {
-          const category = item.job_category || item.job?.job_category || "";
-          return category.toLowerCase() === tsoSubFilter.toLowerCase();
-        });
-      }
-    } else if (filterParam === "KANBAN") {
-      if (kanbanSubFilter !== "ALL") {
-        currentData = currentData.filter((item) => {
-          const category = item.job_category || item.job?.job_category || "";
-          return category === kanbanSubFilter;
-        });
-      }
+    if (jobServiceCategoryFilter !== "ALL") {
+      currentData = currentData.filter((item) => {
+        const category = item.job_category || item.job?.job_category || "";
+        return category === jobServiceCategoryFilter;
+      });
     }
 
     return currentData;
-  }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
+  }, [data, jobServiceCategoryFilter]);
 
-  // Get unique identifiers based on filter type
+  // Get unique job numbers
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     
     filteredData.forEach((item) => {
-      if (filterParam === "TSO_SERVICE") {
-        // For TSO_SERVICE, use tso_no
-        const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(tsoNo);
-      } else {
-        // For JOB_SERVICE and KANBAN, use job_no
-        const jobNo = item.job_no || item.job?.job_no;
-        if (jobNo) ids.add(jobNo);
-      }
+      const jobNo = item.job_no || item.job?.job_no;
+      if (jobNo) ids.add(jobNo);
     });
     
     return Array.from(ids);
-  }, [filteredData, filterParam]);
+  }, [filteredData]);
 
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
-      if (filterParam === "TSO_SERVICE") {
-        return (item.tso_no || item.job?.tso_no) === identifier;
-      } else {
-        return (item.job_no || item.job?.job_no) === identifier;
-      }
+      return (item.job_no || item.job?.job_no) === identifier;
     });
     
     const groups: Record<string, QcRow[]> = {};
@@ -240,11 +186,7 @@ export default function QcMainPage() {
 
     jobIdentifiers.forEach((identifier) => {
       const items = filteredData.filter((item) => {
-        if (filterParam === "TSO_SERVICE") {
-          return (item.tso_no || item.job?.tso_no) === identifier;
-        } else {
-          return (item.job_no || item.job?.job_no) === identifier;
-        }
+        return (item.job_no || item.job?.job_no) === identifier;
       });
 
       const totalQty = items.reduce(
@@ -270,19 +212,13 @@ export default function QcMainPage() {
     });
 
     return summary;
-  }, [filteredData, jobIdentifiers, filterParam]);
+  }, [filteredData, jobIdentifiers]);
 
-  const uniqueCategories = useMemo(() => {
-    if (filterParam === "JOB_SERVICE") return categories;
-    if (filterParam === "TSO_SERVICE") return tsoServiceCategory;
-    if (filterParam === "KANBAN") return kanbanCategory;
-    return [];
-  }, [filterParam, categories]);
-
-  const actionConfirm = async (title: string, text: string, confirm: string) => {
+  const actionConfirm = async (title: string, text: string, confirm: string, serialNo?: string) => {
+    const message = serialNo ? `${text} (Serial: ${serialNo})` : text;
     const r = await Swal.fire({
       title,
-      text,
+      text: message,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: confirm,
@@ -290,10 +226,11 @@ export default function QcMainPage() {
     return r.isConfirmed;
   };
 
-  const postAction = async (id: string, endpoint: string, successMsg: string) => {
+  const postAction = async (id: string, endpoint: string, successMsg: string, serialNo?: string) => {
     try {
       await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/${endpoint}`, null);
-      toast.success(successMsg);
+      const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
+      toast.success(msg);
       fetchData();
       setSelectedJobNo(null);
     } catch (e: any) {
@@ -301,32 +238,24 @@ export default function QcMainPage() {
     }
   };
 
-  const handleQc = async (id: string) => {
-    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC"))) return;
-    postAction(id, "ready-for-qc", "Moved to Ready for QC");
+  const handleQc = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC", serialNo))) return;
+    postAction(id, "ready-for-qc", "Moved to Ready for QC", serialNo);
   };
 
-  const handleMachine = async (id: string) => {
-    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine"))) return;
-    postAction(id, "reject", "Moved to In-Progress");
+  const handleMachine = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine", serialNo))) return;
+    postAction(id, "reject", "Moved to In-Progress", serialNo);
   };
 
-  const handleWelding = async (id: string) => {
-    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding"))) return;
-    postAction(id, "welding", "Moved to QC Welding");
+  const handleWelding = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding", serialNo))) return;
+    postAction(id, "welding", "Moved to QC Welding", serialNo);
   };
 
-  const handleVendor = async (id: string) => {
-    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor"))) return;
-    postAction(id, "vendor", "Moved to Vendor Outsource");
-  };
-
-  // Get display name for identifier
-  const getIdentifierDisplayName = (identifier: string) => {
-    if (filterParam === "TSO_SERVICE") {
-      return `TSO: ${identifier}`;
-    }
-    return identifier;
+  const handleVendor = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor", serialNo))) return;
+    postAction(id, "vendor", "Moved to Vendor Outsource", serialNo);
   };
 
   return (
@@ -348,7 +277,7 @@ export default function QcMainPage() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
             <h1 className="text-xl font-semibold text-firstBlack">
-              Review • {filterParam.replace("_", " ")}
+              Review • JOB SERVICE
               {client && ` • ${client}`}
               {assignTo && ` • ${assignTo}`}
             </h1>
@@ -357,54 +286,26 @@ export default function QcMainPage() {
             </p>
           </div>
 
-          {uniqueCategories.length > 0 && (
+          {categories.length > 0 && (
             <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
               <button
-                onClick={() => {
-                  if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter("ALL");
-                  if (filterParam === "TSO_SERVICE") setTsoSubFilter("ALL");
-                  if (filterParam === "KANBAN") setKanbanSubFilter("ALL");
-                }}
+                onClick={() => setJobServiceCategoryFilter("ALL")}
                 className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                  filterParam === "JOB_SERVICE"
-                    ? jobServiceCategoryFilter === "ALL"
-                      ? "bg-primary-600 text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                    : filterParam === "TSO_SERVICE"
-                    ? tsoSubFilter === "ALL"
-                      ? "bg-primary-600 text-white"
-                      : "text-gray-600 hover:bg-gray-100"
-                    : filterParam === "KANBAN"
-                    ? kanbanSubFilter === "ALL"
-                      ? "bg-primary-600 text-white"
-                      : "text-gray-600 hover:bg-gray-100"
+                  jobServiceCategoryFilter === "ALL"
+                    ? "bg-primary-600 text-white"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 All
               </button>
 
-              {uniqueCategories.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.value}
-                  onClick={() => {
-                    if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter(cat.value);
-                    if (filterParam === "TSO_SERVICE") setTsoSubFilter(cat.value);
-                    if (filterParam === "KANBAN") setKanbanSubFilter(cat.value);
-                  }}
+                  onClick={() => setJobServiceCategoryFilter(cat.value)}
                   className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    filterParam === "JOB_SERVICE"
-                      ? jobServiceCategoryFilter === cat.value
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                      : filterParam === "TSO_SERVICE"
-                      ? tsoSubFilter === cat.value
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                      : filterParam === "KANBAN"
-                      ? kanbanSubFilter === cat.value
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
+                    jobServiceCategoryFilter === cat.value
+                      ? "bg-primary-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
@@ -426,7 +327,7 @@ export default function QcMainPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
+                  Job: {selectedJobNo}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -441,7 +342,7 @@ export default function QcMainPage() {
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Action</th>
+                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
 
@@ -455,51 +356,58 @@ export default function QcMainPage() {
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
                         <Fragment key={jo}>
-                          <tr className="border border-tableBorder bg-white hover:bg-primary-100">
-                            <td className="px-2 py-2 border border-tableBorder font-medium">
-                              {jo}
-                            </td>
-                            <td colSpan={8} className="px-2 py-2 border border-tableBorder"></td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <button
-                                  onClick={() => handleQc(items[0].id)}
-                                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                                >
-                                  QC
-                                </button>
-                                <button
-                                  onClick={() => handleMachine(items[0].id)}
-                                  className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm"
-                                >
-                                  Machine
-                                </button>
-                                <button
-                                  onClick={() => handleWelding(items[0].id)}
-                                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                                >
-                                  Welding
-                                </button>
-                                <button
-                                  onClick={() => handleVendor(items[0].id)}
-                                  className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm"
-                                >
-                                  Vendor
-                                </button>
-                              </div>
+                          {/* JO Group Header */}
+                          <tr className="border border-tableBorder bg-gray-100">
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
+                              JO: {jo}
                             </td>
                           </tr>
-
+                          
+                          {/* Individual Items with Actions on Each Row */}
                           {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-gray-50">
+                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder"></td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.serial_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span>{item.serial_no || "-"}</span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <button
+                                      onClick={() => handleQc(item.id, item.serial_no || undefined)}
+                                      className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                      title={`QC Serial: ${item.serial_no || 'N/A'}`}
+                                    >
+                                      QC
+                                    </button>
+                                    <button
+                                      onClick={() => handleMachine(item.id, item.serial_no || undefined)}
+                                      className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
+                                      title={`Machine Serial: ${item.serial_no || 'N/A'}`}
+                                    >
+                                      M/C
+                                    </button>
+                                    <button
+                                      onClick={() => handleWelding(item.id, item.serial_no || undefined)}
+                                      className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                      title={`Welding Serial: ${item.serial_no || 'N/A'}`}
+                                    >
+                                      WLD
+                                    </button>
+                                    <button
+                                      onClick={() => handleVendor(item.id, item.serial_no || undefined)}
+                                      className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
+                                      title={`Vendor Serial: ${item.serial_no || 'N/A'}`}
+                                    >
+                                      VEN
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.quantity_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder"></td>
                             </tr>
@@ -513,15 +421,13 @@ export default function QcMainPage() {
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE" ? "TSO Review" : "Jobs Review"}
+                  Jobs Review
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">
-                        {filterParam === "TSO_SERVICE" ? "TSO No" : "Job No"}
-                      </th>
+                      <th className="p-3 border border-tableBorder">Job No</th>
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
@@ -577,8 +483,13 @@ export default function QcMainPage() {
             )}
           </div>
 
-          <div className="text-xs text-gray-500 mt-3 px-2">
-            Total {filterParam === "TSO_SERVICE" ? "TSOs" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
+          <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
+            <div>
+              Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
+            </div>
+            <div className="text-xs text-gray-400">
+              Actions are per serial number - hover buttons to see serial
+            </div>
           </div>
         </div>
       </div>
