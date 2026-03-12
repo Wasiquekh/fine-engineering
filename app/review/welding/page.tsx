@@ -18,7 +18,7 @@ type QcRow = {
   id: string;
   job_id?: string | null;
   job_no?: string | null;
-  tso_no?: string | null;  // Added for TSO
+  tso_no?: string | null;
   jo_no?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
@@ -30,14 +30,14 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
-  job_type?: string | null;  // Added to identify job type
+  job_type?: string | null;
   job?: {
     id?: string | null;
     job_no?: string | null;
-    tso_no?: string | null;  // Added for TSO
+    tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
-    job_type?: string | null;  // Added to identify job type
+    job_type?: string | null;
   } | null;
 };
 
@@ -52,10 +52,15 @@ export default function ReviewWeldingPage() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
+  const assignTo = searchParams.get("assign_to") || "";
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      const response = await axiosProvider.get("/fineengg_erp/categories", {
+        params: {
+          ...(client ? { client_name: client } : {}),
+        },
+      } as any);
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -86,7 +91,6 @@ export default function ReviewWeldingPage() {
       const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
       let allData: QcRow[] = [];
 
-      // Fetch data for each job type
       for (const jobType of jobTypes) {
         const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
           params: {
@@ -94,12 +98,12 @@ export default function ReviewWeldingPage() {
             status: "in-review",
             review_for: "welding",
             ...(client ? { client_name: client } : {}),
+            ...(assignTo ? { assign_to: assignTo } : {}),
           },
         } as any);
 
         const fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
         
-        // Add job_type to each item for identification
         const dataWithJobType = fetchedData.map((item: any) => ({
           ...item,
           job_type: jobType
@@ -121,12 +125,12 @@ export default function ReviewWeldingPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     setSelectedJobNo(null);
     fetchData();
-  }, [client]);
+  }, [client, assignTo]);
 
   const filteredData = useMemo(() => {
     if (jobServiceCategoryFilter === "ALL") return data;
@@ -142,44 +146,38 @@ export default function ReviewWeldingPage() {
     const ids = new Set<string>();
     
     filteredData.forEach((item) => {
-      // Check job type to use correct identifier
       const jobType = item.job_type || item.job?.job_type;
       
       if (jobType === "TSO_SERVICE") {
         const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(`TSO:${tsoNo}`); // Prefix to avoid conflicts
+        if (tsoNo) ids.add(`TSO:${tsoNo}`);
+      } else if (jobType === "KANBAN") {
+        const jobNo = item.job_no || item.job?.job_no;
+        if (jobNo) ids.add(`KANBAN:${jobNo}`);
       } else {
         const jobNo = item.job_no || item.job?.job_no;
-        if (jobNo) ids.add(`JOB:${jobNo}`); // Prefix to avoid conflicts
+        if (jobNo) ids.add(`JOB:${jobNo}`);
       }
     });
     
     return Array.from(ids);
   }, [filteredData]);
 
-  const getJoGroupsForIdentifier = (identifier: string) => {
+  const getItemsForIdentifier = (identifier: string) => {
     const [type, actualId] = identifier.split(':');
     
-    const items = filteredData.filter((item) => {
+    return filteredData.filter((item) => {
       const jobType = item.job_type || item.job?.job_type;
       
       if (type === "TSO" && jobType === "TSO_SERVICE") {
         return (item.tso_no || item.job?.tso_no) === actualId;
-      } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
+      } else if (type === "KANBAN" && jobType === "KANBAN") {
+        return (item.job_no || item.job?.job_no) === actualId;
+      } else if (type === "JOB" && jobType === "JOB_SERVICE") {
         return (item.job_no || item.job?.job_no) === actualId;
       }
       return false;
     });
-    
-    const groups: Record<string, QcRow[]> = {};
-
-    items.forEach((item) => {
-      const jo = item.jo_no || "Unknown";
-      if (!groups[jo]) groups[jo] = [];
-      groups[jo].push(item);
-    });
-
-    return groups;
   };
 
   const jobSummary = useMemo(() => {
@@ -195,18 +193,7 @@ export default function ReviewWeldingPage() {
     > = {};
 
     jobIdentifiers.forEach((identifier) => {
-      const [type, actualId] = identifier.split(':');
-      
-      const items = filteredData.filter((item) => {
-        const jobType = item.job_type || item.job?.job_type;
-        
-        if (type === "TSO" && jobType === "TSO_SERVICE") {
-          return (item.tso_no || item.job?.tso_no) === actualId;
-        } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
-          return (item.job_no || item.job?.job_no) === actualId;
-        }
-        return false;
-      });
+      const items = getItemsForIdentifier(identifier);
 
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
@@ -256,6 +243,7 @@ export default function ReviewWeldingPage() {
       await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/${endpoint}`, null);
       toast.success(successMsg);
       fetchData();
+      setSelectedJobNo(null);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Action failed");
     }
@@ -286,6 +274,8 @@ export default function ReviewWeldingPage() {
     const [type, actualId] = identifier.split(':');
     if (type === "TSO") {
       return `TSO: ${actualId}`;
+    } else if (type === "KANBAN") {
+      return `KANBAN: ${actualId}`;
     }
     return actualId;
   };
@@ -294,12 +284,42 @@ export default function ReviewWeldingPage() {
   const getJobTypeBadge = (jobType: string) => {
     switch(jobType) {
       case "TSO_SERVICE":
-        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">TSO</span>;
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
       case "KANBAN":
-        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">KANBAN</span>;
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
       default:
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">JOB</span>;
+        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
     }
+  };
+
+  // Count by job type
+  const countsByType = useMemo(() => {
+    const counts = {
+      JOB_SERVICE: 0,
+      TSO_SERVICE: 0,
+      KANBAN: 0,
+      TOTAL: data.length
+    };
+    
+    data.forEach(item => {
+      const type = item.job_type || item.job?.job_type;
+      if (type === "JOB_SERVICE") counts.JOB_SERVICE++;
+      else if (type === "TSO_SERVICE") counts.TSO_SERVICE++;
+      else if (type === "KANBAN") counts.KANBAN++;
+    });
+    
+    return counts;
+  }, [data]);
+
+  // Group items by JO No for display
+  const groupItemsByJo = (items: QcRow[]) => {
+    const groups: Record<string, QcRow[]> = {};
+    items.forEach((item) => {
+      const jo = item.jo_no || "Unknown";
+      if (!groups[jo]) groups[jo] = [];
+      groups[jo].push(item);
+    });
+    return groups;
   };
 
   return (
@@ -323,12 +343,18 @@ export default function ReviewWeldingPage() {
             <h1 className="text-xl font-semibold text-firstBlack">
               Review Welding • All Services
               {client && ` • ${client}`}
+              {assignTo && ` • ${assignTo}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Status: <span className="font-semibold">in-review</span> | review_for:{" "}
-              <span className="font-semibold">welding</span> | 
-              Showing: <span className="font-semibold">JOB_SERVICE, TSO_SERVICE, KANBAN</span>
+              <span className="font-semibold">welding</span>
             </p>
+            <div className="flex gap-3 mt-2 text-xs">
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
+              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">TSO: {countsByType.TSO_SERVICE}</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">KANBAN: {countsByType.KANBAN}</span>
+              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">TOTAL: {countsByType.TOTAL}</span>
+            </div>
           </div>
 
           {uniqueCategories.length > 0 && (
@@ -372,13 +398,14 @@ export default function ReviewWeldingPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {selectedJobNo.startsWith('TSO:') ? 'TSO' : 'Job'}: {selectedJobNo.split(':')[1] || selectedJobNo}
+                  Details: {getIdentifierDisplayName(selectedJobNo)}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Type</th>
                       <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Item No</th>
                       <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
@@ -387,55 +414,85 @@ export default function ReviewWeldingPage() {
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Action</th>
+                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No JO data found</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                        <Fragment key={jo}>
-                          <tr className="border border-tableBorder bg-white hover:bg-primary-100">
-                            <td className="px-2 py-2 border border-tableBorder font-medium">{jo}</td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={9}>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <button onClick={() => handleQc(items[0].id)} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
-                                  QC
-                                </button>
-                                <button onClick={() => handleMachine(items[0].id)} className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm">
-                                  Machine
-                                </button>
-                                <button onClick={() => handleWelding(items[0].id)} className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
-                                  Welding
-                                </button>
-                                <button onClick={() => handleVendor(items[0].id)} className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm">
-                                  Vendor
-                                </button>
-                              </div>
+                    {(() => {
+                      const items = getItemsForIdentifier(selectedJobNo);
+                      const groupedByJo = groupItemsByJo(items);
+                      
+                      if (Object.keys(groupedByJo).length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
+                              <p className="text-[#666666] text-base">No JO data found</p>
                             </td>
                           </tr>
-                          {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-gray-50">
+                        );
+                      }
+
+                      return Object.entries(groupedByJo).map(([jo, joItems]) => (
+                        <Fragment key={jo}>
+                          {/* JO Group Header */}
+                          <tr className="border border-tableBorder bg-gray-100">
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
+                              JO: {jo}
+                            </td>
+                          </tr>
+                          
+                          {/* Individual Items with Actions */}
+                          {joItems.map((item) => (
+                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder"></td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.serial_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.quantity_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <button
+                                    onClick={() => handleQc(item.id)}
+                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                    title="Ready for QC"
+                                  >
+                                    QC
+                                  </button>
+                                  <button
+                                    onClick={() => handleMachine(item.id)}
+                                    className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
+                                    title="Send back to Machine"
+                                  >
+                                    M/C
+                                  </button>
+                                  <button
+                                    onClick={() => handleWelding(item.id)}
+                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                    title="Send to Welding"
+                                  >
+                                    WLD
+                                  </button>
+                                  <button
+                                    onClick={() => handleVendor(item.id)}
+                                    className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
+                                    title="Send to Vendor"
+                                  >
+                                    VEN
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </Fragment>
-                      ))
-                    )}
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </>
@@ -508,10 +565,16 @@ export default function ReviewWeldingPage() {
             )}
           </div>
 
-          <div className="text-xs text-gray-500 mt-3 px-2">
-            Total Items: {filteredData.length} | 
-            Jobs: {jobIdentifiers.filter(id => id.startsWith('JOB:')).length} | 
-            TSO: {jobIdentifiers.filter(id => id.startsWith('TSO:')).length}
+          <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
+            <div>
+              Total Items: {filteredData.length} | 
+              Jobs: {jobIdentifiers.filter(id => id.startsWith('JOB:')).length} | 
+              TSO: {jobIdentifiers.filter(id => id.startsWith('TSO:')).length} |
+              KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length}
+            </div>
+            <div className="text-xs text-gray-400">
+              Actions are per serial number
+            </div>
           </div>
         </div>
       </div>
