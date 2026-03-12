@@ -110,8 +110,7 @@ export default function QcMainPage() {
       
       if (fetchedData.length > 0) {
         console.log("Sample data item:", fetchedData[0]);
-        console.log("Available job categories:", [...new Set(fetchedData.map(item => item.job_category || item.job?.job_category))]);
-      }
+        console.log("Available job categories:", Array.from(new Set(fetchedData.map(item => item.job_category || item.job?.job_category))));      }
 
       setData(fetchedData);
     } catch (error) {

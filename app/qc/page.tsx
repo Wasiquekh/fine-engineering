@@ -40,6 +40,7 @@ type QcRow = {
   id: string;
   job_id?: string | null;
   job_no?: string | null;
+  tso_no?: string | null; // Added for TSO
   jo_no?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
@@ -54,6 +55,7 @@ type QcRow = {
   job?: {
     id?: string | null;
     job_no?: string | null;
+    tso_no?: string | null; // Added for TSO
     job_category?: string | null;
     client_name?: string | null;
   } | null;
@@ -171,17 +173,30 @@ export default function QcMainPage() {
     return currentData;
   }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
-  const jobNumbers = useMemo(() => {
-    const jobs = new Set<string>();
+  // Get unique identifiers based on filter type
+  const jobIdentifiers = useMemo(() => {
+    const ids = new Set<string>();
     filteredData.forEach((item) => {
-      const jobNo = item.job_no || item.job?.job_no;
-      if (jobNo) jobs.add(jobNo);
+      if (filterParam === "TSO_SERVICE") {
+        // For TSO_SERVICE, use tso_no
+        const tsoNo = item.tso_no || item.job?.tso_no;
+        if (tsoNo) ids.add(tsoNo);
+      } else {
+        // For JOB_SERVICE and KANBAN, use job_no
+        const jobNo = item.job_no || item.job?.job_no;
+        if (jobNo) ids.add(jobNo);
+      }
     });
-    return Array.from(jobs);
-  }, [filteredData]);
+    return Array.from(ids);
+  }, [filteredData, filterParam]);
 
-  const getJoGroupsForJob = (jobNo: string) => {
-    const items = filteredData.filter((item) => (item.job_no || item.job?.job_no) === jobNo);
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = filteredData.filter((item) => {
+      if (filterParam === "TSO_SERVICE") {
+        return (item.tso_no || item.job?.tso_no) === identifier;
+      }
+      return (item.job_no || item.job?.job_no) === identifier;
+    });
     const groups: Record<string, QcRow[]> = {};
 
     items.forEach((item) => {
@@ -204,8 +219,13 @@ export default function QcMainPage() {
       }
     > = {};
 
-    jobNumbers.forEach((jobNo) => {
-      const items = filteredData.filter((item) => (item.job_no || item.job?.job_no) === jobNo);
+    jobIdentifiers.forEach((identifier) => {
+      const items = filteredData.filter((item) => {
+        if (filterParam === "TSO_SERVICE") {
+          return (item.tso_no || item.job?.tso_no) === identifier;
+        }
+        return (item.job_no || item.job?.job_no) === identifier;
+      });
 
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
@@ -221,7 +241,7 @@ export default function QcMainPage() {
 
       const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
 
-      summary[jobNo] = {
+      summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
@@ -230,7 +250,7 @@ export default function QcMainPage() {
     });
 
     return summary;
-  }, [filteredData, jobNumbers]);
+  }, [filteredData, jobIdentifiers, filterParam]);
 
   const uniqueCategories = useMemo(() => {
     if (filterParam === "JOB_SERVICE") return categories;
@@ -454,7 +474,9 @@ const handleJoRework = async (items: QcRow[]) => {
                   Back to Jobs
                 </button>
 
-                <h2 className="text-xl font-bold mb-4">Job: {selectedJobNo}</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
@@ -473,14 +495,14 @@ const handleJoRework = async (items: QcRow[]) => {
                   </thead>
 
                   <tbody>
-                    {Object.entries(getJoGroupsForJob(selectedJobNo)).length === 0 ? (
+                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
                         <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No JO data found</p>
                         </td>
                       </tr>
                     ) : (
-                      Object.entries(getJoGroupsForJob(selectedJobNo)).map(([jo, items]) => (
+                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
                         <>
                           <tr key={`${jo}-head`} className="border border-tableBorder bg-white hover:bg-primary-100">
                             <td className="px-2 py-2 border border-tableBorder font-medium">
@@ -533,12 +555,16 @@ const handleJoRework = async (items: QcRow[]) => {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Jobs Ready for QC</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {filterParam === "TSO_SERVICE" ? "TSOs Ready for QC" : "Jobs Ready for QC"}
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">Job No</th>
+                      <th className="p-3 border border-tableBorder">
+                        {filterParam === "TSO_SERVICE" ? "TSO No" : "Job No"}
+                      </th>
                       <th className="px-2 py-0 border border-tableBorder">Job Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
@@ -553,24 +579,24 @@ const handleJoRework = async (items: QcRow[]) => {
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
-                    ) : jobNumbers.length === 0 ? (
+                    ) : jobIdentifiers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
                     ) : (
-                      jobNumbers.map((jobNo) => {
-                        const summary = jobSummary[jobNo];
+                      jobIdentifiers.map((identifier) => {
+                        const summary = jobSummary[identifier];
 
                         return (
                           <tr
-                            key={jobNo}
+                            key={identifier}
                             className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
-                            onClick={() => setSelectedJobNo(jobNo)}
+                            onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">{jobNo}</p>
+                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.jobCategory}</p>
@@ -595,7 +621,7 @@ const handleJoRework = async (items: QcRow[]) => {
           </div>
 
           <div className="text-xs text-gray-500 mt-3 px-2">
-            Total Jobs: {jobNumbers.length} | Total Items: {filteredData.length}
+            Total {filterParam === "TSO_SERVICE" ? "TSOs" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
           </div>
         </div>
       </div>

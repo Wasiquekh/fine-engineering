@@ -18,7 +18,7 @@ export default function JobDetailsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const isVendorTab = !!searchParams.get("assign_to_not");
-  const jobNo = params.job_no ? decodeURIComponent(params.job_no as string) : "";
+  const tsoNo = params.tso_no ? decodeURIComponent(params.tso_no as string) : "";
 
   const handleApprove = async (id: string) => {
     const result = await Swal.fire({
@@ -77,10 +77,10 @@ export default function JobDetailsPage() {
   };
 
   const fetchData = async () => {
-    if (!jobNo) return;
+    if (!tsoNo) return;
     try {
       const params = new URLSearchParams();
-      params.append("job_no", jobNo);
+      params.append("tso_no", tsoNo);
 
       const clientParam = searchParams.get("client");
       const filterParam = searchParams.get("filter");
@@ -124,7 +124,7 @@ export default function JobDetailsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [jobNo]);
+  }, [tsoNo]);
 
   return (
     <>
@@ -151,7 +151,7 @@ export default function JobDetailsPage() {
               Back
             </button>
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-800">Job Details: {jobNo}</h1>
+              <h1 className="text-2xl font-bold text-gray-800">Job Details: {tsoNo}</h1>
               {/* {jobInfo && (
                   <div className="text-sm text-gray-500 mt-1">
                       <span>Job Type: {jobInfo.job_type}</span>
