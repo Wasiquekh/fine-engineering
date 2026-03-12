@@ -36,6 +36,7 @@ export default function JobDetailsPage() {
   const job_no = decodeURIComponent(params.job_no as string);
   const client = searchParams.get("client");
   const filter = searchParams.get("filter");
+  const assign_to = searchParams.get("assign_to");
 
   const uniqueJobDetails = useMemo(() => {
     const seen = new Set();
@@ -52,10 +53,7 @@ export default function JobDetailsPage() {
       const fetchData = async () => {
         setLoading(true);
         try {
-          const urlParams = new URLSearchParams({
-            job_no: job_no,
-            assign_to: "Usmaan",
-          });
+          const urlParams = new URLSearchParams({ job_no: job_no });
 
           if (client) {
             urlParams.append("client_name", client);
@@ -63,6 +61,10 @@ export default function JobDetailsPage() {
 
           if (filter && filter !== "ALL") {
             urlParams.append("job_type", filter);
+          }
+
+          if (assign_to) {
+            urlParams.append("assign_to", assign_to);
           }
           const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?${urlParams.toString()}`);
 
@@ -81,7 +83,7 @@ export default function JobDetailsPage() {
       };
       fetchData();
     }
-  }, [job_no, client, filter]);
+  }, [job_no, client, filter, assign_to]);
 
   return (
     <div className="flex justify-end min-h-screen">

@@ -84,9 +84,6 @@ export default function Home() {
   const urgentParam = searchParams.get("urgent");
   const assignToParam = searchParams.get("assign_to");
 
-  // This module should always display jobs, not a category summary.
-  const isCategoriesDataset = false;
-
   useEffect(() => {
     if (filterParam) {
       // Update active filter if a valid param is present
@@ -266,74 +263,6 @@ export default function Home() {
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    {isCategoriesDataset ? (
-                      <>
-                        <th scope="col" className="p-3 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Job No
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Job Category
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Description
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Material Type
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Quantity
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Bar
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Temperature
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Due Date
-                            </div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-2 py-0 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
-                              Status
-                            </div>
-                          </div>
-                        </th>
-                      </>
-                    ) : (
-                      <>
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
@@ -431,8 +360,6 @@ export default function Home() {
                         </div>
                       </div>
                     </th>
-                      </>
-                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -449,61 +376,6 @@ export default function Home() {
                     </tr>
                   ) : (
                     filteredData.map((item: any) => (
-                      isCategoriesDataset ? (
-                        <tr
-                          className="border border-tableBorder bg-white hover:bg-primary-100"
-                          key={item.id}
-                        >
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p
-                            onClick={() => 
-                              router.push(
-                                  `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
-                                )
-                              }
-                              className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent || item.is_urgent
-                                  ? "text-red-600 hover:text-red-800"
-                                  : "text-blue-600 hover:text-blue-800"
-                              }`}
-                            >
-                              {item.job_no}
-                            </p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.job_category}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.description}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.material_type}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.qty}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.bar}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.tempp}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.urgent_due_date || "-"}</p>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <span
-                              className={`px-2 py-1 rounded text-sm ${
-                                item.urgent || item.is_urgent
-                                  ? "bg-red-100 text-red-600"
-                                  : "bg-green-100 text-green-600"
-                              }`}
-                            >
-                              {item.urgent || item.is_urgent ? "Urgent" : "Normal"}
-                            </span>
-                          </td>
-                        </tr>
-                      ) : (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -593,7 +465,6 @@ export default function Home() {
                           </span>
                         </td>
                       </tr>
-                      )
                     ))
                   )}
                 </tbody>
