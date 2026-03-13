@@ -378,39 +378,7 @@ export default function QcMainPage() {
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder"></td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span>{item.serial_no || "-"}</span>
-                                  <div className="flex items-center gap-1 flex-wrap">
-                                    <button
-                                      onClick={() => handleQc(item.id, item.serial_no || undefined)}
-                                      className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                      title={`QC Serial: ${item.serial_no || 'N/A'}`}
-                                    >
-                                      QC
-                                    </button>
-                                    <button
-                                      onClick={() => handleMachine(item.id, item.serial_no || undefined)}
-                                      className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
-                                      title={`Machine Serial: ${item.serial_no || 'N/A'}`}
-                                    >
-                                      M/C
-                                    </button>
-                                    <button
-                                      onClick={() => handleWelding(item.id, item.serial_no || undefined)}
-                                      className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                      title={`Welding Serial: ${item.serial_no || 'N/A'}`}
-                                    >
-                                      WLD
-                                    </button>
-                                    <button
-                                      onClick={() => handleVendor(item.id, item.serial_no || undefined)}
-                                      className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-                                      title={`Vendor Serial: ${item.serial_no || 'N/A'}`}
-                                    >
-                                      VEN
-                                    </button>
-                                  </div>
-                                </div>
+                                {item.serial_no || "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
@@ -419,7 +387,38 @@ export default function QcMainPage() {
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <button
+                                    onClick={() => handleQc(item.id, item.serial_no || undefined)}
+                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                    title={`QC Serial: ${item.serial_no || 'N/A'}`}
+                                  >
+                                    QC
+                                  </button>
+                                  <button
+                                    onClick={() => handleMachine(item.id, item.serial_no || undefined)}
+                                    className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
+                                    title={`Machine Serial: ${item.serial_no || 'N/A'}`}
+                                  >
+                                    M/C
+                                  </button>
+                                  <button
+                                    onClick={() => handleWelding(item.id, item.serial_no || undefined)}
+                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                    title={`Welding Serial: ${item.serial_no || 'N/A'}`}
+                                  >
+                                    WLD
+                                  </button>
+                                  <button
+                                    onClick={() => handleVendor(item.id, item.serial_no || undefined)}
+                                    className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
+                                    title={`Vendor Serial: ${item.serial_no || 'N/A'}`}
+                                  >
+                                    VEN
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
                         </Fragment>
