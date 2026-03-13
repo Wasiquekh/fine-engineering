@@ -8,28 +8,6 @@ import AxiosProvider from "../../provider/AxiosProvider";
 
 const axiosProvider = new AxiosProvider();
 
-// Options for TSO Service Category
-const tsoServiceCategory = [
-  { value: "drawing", label: "Drawing" },
-  { value: "sample", label: "Sample" },
-];
-
-// Options for Kanban Category - UPDATED based on API validation
-const kanbanCategory = [
-  { value: "VESSEL", label: "VESSEL" },
-  { value: "HEAD", label: "HEAD" },
-  { value: "CLAMP", label: "CLAMP" },
-  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
-  { value: "HEATER_PLATE", label: "HEATER PLATE" },
-  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
-  { value: "HEATER_SHELL", label: "HEATER SHELL" },
-  { value: "OUTER_RING", label: "OUTER RING" },
-  { value: "COOLING_COIL", label: "COOLING COIL" },
-  { value: "SPARGER", label: "SPARGER" },
-  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
-  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
-];
-
 interface FilterTab {
   value: string;
   label: string;
@@ -70,28 +48,26 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ options, activeTab, onTabClick,
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const activeFilter = "JOB_SERVICE";
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
-  const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
-  const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
-  const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter");
   const clientParam = searchParams.get("client");
   const urgentParam = searchParams.get("urgent");
   const assignToParam = searchParams.get("assign_to");
 
-  useEffect(() => {
-    if (filterParam) {
-      // Update active filter if a valid param is present
-      setActiveFilter(filterParam);
-    }
-  }, [filterParam]);
-
   const filteredData = useMemo(() => {
+    let dataToFilter = data;
+
+    if (jobServiceCategoryFilter !== "ALL") {
+      dataToFilter = data.filter((item) => {
+        const category = item.job_category || item.job?.job_category || "";
+        return category === jobServiceCategoryFilter;
+      });
+    }
+
     // With backend filtering, the data is pre-filtered. We only need to
     // handle tasks like de-duplication on the client side.
     // De-duplicate by job_no to show only one entry per job.
@@ -99,7 +75,7 @@ export default function Home() {
     const uniqueJobs = new Map<string, any>();
     const itemsWithoutJob: any[] = [];
 
-    data.forEach((item) => {
+    dataToFilter.forEach((item) => {
       if (item.job_no) {
         if (!uniqueJobs.has(item.job_no)) {
           uniqueJobs.set(item.job_no, item);
@@ -110,7 +86,7 @@ export default function Home() {
     });
 
     return [...Array.from(uniqueJobs.values()), ...itemsWithoutJob];
-  }, [data]);
+  }, [data, jobServiceCategoryFilter]);
 
   const fetchCategories = async () => {
     try {
@@ -166,28 +142,10 @@ export default function Home() {
         params.append("is_urgent", "true");
       }
 
-      if (activeFilter !== "ALL") {
-        params.append("job_type", activeFilter);
-
-        // Add the appropriate sub-filter for job_category
-        if (activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter !== "ALL") {
-          params.append("job_category", jobServiceCategoryFilter);
-        } else if (activeFilter === "TSO_SERVICE" && tsoSubFilter !== "ALL") {
-          params.append("job_category", tsoSubFilter);
-        } else if (activeFilter === "KANBAN" && kanbanSubFilter !== "ALL") {
-          params.append("job_category", kanbanSubFilter);
-        }
-      }
+      params.append("job_type", "JOB_SERVICE");
 
       const queryString = params.toString();
       const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-
-      if (lastFetchedEndpoint.current === url) {
-        return;
-      }
-      lastFetchedEndpoint.current = url;
-
-      // Clear data for new fetch to show loading state
       setData([]);
 
       try {
@@ -207,7 +165,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter, clientParam, assignToParam, urgentParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
+  }, [clientParam, assignToParam, urgentParam]);
 
   return (
     <>
@@ -232,30 +190,12 @@ export default function Home() {
             {/* Search and filter table row */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
               <div className="flex items-center gap-4 max-w-full min-w-0">
-                {/* TSO Service Tabs */}
-                {activeFilter === "TSO_SERVICE" && (
-                  <FilterTabs
-                    options={tsoServiceCategory}
-                    activeTab={tsoSubFilter}
-                    onTabClick={setTsoSubFilter}
-                  />
-                )}
-                {/* Kanban Tabs */}
-                {activeFilter === "KANBAN" && (
-                  <FilterTabs
-                    options={kanbanCategory}
-                    activeTab={kanbanSubFilter}
-                    onTabClick={setKanbanSubFilter}
-                  />
-                )}
                 {/* Job Service Tabs */}
-                {activeFilter === "JOB_SERVICE" && (
-                  <FilterTabs
-                    options={categories}
-                    activeTab={jobServiceCategoryFilter}
-                    onTabClick={setJobServiceCategoryFilter}
-                  />
-                )}
+                <FilterTabs
+                  options={categories}
+                  activeTab={jobServiceCategoryFilter}
+                  onTabClick={setJobServiceCategoryFilter}
+                />
               </div>
 
             </div>
