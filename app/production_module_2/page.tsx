@@ -14,22 +14,6 @@ const tsoServiceCategory = [
   { value: "sample", label: "Sample" },
 ];
 
-// Options for Kanban Category - UPDATED based on API validation
-const kanbanCategory = [
-  { value: "VESSEL", label: "VESSEL" },
-  { value: "HEAD", label: "HEAD" },
-  { value: "CLAMP", label: "CLAMP" },
-  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
-  { value: "HEATER_PLATE", label: "HEATER PLATE" },
-  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
-  { value: "HEATER_SHELL", label: "HEATER SHELL" },
-  { value: "OUTER_RING", label: "OUTER RING" },
-  { value: "COOLING_COIL", label: "COOLING COIL" },
-  { value: "SPARGER", label: "SPARGER" },
-  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
-  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
-];
-
 interface FilterTab {
   value: string;
   label: string;
@@ -70,87 +54,43 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ options, activeTab, onTabClick,
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>("ALL");
-  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
+  const activeFilter = "TSO_SERVICE";
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
-  const [kanbanSubFilter, setKanbanSubFilter] = useState<string>("ALL");
-  const [categories, setCategories] = useState<any[]>([]);
-  const lastFetchedEndpoint = useRef<string>("");
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter");
   const clientParam = searchParams.get("client");
   const urgentParam = searchParams.get("urgent");
   const assignToParam = searchParams.get("assign_to");
 
-  useEffect(() => {
-    if (filterParam) {
-      // Update active filter if a valid param is present
-      setActiveFilter(filterParam);
-    }
-  }, [filterParam]);
-
   const filteredData = useMemo(() => {
-    // With backend filtering, the data is pre-filtered. We only need to
-    // handle tasks like de-duplication on the client side.
-    // De-duplicate by job_no to show only one entry per job
-    const uniqueData: any[] = [];
-    const seenJobNos = new Set<string>();
+    let dataToFilter = data;
 
-    data.forEach((item) => {
-      if (item.job_no && !seenJobNos.has(item.job_no)) {
-        seenJobNos.add(item.job_no);
+    if (tsoSubFilter !== "ALL") {
+      dataToFilter = data.filter((item) => {
+        const category = item.job_category || item.job?.job_category || "";
+        return category === tsoSubFilter;
+      });
+    }
+
+    const uniqueData: any[] = [];
+    const seenTsoNos = new Set<string>();
+
+    dataToFilter.forEach((item) => {
+      if (item.tso_no && !seenTsoNos.has(item.tso_no)) {
+        seenTsoNos.add(item.tso_no);
         uniqueData.push(item);
-      } else if (!item.job_no) {
+      } else if (!item.tso_no) {
         uniqueData.push(item);
       }
     });
 
     return uniqueData;
-  }, [data]);
-
-  const fetchCategories = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (clientParam) {
-        params.append("client_name", clientParam);
-      }
-      if (assignToParam) {
-        params.append("assign_to", assignToParam);
-      }
-      let url = "/fineengg_erp/categories";
-      const queryString = params.toString();
-      if (queryString) {
-        url += `?${queryString}`;
-      }
-      const response = await axiosProvider.get(url);
-      if (response.data && response.data.data) {
-        const cats = Array.isArray(response.data.data) ? response.data.data : response.data.data.categories || [];
-        const uniqueCategories = Array.from(
-          new Map( // Using Array.from to explicitly convert MapIterator to Array
-            cats.map((cat: any) => [
-              cat.job_category,
-              { value: cat.job_category, label: cat.job_category }
-            ])
-          ).values() // .values() returns a MapIterator
-        );
-
-        setCategories(uniqueCategories);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, [clientParam, assignToParam]);
+  }, [data, tsoSubFilter]);
 
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      // This component always fetches jobs. Categories are for filter tabs only.
       const endpoint = "/fineengg_erp/jobs";
       const params = new URLSearchParams();
 
@@ -164,28 +104,11 @@ export default function Home() {
         params.append("is_urgent", "true");
       }
 
-      if (activeFilter !== "ALL") {
-        params.append("job_type", activeFilter);
-
-        // Add the appropriate sub-filter for job_category
-        if (activeFilter === "JOB_SERVICE" && jobServiceCategoryFilter !== "ALL") {
-          params.append("job_category", jobServiceCategoryFilter);
-        } else if (activeFilter === "TSO_SERVICE" && tsoSubFilter !== "ALL") {
-          params.append("job_category", tsoSubFilter);
-        } else if (activeFilter === "KANBAN" && kanbanSubFilter !== "ALL") {
-          params.append("job_category", kanbanSubFilter);
-        }
-      }
+      params.append("job_type", "TSO_SERVICE");
 
       const queryString = params.toString();
       const url = queryString ? `${endpoint}?${queryString}` : endpoint;
 
-      if (lastFetchedEndpoint.current === url) {
-        return;
-      }
-      lastFetchedEndpoint.current = url;
-
-      // Clear data for new fetch to show loading state
       setData([]);
 
       try {
@@ -205,7 +128,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter, clientParam, assignToParam, urgentParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
+  }, [clientParam, assignToParam, urgentParam]);
 
   return (
     <>
@@ -231,29 +154,11 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
               <div className="flex items-center gap-4 max-w-full min-w-0">
                 {/* TSO Service Tabs */}
-                {activeFilter === "TSO_SERVICE" && (
-                  <FilterTabs
-                    options={tsoServiceCategory}
-                    activeTab={tsoSubFilter}
-                    onTabClick={setTsoSubFilter}
-                  />
-                )}
-                {/* Kanban Tabs */}
-                {activeFilter === "KANBAN" && (
-                  <FilterTabs
-                    options={kanbanCategory}
-                    activeTab={kanbanSubFilter}
-                    onTabClick={setKanbanSubFilter}
-                  />
-                )}
-                {/* Job Service Tabs */}
-                {activeFilter === "JOB_SERVICE" && (
-                  <FilterTabs
-                    options={categories}
-                    activeTab={jobServiceCategoryFilter}
-                    onTabClick={setJobServiceCategoryFilter}
-                  />
-                )}
+                <FilterTabs
+                  options={tsoServiceCategory}
+                  activeTab={tsoSubFilter}
+                  onTabClick={setTsoSubFilter}
+                />
               </div>
 
             </div>
@@ -266,7 +171,7 @@ export default function Home() {
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          {activeFilter === "TSO_SERVICE" ? "TSO No" : "Job No"}
+                          TSO No
                         </div>
                       </div>
                     </th>
@@ -381,37 +286,21 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          {activeFilter === "TSO_SERVICE" ? (
-                            <p
-                              onClick={() => 
+                          <p
+                            onClick={() =>
                               router.push(
-                                  `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
-                                )
-                              }
-                              className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent_due_date &&
-                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
-                                  ? "text-red-600 hover:text-red-700"
-                                  : "text-blue-600 hover:text-blue-800"
-                              }`}
-                            >
-                              {item.tso_no || "N/A"}
-                            </p>
-                          ) : item.job_no ? (
-                            <p
-                              onClick={() => router.push(`/production_module_2/${encodeURIComponent(item.job_no)}`)}
-                              className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent_due_date &&
-                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
-                                  ? "text-red-600 hover:text-red-700"
-                                  : "text-blue-600 hover:text-blue-800"
-                              }`}
-                            >
-                              {item.job_no}
-                            </p>
-                          ) : (
-                            <p className="text-[#232323] text-base leading-normal">N/A</p>
-                          )}
+                                `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                              )
+                            }
+                            className={`text-base leading-normal cursor-pointer underline ${
+                              item.urgent_due_date &&
+                              new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                ? "text-red-600 hover:text-red-700"
+                                : "text-blue-600 hover:text-blue-800"
+                            }`}
+                          >
+                            {item.tso_no || "N/A"}
+                          </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">

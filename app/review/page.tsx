@@ -18,6 +18,7 @@ type QcRow = {
   id: string;
   job_id?: string | null;
   job_no?: string | null;
+  tso_no?: string | null;
   jo_no?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
@@ -33,8 +34,10 @@ type QcRow = {
   job?: {
     id?: string | null;
     job_no?: string | null;
+    tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
+    assign_to?: string | null;
   } | null;
 };
 
@@ -86,8 +89,8 @@ export default function QcMainPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      console.log("Fetching JOB_SERVICE data with params:", {
-        job_type: "JOB_SERVICE",
+      console.log(`Fetching ${filterParam} data with params:`, {
+        job_type: filterParam,
         status: "in-review",
         client_name: client,
         assign_to: assignTo
@@ -95,7 +98,7 @@ export default function QcMainPage() {
 
       const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
         params: {
-          job_type: "JOB_SERVICE",
+          job_type: filterParam,
           status: "in-review",
           ...(client ? { client_name: client } : {}),
           ...(assignTo ? { assign_to: assignTo } : {}),
@@ -141,24 +144,31 @@ export default function QcMainPage() {
       });
     }
 
+    if (assignTo) {
+      currentData = currentData.filter((item) => item.job?.assign_to === assignTo);
+    }
+
     return currentData;
-  }, [data, jobServiceCategoryFilter]);
+  }, [data, jobServiceCategoryFilter, assignTo]);
 
   // Get unique job numbers
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     
     filteredData.forEach((item) => {
-      const jobNo = item.job_no || item.job?.job_no;
-      if (jobNo) ids.add(jobNo);
+      const identifier = filterParam === "TSO_SERVICE" 
+        ? (item.tso_no || item.job?.tso_no) 
+        : (item.job_no || item.job?.job_no);
+      if (identifier) ids.add(identifier);
     });
     
     return Array.from(ids);
-  }, [filteredData]);
+  }, [filteredData, filterParam]);
 
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
-      return (item.job_no || item.job?.job_no) === identifier;
+      const itemIdentifier = filterParam === "TSO_SERVICE" ? (item.tso_no || item.job?.tso_no) : (item.job_no || item.job?.job_no);
+      return itemIdentifier === identifier;
     });
     
     const groups: Record<string, QcRow[]> = {};
@@ -185,7 +195,8 @@ export default function QcMainPage() {
 
     jobIdentifiers.forEach((identifier) => {
       const items = filteredData.filter((item) => {
-        return (item.job_no || item.job?.job_no) === identifier;
+        const itemIdentifier = filterParam === "TSO_SERVICE" ? (item.tso_no || item.job?.tso_no) : (item.job_no || item.job?.job_no);
+        return itemIdentifier === identifier;
       });
 
       const totalQty = items.reduce(
@@ -211,7 +222,7 @@ export default function QcMainPage() {
     });
 
     return summary;
-  }, [filteredData, jobIdentifiers]);
+  }, [filteredData, jobIdentifiers, filterParam]);
 
   const actionConfirm = async (title: string, text: string, confirm: string, serialNo?: string) => {
     const message = serialNo ? `${text} (Serial: ${serialNo})` : text;
@@ -276,7 +287,7 @@ export default function QcMainPage() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
             <h1 className="text-xl font-semibold text-firstBlack">
-              Review • JOB SERVICE
+              Review • {filterParam.replace("_", " ")}
               {client && ` • ${client}`}
               {assignTo && ` • ${assignTo}`}
             </h1>
@@ -326,7 +337,7 @@ export default function QcMainPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  Job: {selectedJobNo}
+                  {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -420,13 +431,13 @@ export default function QcMainPage() {
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">
-                  Jobs Review
+                  {filterParam === "TSO_SERVICE" ? "TSO Review" : "Jobs Review"}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">Job No</th>
+                      <th className="p-3 border border-tableBorder">{filterParam === "TSO_SERVICE" ? "TSO No" : "Job No"}</th>
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
