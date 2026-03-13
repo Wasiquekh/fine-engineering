@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
@@ -140,6 +140,54 @@ export default function QcMainPage() {
     fetchData();
   }, [filterParam, client]);
 
+  const getJobId = (item: QcRow) => item.job_id || item.job?.id;
+
+  const actionConfirm = async (title: string, text: string, confirm: string) => {
+    const r = await Swal.fire({
+      title,
+      text,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: confirm,
+    });
+    return r.isConfirmed;
+  };
+
+  const postAction = async (item: QcRow, endpoint: string, successMsg: string, params: any = {}) => {
+    const job_id = getJobId(item);
+    const updated_by = storage.getUserId();
+
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/${endpoint}`, {
+        updated_by,
+        ...params
+      });
+
+      toast.success(successMsg);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || `${endpoint} failed`);
+    }
+  };
+
+  const handleBackToQC = async (item: QcRow) => {
+    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC.", "Yes, Send to QC"))) return;
+    await postAction(item, "backToQc", "Serial sent back to QC successfully");
+  };
+
+  const handleRework = async (item: QcRow) => {
+    if (!(await actionConfirm("Send for rework?", "This serial will be sent for rework.", "Yes, Rework"))) return;
+    await postAction(item, "rework", "Serial sent for rework successfully");
+  };
+
+  const handleReject = async (item: QcRow) => {
+    if (!(await actionConfirm("Reject this serial?", "This will reject the selected Not OK serial.", "Yes, Reject"))) return;
+    await postAction(item, "reject-not-ok", "Serial rejected successfully");
+  };
+
   const filteredData = useMemo(() => {
     let currentData = [...data];
 
@@ -252,86 +300,6 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
-const handleJoOK = async (items: QcRow[]) => {
-  const job_id = items[0]?.job_id || items[0]?.job?.id;
-  const updated_by = storage.getUserId();
-
-  if (!job_id || !updated_by) {
-    toast.error("Job or User not found");
-    return;
-  }
-
-  try {
-    await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, {
-      updated_by,
-    });
-
-    toast.success("Sent back to QC");
-    fetchData();
-  } catch (error: any) {
-    toast.error(error?.response?.data?.error || "Failed");
-  }
-};
- const handleJobRejected = async (items: any[]) => {
- const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You want to reject this job?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#22c55e",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, Reject Job!",
-    });
-
-    if (!result.isConfirmed) return;
-
-    const job_id = items[0]?.job_id || items[0]?.job?.id;
-    const updated_by = storage.getUserId();
-
-    if (!job_id) return toast.error("Job ID not found for the selected items.");
-    if (!updated_by) return toast.error("User ID not found. Please log in again.");
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject-not-ok`, { updated_by });
-      toast.success("Job Rejected successfully");
-      fetchData();
-    } catch (error) {
-      const errorMessage =
-        (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleJobBackToQC = async (items: any[]) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You want to send this job back to QC?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#eab308",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, Send Back to QC!",
-    });
-
-    if (!result.isConfirmed) return;
-
-    const job_id = items[0]?.job_id || items[0]?.job?.id;
-    const updated_by = storage.getUserId();
-
-    if (!job_id) return toast.error("Job ID not found for the selected items.");
-    if (!updated_by) return toast.error("User ID not found. Please log in again.");
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, { updated_by });
-      toast.success("Job sent back to QC successfully");
-      fetchData();
-    } catch (error) {
-      const errorMessage =
-        (error as any).response?.data?.error || (error as Error).message || "An unknown error occurred";
-      toast.error(errorMessage);
-    }
-  };
-
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -443,7 +411,7 @@ const handleJoOK = async (items: QcRow[]) => {
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Action</th>
+                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
 
@@ -456,55 +424,62 @@ const handleJoOK = async (items: QcRow[]) => {
                       </tr>
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                        <>
-                          <tr key={`${jo}-head`} className="border border-tableBorder bg-white hover:bg-primary-100">
-                            <td className="px-2 py-2 border border-tableBorder font-medium">
-                              {jo}
-                            </td>
-                            <td colSpan={8} className="px-2 py-2 border border-tableBorder"></td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <button
-                                  onClick={() => handleJoOK(items)}
-                                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                                >
-                                  backToQc
-                                </button>
-                                <button
-                                  onClick={() => handleJobRejected(items)}
-                                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
-                                >
-                                  Reject
-                                </button>
-                                <button
-                                  onClick={() => handleJobBackToQC(items)}
-                                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                                >
-                                  Rework
-                                </button>
-                              </div>
+                        <Fragment key={jo}>
+                          {/* JO Group Header */}
+                          <tr className="border border-tableBorder bg-gray-100">
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
+                              JO: {jo}
                             </td>
                           </tr>
 
+                          {/* Individual Items with Actions */}
                           {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-gray-50">
+                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder"></td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.serial_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.quantity_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <button
+                                    onClick={() => handleBackToQC(item)}
+                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                    title="Send back to QC"
+                                  >
+                                    QC
+                                  </button>
+                                  <button
+                                    onClick={() => handleRework(item)}
+                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                    title="Send for rework"
+                                  >
+                                    Rework
+                                  </button>
+                                  <button
+                                    onClick={() => handleReject(item)}
+                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                    title="Reject this serial"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
                           ))}
-                        </>
+                        </Fragment>
                       ))
                     )}
                   </tbody>
                 </table>
+
+                <div className="text-xs text-gray-400 mt-2 px-2 text-right">
+                  Actions are per serial number
+                </div>
               </>
             ) : (
               <>

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
@@ -32,11 +32,16 @@ type Row = {
   job_category?: string | null;
   review_for?: "welding" | "vendor" | null;
   status?: string | null;
+  job_type?: string | null;
+  tso_no?: string | null;
+  job_no?: string | null;
   job?: {
     id?: string | null;
     job_no?: string | null;
+    tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
+    job_type?: string | null;
   } | null;
 };
 
@@ -46,8 +51,9 @@ export default function NotOkVendorPage() {
 
   const [data, setData] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
+  const [selectedIdentifier, setSelectedIdentifier] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [jobTypeFilter, setJobTypeFilter] = useState<string>("ALL");
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
@@ -97,17 +103,31 @@ export default function NotOkVendorPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
-        params: {
-          job_type: filterParam,
-          status: "not-ok",
-          review_for: REVIEW_FOR,
-          ...(client ? { client } : {}),
-        },
-      } as any);
+      // Fetch ALL job types
+      const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
+      let allData: Row[] = [];
 
-      const fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
-      setData(fetchedData);
+      for (const jobType of jobTypes) {
+        const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+          params: {
+            job_type: jobType,
+            status: "not-ok",
+            review_for: REVIEW_FOR,
+            ...(client ? { client_name: client } : {}),
+          },
+        } as any);
+
+        const fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
+        
+        const dataWithJobType = fetchedData.map((item: any) => ({
+          ...item,
+          job_type: jobType
+        }));
+        
+        allData = [...allData, ...dataWithJobType];
+      }
+
+      setData(allData);
     } catch (error: any) {
       console.error("Error fetching not-ok vendor data:", error);
       toast.error(error?.response?.data?.error || "Failed to load Not OK Vendor data");
@@ -122,7 +142,7 @@ export default function NotOkVendorPage() {
   }, []);
 
   useEffect(() => {
-    setSelectedJobNo(null);
+    setSelectedIdentifier(null);
     fetchData();
   }, [filterParam, client]);
 
@@ -130,8 +150,7 @@ export default function NotOkVendorPage() {
     setExpandedGroups((prev) => ({ ...prev, [jo]: !prev[jo] }));
   };
 
-  const getJobId = (items: Row[]) =>
-    items?.[0]?.jobId || items?.[0]?.job_id || items?.[0]?.job?.id;
+  const getJobId = (item: Row) => item.jobId || item.job_id || item.job?.id;
 
   const actionConfirm = async (title: string, text: string, confirm: string) => {
     const r = await Swal.fire({
@@ -144,90 +163,98 @@ export default function NotOkVendorPage() {
     return r.isConfirmed;
   };
 
-  const handleJobBackToQC = async (items: Row[]) => {
-    if (!(await actionConfirm("Send back to QC?", "This job will move back to QC Vendor.", "Yes, Send to QC"))) return;
-
-    const job_id = getJobId(items);
+  const postAction = async (item: Row, endpoint: string, successMsg: string, params: any = {}) => {
+    const job_id = getJobId(item);
     const updated_by = storage.getUserId();
 
     if (!job_id) return toast.error("Job ID not found.");
     if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/${endpoint}`, {
         updated_by,
-        review_for: REVIEW_FOR,
+        ...params
       });
 
-      toast.success("Job sent back to QC Vendor successfully");
-      goQcVendorPage();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to send back to QC");
-    }
-  };
-
-  const handleRework = async (items: Row[]) => {
-    if (!(await actionConfirm("Send for rework?", "This job will be sent for rework.", "Yes, Rework"))) return;
-
-    const job_id = getJobId(items);
-    const updated_by = storage.getUserId();
-
-    if (!job_id) return toast.error("Job ID not found.");
-    if (!updated_by) return toast.error("User ID not found. Please login again.");
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, { updated_by });
-      toast.success("Job sent for rework successfully");
+      toast.success(successMsg);
       fetchData();
-      setSelectedJobNo(null);
+      setSelectedIdentifier(null);
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Rework failed");
+      toast.error(error?.response?.data?.error || `${endpoint} failed`);
     }
   };
 
-  const handleJobRejected = async (items: Row[]) => {
-    if (!(await actionConfirm("Reject this job?", "This will reject the selected Not OK job.", "Yes, Reject"))) return;
-
-    const job_id = getJobId(items);
-    const updated_by = storage.getUserId();
-
-    if (!job_id) return toast.error("Job ID not found.");
-    if (!updated_by) return toast.error("User ID not found. Please login again.");
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject-not-ok`, {
-        updated_by,
-        review_for: REVIEW_FOR,
-      });
-
-      toast.success("Job rejected successfully");
-      fetchData();
-      setSelectedJobNo(null);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Reject failed");
-    }
+  const handleJobBackToQC = async (item: Row) => {
+    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC Vendor.", "Yes, Send to QC"))) return;
+    await postAction(item, "backToQc", "Serial sent back to QC Vendor successfully", { review_for: REVIEW_FOR });
   };
+
+  const handleRework = async (item: Row) => {
+    if (!(await actionConfirm("Send for rework?", "This serial will be sent for rework.", "Yes, Rework"))) return;
+    await postAction(item, "rework", "Serial sent for rework successfully");
+  };
+
+  const handleJobRejected = async (item: Row) => {
+    if (!(await actionConfirm("Reject this serial?", "This will reject the selected Not OK serial.", "Yes, Reject"))) return;
+    await postAction(item, "reject-not-ok", "Serial rejected successfully", { review_for: REVIEW_FOR });
+  };
+
+  // Filter by job type
+  const filteredByType = useMemo(() => {
+    if (jobTypeFilter === "ALL") return data;
+    return data.filter(item => (item.job_type || item.job?.job_type) === jobTypeFilter);
+  }, [data, jobTypeFilter]);
 
   const filteredData = useMemo(() => {
-    if (jobServiceCategoryFilter === "ALL") return data;
+    if (jobServiceCategoryFilter === "ALL") return filteredByType;
 
-    return data.filter((item) => {
+    return filteredByType.filter((item) => {
       const category = item.job_category || item.job?.job_category || "";
       return category === jobServiceCategoryFilter;
     });
-  }, [data, jobServiceCategoryFilter]);
+  }, [filteredByType, jobServiceCategoryFilter]);
 
-  const jobNumbers = useMemo(() => {
-    const jobs = new Set<string>();
+  // Get unique identifiers based on job type
+  const jobIdentifiers = useMemo(() => {
+    const ids = new Set<string>();
+    
     filteredData.forEach((item) => {
-      const jobNo = item.job?.job_no;
-      if (jobNo) jobs.add(jobNo);
+      const jobType = item.job_type || item.job?.job_type;
+      
+      if (jobType === "TSO_SERVICE") {
+        const tsoNo = item.tso_no || item.job?.tso_no;
+        if (tsoNo) ids.add(`TSO:${tsoNo}`);
+      } else if (jobType === "KANBAN") {
+        const jobNo = item.job?.job_no;
+        if (jobNo) ids.add(`KANBAN:${jobNo}`);
+      } else {
+        const jobNo = item.job?.job_no;
+        if (jobNo) ids.add(`JOB:${jobNo}`);
+      }
     });
-    return Array.from(jobs);
+    
+    return Array.from(ids);
   }, [filteredData]);
 
-  const getJoGroupsForJob = (jobNo: string) => {
-    const items = filteredData.filter((item) => item.job?.job_no === jobNo);
+  const getItemsForIdentifier = (identifier: string) => {
+    const [type, actualId] = identifier.split(':');
+    
+    return filteredData.filter((item) => {
+      const jobType = item.job_type || item.job?.job_type;
+      
+      if (type === "TSO" && jobType === "TSO_SERVICE") {
+        return (item.tso_no || item.job?.tso_no) === actualId;
+      } else if (type === "KANBAN" && jobType === "KANBAN") {
+        return item.job?.job_no === actualId;
+      } else if (type === "JOB" && jobType === "JOB_SERVICE") {
+        return item.job?.job_no === actualId;
+      }
+      return false;
+    });
+  };
+
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
     const groups: Record<string, Row[]> = {};
 
     items.forEach((item) => {
@@ -239,7 +266,7 @@ export default function NotOkVendorPage() {
     return groups;
   };
 
-  const jobSummary = useMemo(() => {
+  const identifierSummary = useMemo(() => {
     const summary: Record<
       string,
       {
@@ -247,11 +274,12 @@ export default function NotOkVendorPage() {
         uniqueJoCount: number;
         jobCategory: string;
         assigningDate: string;
+        jobType: string;
       }
     > = {};
 
-    jobNumbers.forEach((jobNo) => {
-      const items = filteredData.filter((item) => item.job?.job_no === jobNo);
+    jobIdentifiers.forEach((identifier) => {
+      const items = getItemsForIdentifier(identifier);
 
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
@@ -266,19 +294,66 @@ export default function NotOkVendorPage() {
           : "N/A";
 
       const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
+      
+      const jobType = items.length > 0 
+        ? (items[0].job_type || items[0].job?.job_type || "JOB_SERVICE")
+        : "JOB_SERVICE";
 
-      summary[jobNo] = {
+      summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
+        jobType,
       };
     });
 
     return summary;
-  }, [filteredData, jobNumbers]);
+  }, [filteredData, jobIdentifiers]);
 
   const uniqueCategories = useMemo(() => categories, [categories]);
+
+  // Get display name for identifier
+  const getIdentifierDisplayName = (identifier: string) => {
+    const [type, actualId] = identifier.split(':');
+    if (type === "TSO") {
+      return `TSO: ${actualId}`;
+    } else if (type === "KANBAN") {
+      return `KANBAN: ${actualId}`;
+    }
+    return actualId;
+  };
+
+  // Get job type badge color
+  const getJobTypeBadge = (jobType: string) => {
+    switch(jobType) {
+      case "TSO_SERVICE":
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
+      case "KANBAN":
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
+      default:
+        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
+    }
+  };
+
+  // Count by job type
+  const countsByType = useMemo(() => {
+    const counts = {
+      JOB_SERVICE: 0,
+      TSO_SERVICE: 0,
+      KANBAN: 0,
+      TOTAL: data.length
+    };
+    
+    data.forEach(item => {
+      const type = item.job_type || item.job?.job_type;
+      if (type === "JOB_SERVICE") counts.JOB_SERVICE++;
+      else if (type === "TSO_SERVICE") counts.TSO_SERVICE++;
+      else if (type === "KANBAN") counts.KANBAN++;
+    });
+    
+    return counts;
+  }, [data]);
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -299,13 +374,32 @@ export default function NotOkVendorPage() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
             <h1 className="text-xl font-semibold text-firstBlack">
-              Not OK • Vendor • {filterParam.replace("_", " ")}
+              Not OK • Vendor • All Services
               {client && ` • ${client}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Status: <span className="font-semibold">not-ok</span> | Review for:{" "}
               <span className="font-semibold">vendor</span>
             </p>
+            <div className="flex gap-3 mt-2 text-xs">
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
+              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">TSO: {countsByType.TSO_SERVICE}</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">KANBAN: {countsByType.KANBAN}</span>
+              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">TOTAL: {countsByType.TOTAL}</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mb-4 px-2">
+            <select
+              value={jobTypeFilter}
+              onChange={(e) => setJobTypeFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="ALL">All Job Types</option>
+              <option value="JOB_SERVICE">JOB_SERVICE</option>
+              <option value="TSO_SERVICE">TSO_SERVICE</option>
+              <option value="KANBAN">KANBAN</option>
+            </select>
           </div>
 
           {uniqueCategories.length > 0 && (
@@ -318,7 +412,7 @@ export default function NotOkVendorPage() {
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                All
+                All Categories
               </button>
 
               {uniqueCategories.map((cat) => (
@@ -338,22 +432,25 @@ export default function NotOkVendorPage() {
           )}
 
           <div className="relative overflow-x-auto sm:rounded-lg">
-            {selectedJobNo ? (
+            {selectedIdentifier ? (
               <>
                 <button
-                  onClick={() => setSelectedJobNo(null)}
+                  onClick={() => setSelectedIdentifier(null)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 mb-4"
                 >
                   <FaArrowLeft />
                   Back to Jobs
                 </button>
 
-                <h2 className="text-xl font-bold mb-4">Job: {selectedJobNo}</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {getIdentifierDisplayName(selectedIdentifier)}
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Type</th>
                       <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Item No</th>
                       <th className="px-2 py-0 border border-tableBorder">Vendor Name</th>
@@ -363,75 +460,80 @@ export default function NotOkVendorPage() {
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Action</th>
+                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(getJoGroupsForJob(selectedJobNo)).length === 0 ? (
+                    {Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={12} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No JO data found</p>
                         </td>
                       </tr>
                     ) : (
-                      Object.entries(getJoGroupsForJob(selectedJobNo)).map(([jo, items]) => {
+                      Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => {
                         const isExpanded = expandedGroups[jo] ?? true;
                         return (
-                          <>
-                            <tr
-                              key={`${jo}-head`}
-                              className="border border-tableBorder bg-white hover:bg-primary-100"
-                            >
+                          <Fragment key={jo}>
+                            {/* JO Group Header */}
+                            <tr className="border border-tableBorder bg-gray-100">
                               <td
                                 className="px-2 py-2 border border-tableBorder cursor-pointer"
                                 onClick={() => toggleGroup(jo)}
+                                colSpan={12}
                               >
                                 <div className="flex items-center gap-2">
                                   {isExpanded ? <FaChevronDown /> : <FaChevronRight />}
-                                  <p className="text-blue-600 text-base leading-normal">{jo}</p>
-                                </div>
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder" colSpan={9}></td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <button
-                                    onClick={() => handleJobBackToQC(items)}
-                                    className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
-                                  >
-                                    QC
-                                  </button>
-                                  <button
-                                    onClick={() => handleRework(items)}
-                                    className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-                                  >
-                                    Rework
-                                  </button>
-                                  <button
-                                    onClick={() => handleJobRejected(items)}
-                                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                                  >
-                                    Reject
-                                  </button>
+                                  <span className="font-semibold">JO: {jo}</span>
                                 </div>
                               </td>
                             </tr>
+                            
+                            {/* Individual Items with Actions */}
                             {isExpanded &&
                               items.map((item) => (
-                                <tr key={item.id} className="border border-tableBorder bg-gray-50">
+                                <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                                   <td className="px-2 py-2 border border-tableBorder"></td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.serial_no || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">
+                                    {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
+                                  </td>
+                                  <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.vendor_name || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.quantity_no ?? "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder"></td>
+                                  <td className="px-2 py-2 border border-tableBorder">
+                                    <div className="flex items-center gap-1 flex-wrap">
+                                      <button
+                                        onClick={() => handleJobBackToQC(item)}
+                                        className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                        title="Send back to QC"
+                                      >
+                                        QC
+                                      </button>
+                                      <button
+                                        onClick={() => handleRework(item)}
+                                        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                        title="Send for rework"
+                                      >
+                                        Rework
+                                      </button>
+                                      <button
+                                        onClick={() => handleJobRejected(item)}
+                                        className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                        title="Reject this serial"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  </td>
                                 </tr>
                               ))}
-                          </>
+                          </Fragment>
                         );
                       })
                     )}
@@ -440,11 +542,14 @@ export default function NotOkVendorPage() {
               </>
             ) : (
               <>
+                <h2 className="text-xl font-bold mb-4">Not OK Vendor - All Services</h2>
+
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">Job No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Job Category</th>
+                      <th className="p-3 border border-tableBorder">Job/TSO No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Type</th>
+                      <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
@@ -454,28 +559,33 @@ export default function NotOkVendorPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
-                    ) : jobNumbers.length === 0 ? (
+                    ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
                     ) : (
-                      jobNumbers.map((jobNo) => {
-                        const summary = jobSummary[jobNo];
+                      jobIdentifiers.map((identifier) => {
+                        const summary = identifierSummary[identifier];
 
                         return (
                           <tr
-                            key={jobNo}
+                            key={identifier}
                             className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
-                            onClick={() => setSelectedJobNo(jobNo)}
+                            onClick={() => setSelectedIdentifier(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">{jobNo}</p>
+                              <p className="text-blue-600 text-base leading-normal">
+                                {getIdentifierDisplayName(identifier)}
+                              </p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {getJobTypeBadge(summary.jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.jobCategory}</p>
@@ -499,8 +609,16 @@ export default function NotOkVendorPage() {
             )}
           </div>
 
-          <div className="text-xs text-gray-500 mt-3 px-2">
-            Total Jobs: {jobNumbers.length} | Total Items: {filteredData.length}
+          <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
+            <div>
+              Total Jobs: {jobIdentifiers.filter(id => id.startsWith('JOB:')).length} | 
+              TSO: {jobIdentifiers.filter(id => id.startsWith('TSO:')).length} |
+              KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length} |
+              Total Items: {filteredData.length}
+            </div>
+            <div className="text-xs text-gray-400">
+              Actions are per serial number
+            </div>
           </div>
         </div>
       </div>
