@@ -177,23 +177,30 @@ export default function QcMainPage() {
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     filteredData.forEach((item) => {
+      let identifier: string | null | undefined;
       if (filterParam === "TSO_SERVICE") {
-        const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(tsoNo);
+        identifier = item.tso_no || item.job?.tso_no;
+      } else if (filterParam === "KANBAN") {
+        identifier = item.jo_no || item.job_no || item.job?.job_no;
       } else {
-        const jobNo = item.job_no || item.job?.job_no;
-        if (jobNo) ids.add(jobNo);
+        identifier = item.job_no || item.job?.job_no;
       }
+      if (identifier) ids.add(identifier);
     });
     return Array.from(ids);
   }, [filteredData, filterParam]);
 
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
+      let itemIdentifier: string | null | undefined;
       if (filterParam === "TSO_SERVICE") {
-        return (item.tso_no || item.job?.tso_no) === identifier;
+        itemIdentifier = item.tso_no || item.job?.tso_no;
+      } else if (filterParam === "KANBAN") {
+        itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
+      } else {
+        itemIdentifier = item.job_no || item.job?.job_no;
       }
-      return (item.job_no || item.job?.job_no) === identifier;
+      return itemIdentifier === identifier;
     });
     const groups: Record<string, QcRow[]> = {};
 
@@ -219,10 +226,15 @@ export default function QcMainPage() {
 
     jobIdentifiers.forEach((identifier) => {
       const items = filteredData.filter((item) => {
+        let itemIdentifier: string | null | undefined;
         if (filterParam === "TSO_SERVICE") {
-          return (item.tso_no || item.job?.tso_no) === identifier;
+          itemIdentifier = item.tso_no || item.job?.tso_no;
+        } else if (filterParam === "KANBAN") {
+          itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
+        } else {
+          itemIdentifier = item.job_no || item.job?.job_no;
         }
-        return (item.job_no || item.job?.job_no) === identifier;
+        return itemIdentifier === identifier;
       });
 
       const totalQty = items.reduce(
@@ -558,7 +570,11 @@ export default function QcMainPage() {
                 </div>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
+                  {filterParam === "TSO_SERVICE"
+                    ? "TSO"
+                    : filterParam === "KANBAN"
+                    ? "J/O Number"
+                    : "Job"}: {selectedJobNo}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -655,14 +671,18 @@ export default function QcMainPage() {
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE" ? "TSOs Ready for QC" : "Jobs Ready for QC"}
+                  {filterParam === "TSO_SERVICE"
+                    ? "TSOs Ready for QC"
+                    : filterParam === "KANBAN"
+                    ? "Kanban Ready for QC"
+                    : "Jobs Ready for QC"}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">
-                        {filterParam === "TSO_SERVICE" ? "TSO No" : "Job No"}
+                        {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">Job Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
@@ -720,7 +740,7 @@ export default function QcMainPage() {
           </div>
 
           <div className="text-xs text-gray-500 mt-3 px-2">
-            Total {filterParam === "TSO_SERVICE" ? "TSOs" : "Jobs"}: {jobIdentifiers.length} | 
+            Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: {jobIdentifiers.length} | 
             Total Items: {filteredData.length}
           </div>
         </div>

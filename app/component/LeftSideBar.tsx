@@ -829,6 +829,13 @@ const LeftSideBar: React.FC = () => {
                 <Link href="/qc?filter=KANBAN&client=Amar%20Equipment">
                   <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>
                     <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>Kanban</p>
+                  </div>
+                </Link>
+
+                <Link href="/qc?filter=KANBAN&client=Amar%20Equipment">
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")} />
                     <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>PO</p>
                   </div>
                 </Link>
@@ -871,6 +878,13 @@ const LeftSideBar: React.FC = () => {
                   <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
                     <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
                     <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>TSO Service</p>
+                  </div>
+                </Link>
+
+                <Link href="/qc?filter=KANBAN&client=Amar%20Biosystem">
+                  <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>
+                    <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")} />
+                    <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>Kanban</p>
                   </div>
                 </Link>
 
