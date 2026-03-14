@@ -153,7 +153,9 @@ export default function QcMainPage() {
     return r.isConfirmed;
   };
 
-  const postAction = async (item: QcRow, endpoint: string, successMsg: string, params: any = {}) => {
+  const handleBackToQC = async (item: QcRow) => {
+    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC.", "Yes, Send to QC"))) return;
+    
     const job_id = getJobId(item);
     const updated_by = storage.getUserId();
 
@@ -161,31 +163,65 @@ export default function QcMainPage() {
     if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/${endpoint}`, {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/backToQc`, {
         updated_by,
-        ...params
       });
 
-      toast.success(successMsg);
+      toast.success("Serial sent back to QC successfully");
       fetchData();
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || `${endpoint} failed`);
+      toast.error(error?.response?.data?.error || "Failed to send back to QC");
     }
   };
 
-  const handleBackToQC = async (item: QcRow) => {
-    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC.", "Yes, Send to QC"))) return;
-    await postAction(item, "backToQc", "Serial sent back to QC successfully");
-  };
-
+  // Rework function using reject endpoint (rework = reject)
   const handleRework = async (item: QcRow) => {
-    if (!(await actionConfirm("Send for rework?", "This serial will be sent for rework.", "Yes, Rework"))) return;
-    await postAction(item, "rework", "Serial sent for rework successfully");
+    if (!item) return;
+
+    if (!(await actionConfirm(
+      "Send for rework?",
+      `Serial: ${item.serial_no || 'N/A'} will be sent for rework.`,
+      "Yes, Rework"
+    ))) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, {
+        updated_by,
+      });
+
+      toast.success(`Item ${item.serial_no} sent for rework`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Rework failed");
+    }
   };
 
   const handleReject = async (item: QcRow) => {
     if (!(await actionConfirm("Reject this serial?", "This will reject the selected Not OK serial.", "Yes, Reject"))) return;
-    await postAction(item, "reject-not-ok", "Serial rejected successfully");
+    
+    const job_id = getJobId(item);
+    const updated_by = storage.getUserId();
+
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/reject-not-ok`, {
+        updated_by,
+      });
+
+      toast.success("Serial rejected successfully");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Reject failed");
+    }
   };
 
   const filteredData = useMemo(() => {

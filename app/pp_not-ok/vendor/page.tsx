@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
-import { FaArrowLeft, FaChevronDown, FaChevronRight } from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 
 import AxiosProvider from "../../../provider/AxiosProvider";
 import StorageManager from "../../../provider/StorageManager";
@@ -52,8 +52,6 @@ export default function NotOkVendorPage() {
   const [data, setData] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIdentifier, setSelectedIdentifier] = useState<string | null>(null);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-  const [jobTypeFilter, setJobTypeFilter] = useState<string>("ALL");
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
@@ -146,10 +144,6 @@ export default function NotOkVendorPage() {
     fetchData();
   }, [filterParam, client]);
 
-  const toggleGroup = (jo: string) => {
-    setExpandedGroups((prev) => ({ ...prev, [jo]: !prev[jo] }));
-  };
-
   const getJobId = (item: Row) => item.jobId || item.job_id || item.job?.id;
 
   const actionConfirm = async (title: string, text: string, confirm: string) => {
@@ -189,9 +183,34 @@ export default function NotOkVendorPage() {
     await postAction(item, "backToQc", "Serial sent back to QC Vendor successfully", { review_for: REVIEW_FOR });
   };
 
+  // UPDATED: Changed from "rework" to use reject endpoint
   const handleRework = async (item: Row) => {
-    if (!(await actionConfirm("Send for rework?", "This serial will be sent for rework.", "Yes, Rework"))) return;
-    await postAction(item, "rework", "Serial sent for rework successfully");
+    if (!item) return;
+
+    if (!(await actionConfirm(
+      "Send for rework?",
+      `Serial: ${item.serial_no || 'N/A'} will be sent for rework.`,
+      "Yes, Rework"
+    ))) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, {
+        updated_by,
+      });
+
+      toast.success(`Item ${item.serial_no} sent for rework`);
+      fetchData();
+      setSelectedIdentifier(null);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Rework failed");
+    }
   };
 
   const handleJobRejected = async (item: Row) => {
@@ -200,19 +219,14 @@ export default function NotOkVendorPage() {
   };
 
   // Filter by job type
-  const filteredByType = useMemo(() => {
-    if (jobTypeFilter === "ALL") return data;
-    return data.filter(item => (item.job_type || item.job?.job_type) === jobTypeFilter);
-  }, [data, jobTypeFilter]);
-
   const filteredData = useMemo(() => {
-    if (jobServiceCategoryFilter === "ALL") return filteredByType;
+    if (jobServiceCategoryFilter === "ALL") return data;
 
-    return filteredByType.filter((item) => {
+    return data.filter((item) => {
       const category = item.job_category || item.job?.job_category || "";
       return category === jobServiceCategoryFilter;
     });
-  }, [filteredByType, jobServiceCategoryFilter]);
+  }, [data, jobServiceCategoryFilter]);
 
   // Get unique identifiers based on job type
   const jobIdentifiers = useMemo(() => {
@@ -389,19 +403,6 @@ export default function NotOkVendorPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 mb-4 px-2">
-            <select
-              value={jobTypeFilter}
-              onChange={(e) => setJobTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="ALL">All Job Types</option>
-              <option value="JOB_SERVICE">JOB_SERVICE</option>
-              <option value="TSO_SERVICE">TSO_SERVICE</option>
-              <option value="KANBAN">KANBAN</option>
-            </select>
-          </div>
-
           {uniqueCategories.length > 0 && (
             <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
               <button
@@ -471,71 +472,60 @@ export default function NotOkVendorPage() {
                         </td>
                       </tr>
                     ) : (
-                      Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => {
-                        const isExpanded = expandedGroups[jo] ?? true;
-                        return (
-                          <Fragment key={jo}>
-                            {/* JO Group Header */}
-                            <tr className="border border-tableBorder bg-gray-100">
-                              <td
-                                className="px-2 py-2 border border-tableBorder cursor-pointer"
-                                onClick={() => toggleGroup(jo)}
-                                colSpan={12}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {isExpanded ? <FaChevronDown /> : <FaChevronRight />}
-                                  <span className="font-semibold">JO: {jo}</span>
+                      Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => (
+                        <Fragment key={jo}>
+                          {/* JO Group Header */}
+                          <tr className="border border-tableBorder bg-gray-100">
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={12}>
+                              JO: {jo}
+                            </td>
+                          </tr>
+                          
+                          {/* Individual Items with Actions */}
+                          {items.map((item) => (
+                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
+                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.vendor_name || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <button
+                                    onClick={() => handleJobBackToQC(item)}
+                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                    title="Send back to QC"
+                                  >
+                                    QC
+                                  </button>
+                                  <button
+                                    onClick={() => handleRework(item)}
+                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                    title="Send for rework"
+                                  >
+                                    Rework
+                                  </button>
+                                  <button
+                                    onClick={() => handleJobRejected(item)}
+                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                    title="Reject this serial"
+                                  >
+                                    Reject
+                                  </button>
                                 </div>
                               </td>
                             </tr>
-                            
-                            {/* Individual Items with Actions */}
-                            {isExpanded &&
-                              items.map((item) => (
-                                <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                                  <td className="px-2 py-2 border border-tableBorder"></td>
-                                  <td className="px-2 py-2 border border-tableBorder">
-                                    {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
-                                  </td>
-                                  <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.vendor_name || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">
-                                    <div className="flex items-center gap-1 flex-wrap">
-                                      <button
-                                        onClick={() => handleJobBackToQC(item)}
-                                        className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
-                                        title="Send back to QC"
-                                      >
-                                        QC
-                                      </button>
-                                      <button
-                                        onClick={() => handleRework(item)}
-                                        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                        title="Send for rework"
-                                      >
-                                        Rework
-                                      </button>
-                                      <button
-                                        onClick={() => handleJobRejected(item)}
-                                        className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                        title="Reject this serial"
-                                      >
-                                        Reject
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                          </Fragment>
-                        );
-                      })
+                          ))}
+                        </Fragment>
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -611,10 +601,7 @@ export default function NotOkVendorPage() {
 
           <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
             <div>
-              Total Jobs: {jobIdentifiers.filter(id => id.startsWith('JOB:')).length} | 
-              TSO: {jobIdentifiers.filter(id => id.startsWith('TSO:')).length} |
-              KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length} |
-              Total Items: {filteredData.length}
+              Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
             </div>
             <div className="text-xs text-gray-400">
               Actions are per serial number

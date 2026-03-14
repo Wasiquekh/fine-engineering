@@ -307,32 +307,57 @@ export default function QcVendorPage() {
   };
 
   const doRework = async (r: Row) => {
-    const job_id = getJobId(r);
     const updated_by = storage.getUserId();
-
-    if (!job_id || !updated_by) {
-      toast.error("Job ID / User ID missing");
+  
+    if (!updated_by) {
+      toast.error("User ID missing");
       return;
     }
-
-    const result = await Swal.fire({
-      title: "Send for rework?",
-      text: "This job will go back to production module.",
-      icon: "warning",
+  
+    // Ask for confirmation with reason
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: "Send for Rework",
+      html: `
+        <div class="text-left">
+          <p class="mb-2"><strong>Job Type:</strong> ${r.job_type || r.job?.job_type || 'N/A'}</p>
+          <p class="mb-2"><strong>JO No:</strong> ${r.jo_no || 'N/A'}</p>
+          <p class="mb-2"><strong>Serial No:</strong> ${r.serial_no || 'N/A'}</p>
+          <p class="mb-4"><strong>Quantity:</strong> ${r.quantity_no || 'N/A'}</p>
+          <p class="text-sm text-gray-600">This item will be sent back to production with status "machine"</p>
+        </div>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for rework...",
+      inputAttributes: {
+        'aria-label': 'rework reason'
+      },
       showCancelButton: true,
-      confirmButtonText: "Yes, Rework",
+      confirmButtonText: "Yes, Send to Rework",
       confirmButtonColor: "#ef4444",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+      width: '500px',
     });
-
-    if (!result.isConfirmed) return;
-
+  
+    if (!isConfirmed || !reason) return;
+  
     try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, {
+      // Use the correct endpoint: /assign-to-worker/:id/reject
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/reject`, {
         updated_by,
+        // Note: Your current backend doesn't accept reason, but we'll keep it for future
+        // reason: reason 
       });
-
-      toast.success("Sent for Rework");
-      goReworkPage();
+  
+      toast.success(`Item ${r.serial_no || ''} sent for Rework`);
+      
+      // Navigate to production module or refresh data
+      // goReworkPage(); // Uncomment if you want to navigate away
+      fetchData(); // Refresh the current page data
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Rework failed");
     }

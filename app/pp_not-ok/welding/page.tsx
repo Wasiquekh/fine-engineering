@@ -236,9 +236,34 @@ export default function NotOkWeldingPage() {
     await postAction(item, "backToQc", "Serial sent back to QC Welding successfully", { review_for: REVIEW_FOR });
   };
 
+  // UPDATED: Changed from using postAction to direct API call with reject endpoint
   const handleRework = async (item: Row) => {
-    if (!(await actionConfirm("Send for rework?", "This serial will be sent for rework.", "Yes, Rework"))) return;
-    await postAction(item, "rework", "Serial sent for rework successfully");
+    if (!item) return;
+
+    if (!(await actionConfirm(
+      "Send for rework?",
+      `Serial: ${item.serial_no || 'N/A'} will be sent for rework.`,
+      "Yes, Rework"
+    ))) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, {
+        updated_by,
+      });
+
+      toast.success(`Item ${item.serial_no} sent for rework`);
+      fetchData();
+      setSelectedIdentifier(null);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Rework failed");
+    }
   };
 
   const handleJobRejected = async (item: Row) => {

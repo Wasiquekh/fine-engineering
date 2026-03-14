@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Fragment } from "react";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import AxiosProvider from "../../provider/AxiosProvider";
@@ -40,7 +40,7 @@ type QcRow = {
   id: string;
   job_id?: string | null;
   job_no?: string | null;
-  tso_no?: string | null; // Added for TSO
+  tso_no?: string | null;
   jo_no?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
@@ -55,7 +55,7 @@ type QcRow = {
   job?: {
     id?: string | null;
     job_no?: string | null;
-    tso_no?: string | null; // Added for TSO
+    tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
   } | null;
@@ -178,11 +178,9 @@ export default function QcMainPage() {
     const ids = new Set<string>();
     filteredData.forEach((item) => {
       if (filterParam === "TSO_SERVICE") {
-        // For TSO_SERVICE, use tso_no
         const tsoNo = item.tso_no || item.job?.tso_no;
         if (tsoNo) ids.add(tsoNo);
       } else {
-        // For JOB_SERVICE and KANBAN, use job_no
         const jobNo = item.job_no || item.job?.job_no;
         if (jobNo) ids.add(jobNo);
       }
@@ -259,125 +257,206 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
-const handleJoOK = async (items: QcRow[]) => {
-  if (!items || items.length === 0) {
-    toast.error("No items to dispatch.");
-    return;
-  }
+  const handleJoOK = async (items: QcRow[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to dispatch.");
+      return;
+    }
 
-  const { value: formValues } = await Swal.fire({
-    title: "Dispatch JO",
-    html: `
-      <input id="chalan_no" class="swal2-input" placeholder="Chalan No">
-      <input id="dispatch_date" class="swal2-input" type="date">
-    `,
-    focusConfirm: false,
-    preConfirm: () => {
-      const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
-      const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+    const { value: formValues } = await Swal.fire({
+      title: "Dispatch JO",
+      html: `
+        <p>Processing ${items.length} item(s) for dispatch</p>
+        <input id="chalan_no" class="swal2-input" placeholder="Chalan No">
+        <input id="dispatch_date" class="swal2-input" type="date">
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
+        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
 
-      if (!chalan_no || !dispatch_date) {
-        Swal.showValidationMessage("Please fill out both fields");
-        return false;
+        if (!chalan_no || !dispatch_date) {
+          Swal.showValidationMessage("Please fill out both fields");
+          return false;
+        }
+
+        return { chalan_no, dispatch_date };
+      },
+      showCancelButton: true,
+      confirmButtonText: "Dispatch",
+    });
+
+    if (!formValues) return;
+
+    const job_id = items[0]?.job_id || items[0]?.job?.id;
+
+    if (!job_id) {
+      toast.error("Job ID not found");
+      return;
+    }
+
+    try {
+      // Process all items in the JO
+      for (const item of items) {
+        await axiosProvider.post("/fineengg_erp/jobs/dispatch", {
+          job_id,
+          chalan_no: formValues.chalan_no,
+          dispatch_date: formValues.dispatch_date,
+        });
       }
 
-      return { chalan_no, dispatch_date };
-    },
-    showCancelButton: true,
-    confirmButtonText: "Dispatch",
-  });
-
-  if (!formValues) return;
-
-  const job_id = items[0]?.job_id || items[0]?.job?.id;
-
-  if (!job_id) {
-    toast.error("Job ID not found");
-    return;
-  }
-
-  try {
-    await axiosProvider.post("/fineengg_erp/jobs/dispatch", {
-      job_id,
-      chalan_no: formValues.chalan_no,
-      dispatch_date: formValues.dispatch_date,
-    });
-
-    toast.success("JO dispatched successfully");
-    fetchData();
-  } catch (error: any) {
-    toast.error(error?.response?.data?.error || "Dispatch failed");
-  }
-};
+      toast.success(`${items.length} item(s) dispatched successfully`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Dispatch failed");
+    }
+  };
 
   const handleJoNotOk = async (items: QcRow[]) => {
-  const { value: reason } = await Swal.fire({
-    title: "Reason for Not OK",
-    input: "textarea",
-    inputPlaceholder: "Enter the reason...",
-    showCancelButton: true,
-    confirmButtonText: "Submit",
-    confirmButtonColor: "#d33",
-    inputValidator: (value) => {
-      if (!value) return "Reason is required!";
-      return null;
-    },
-  });
+    const { value: reason } = await Swal.fire({
+      title: "Reason for Not OK",
+      html: `
+        <p>Marking ${items.length} item(s) as Not OK</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter the reason...",
+      showCancelButton: true,
+      confirmButtonText: "Submit",
+      confirmButtonColor: "#d33",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+    });
+  
+    if (!reason) return;
+  
+    const job_id = items[0]?.job_id || items[0]?.job?.id;
+    const updated_by = storage.getUserId();
+  
+    if (!job_id || !updated_by) {
+      toast.error("Job or User not found");
+      return;
+    }
+  
+    try {
+      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, {
+        reason,
+        updated_by,
+      });
+  
+      toast.success(`${items.length} item(s) marked as Not OK`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed");
+    }
+  };
 
-  if (!reason) return;
+  // Rework function using /assign-to-worker/:id/reject endpoint
+  const handleRework = async (items: QcRow[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to process.");
+      return;
+    }
 
-  const job_id = items[0]?.job_id || items[0]?.job?.id;
-  const updated_by = storage.getUserId();
-
-  if (!job_id || !updated_by) {
-    toast.error("Job or User not found");
-    return;
-  }
-
-  try {
-    await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, {
-      reason,
-      updated_by,
+    const { value: reason } = await Swal.fire({
+      title: "Send for Rework",
+      html: `
+        <p>Sending <strong>${items.length}</strong> item(s) for rework</p>
+        <p class="text-sm text-gray-600 mt-2">These items will be sent back to production with status "machine"</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for rework...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Send to Rework",
+      confirmButtonColor: "#ef4444",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
     });
 
-    toast.success("JO marked as Not OK");
+    if (!reason) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Process each item individually using the reject endpoint
+    for (const item of items) {
+      try {
+        await axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, {
+          updated_by,
+          // Note: The current backend doesn't accept reason, but we'll keep it for future
+          // reason: reason 
+        });
+        successCount++;
+      } catch (error: any) {
+        console.error(`Failed to reject item ${item.serial_no}:`, error);
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} item(s) sent for rework successfully`);
+    }
+    
+    if (failCount > 0) {
+      toast.error(`Failed to process ${failCount} item(s)`);
+    }
+    
     fetchData();
-  } catch (error: any) {
-    toast.error(error?.response?.data?.error || "Failed");
-  }
-};
+  };
 
-const handleJoRework = async (items: QcRow[]) => {
-  const result = await Swal.fire({
-    title: "Send for rework?",
-    text: "This JO will go back to production.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Yes, Rework",
-    confirmButtonColor: "#ef4444",
-  });
+  // Single item rework (keep this for the individual button)
+  const handleSingleItemRework = async (item: QcRow) => {
+    if (!item) return;
 
-  if (!result.isConfirmed) return;
-
-  const job_id = items[0]?.job_id || items[0]?.job?.id;
-  const updated_by = storage.getUserId();
-
-  if (!job_id || !updated_by) {
-    toast.error("Job or User not found");
-    return;
-  }
-
-  try {
-    await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/rework`, {
-      updated_by,
+    const { value: reason } = await Swal.fire({
+      title: "Send for Rework",
+      html: `
+        <p>Serial: <strong>${item.serial_no || 'N/A'}</strong></p>
+        <p class="text-sm text-gray-600 mt-2">This item will be sent back to production with status "machine"</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for rework...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Send to Rework",
+      confirmButtonColor: "#ef4444",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
     });
 
-    toast.success("JO sent for Rework");
-    fetchData();
-  } catch (error: any) {
-    toast.error(error?.response?.data?.error || "Failed");
-  }
-};
+    if (!reason) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, {
+        updated_by,
+        // Note: The current backend doesn't accept reason, but we'll keep it for future
+        // reason: reason
+      });
+
+      toast.success(`Item ${item.serial_no} sent for rework`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Rework failed");
+    }
+  };
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -466,13 +545,17 @@ const handleJoRework = async (items: QcRow[]) => {
           <div className="relative overflow-x-auto sm:rounded-lg">
             {selectedJobNo ? (
               <>
-                <button
-                  onClick={() => setSelectedJobNo(null)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 mb-4"
-                >
-                  <FaArrowLeft />
-                  Back to Jobs
-                </button>
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    onClick={() => {
+                      setSelectedJobNo(null);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  >
+                    <FaArrowLeft />
+                    Back to Jobs
+                  </button>
+                </div>
 
                 <h2 className="text-xl font-bold mb-4">
                   {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
@@ -490,7 +573,7 @@ const handleJoRework = async (items: QcRow[]) => {
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Action</th>
+                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
 
@@ -503,51 +586,67 @@ const handleJoRework = async (items: QcRow[]) => {
                       </tr>
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                        <>
-                          <tr key={`${jo}-head`} className="border border-tableBorder bg-white hover:bg-primary-100">
-                            <td className="px-2 py-2 border border-tableBorder font-medium">
-                              {jo}
+                        <Fragment key={jo}>
+                          {/* JO Group Header with Batch Actions */}
+                          <tr className="border border-tableBorder bg-gray-100">
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={2}>
+                              JO: {jo}
                             </td>
-                            <td colSpan={8} className="px-2 py-2 border border-tableBorder"></td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <div className="flex items-center gap-2 flex-wrap">
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                              <span className="text-xs text-gray-600">
+                                {items.length} item(s)
+                              </span>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                              <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleJoOK(items)}
-                                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
                                 >
-                                  OK
+                                  OK All
                                 </button>
                                 <button
                                   onClick={() => handleJoNotOk(items)}
-                                  className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
+                                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                                 >
-                                  Not OK
+                                  Not OK All
                                 </button>
                                 <button
-                                  onClick={() => handleJoRework(items)}
-                                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                                  onClick={() => handleRework(items)}
+                                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                                 >
-                                  Rework
+                                  Rework All
                                 </button>
                               </div>
                             </td>
                           </tr>
-
+                          
+                          {/* Individual Items */}
                           {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-gray-50">
+                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder"></td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.serial_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">
+                                {item.serial_no || "-"}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.quantity_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <button
+                                  onClick={() => handleSingleItemRework(item)}
+                                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                  title={`Rework: ${item.serial_no || 'N/A'}`}
+                                >
+                                  Rework
+                                </button>
+                              </td>
                             </tr>
                           ))}
-                        </>
+                        </Fragment>
                       ))
                     )}
                   </tbody>
@@ -621,7 +720,8 @@ const handleJoRework = async (items: QcRow[]) => {
           </div>
 
           <div className="text-xs text-gray-500 mt-3 px-2">
-            Total {filterParam === "TSO_SERVICE" ? "TSOs" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
+            Total {filterParam === "TSO_SERVICE" ? "TSOs" : "Jobs"}: {jobIdentifiers.length} | 
+            Total Items: {filteredData.length}
           </div>
         </div>
       </div>
