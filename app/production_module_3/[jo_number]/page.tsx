@@ -37,16 +37,6 @@ export default function JobDetailsPage() {
   const router = useRouter();
   const jo_number = params.jo_number as string;
 
-  const uniqueJobDetails = useMemo(() => {
-    const seen = new Set();
-    return jobDetails.filter((job) => {
-      if (!job.jo_number) return true;
-      if (seen.has(job.jo_number)) return false;
-      seen.add(job.jo_number);
-      return true;
-    });
-  }, [jobDetails]);
-
   useEffect(() => {
     if (jo_number) {
       const fetchData = async () => {
@@ -56,11 +46,10 @@ export default function JobDetailsPage() {
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
-            const filteredJobs = fetchedJobs.filter((job: JobDetail) => job.assign_to === "Usmaan");
-            setJobDetails(filteredJobs);
+            setJobDetails(fetchedJobs);
 
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
-            filteredJobs.forEach((job: JobDetail) => {
+            fetchedJobs.forEach((job: JobDetail) => {
               if (job.assign_to) {
                 const isStandard = ["Usmaan", "Ashfaq", "Ramzaan"].includes(job.assign_to);
                 initialAssignments[job.id] = {
@@ -185,12 +174,12 @@ export default function JobDetailsPage() {
                       <tr>
                         <td colSpan={9} className="text-center py-4 border border-tableBorder">Loading...</td>
                       </tr>
-                    ) : uniqueJobDetails.length === 0 ? (
+                    ) : jobDetails.length === 0 ? (
                       <tr>
                         <td colSpan={9} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
                       </tr>
                     ) : (
-                      uniqueJobDetails.map((item) => (
+                      jobDetails.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                           
                           <td className="px-2 py-2 border border-tableBorder">

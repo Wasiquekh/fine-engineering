@@ -156,9 +156,14 @@ export default function QcMainPage() {
     const ids = new Set<string>();
     
     filteredData.forEach((item) => {
-      const identifier = filterParam === "TSO_SERVICE" 
-        ? (item.tso_no || item.job?.tso_no) 
-        : (item.job_no || item.job?.job_no);
+      let identifier: string | null | undefined;
+      if (filterParam === "TSO_SERVICE") {
+        identifier = item.tso_no || item.job?.tso_no;
+      } else if (filterParam === "KANBAN") {
+        identifier = item.jo_no;
+      } else {
+        identifier = item.job_no || item.job?.job_no;
+      }
       if (identifier) ids.add(identifier);
     });
     
@@ -167,7 +172,14 @@ export default function QcMainPage() {
 
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
-      const itemIdentifier = filterParam === "TSO_SERVICE" ? (item.tso_no || item.job?.tso_no) : (item.job_no || item.job?.job_no);
+      let itemIdentifier: string | null | undefined;
+      if (filterParam === "TSO_SERVICE") {
+        itemIdentifier = item.tso_no || item.job?.tso_no;
+      } else if (filterParam === "KANBAN") {
+        itemIdentifier = item.jo_no;
+      } else {
+        itemIdentifier = item.job_no || item.job?.job_no;
+      }
       return itemIdentifier === identifier;
     });
     
@@ -195,7 +207,14 @@ export default function QcMainPage() {
 
     jobIdentifiers.forEach((identifier) => {
       const items = filteredData.filter((item) => {
-        const itemIdentifier = filterParam === "TSO_SERVICE" ? (item.tso_no || item.job?.tso_no) : (item.job_no || item.job?.job_no);
+        let itemIdentifier: string | null | undefined;
+        if (filterParam === "TSO_SERVICE") {
+          itemIdentifier = item.tso_no || item.job?.tso_no;
+        } else if (filterParam === "KANBAN") {
+          itemIdentifier = item.jo_no;
+        } else {
+          itemIdentifier = item.job_no || item.job?.job_no;
+        }
         return itemIdentifier === identifier;
       });
 
@@ -337,7 +356,11 @@ export default function QcMainPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE" ? "TSO" : "Job"}: {selectedJobNo}
+                  {filterParam === "TSO_SERVICE"
+                    ? "TSO"
+                    : filterParam === "KANBAN"
+                    ? "J/O Number"
+                    : "Job"}: {selectedJobNo}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -430,13 +453,19 @@ export default function QcMainPage() {
             ) : (
               <>
                 <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE" ? "TSO Review" : "Jobs Review"}
+                  {filterParam === "TSO_SERVICE"
+                    ? "TSO Review"
+                    : filterParam === "KANBAN"
+                    ? "Kanban Review"
+                    : "Jobs Review"}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">{filterParam === "TSO_SERVICE" ? "TSO No" : "Job No"}</th>
+                      <th className="p-3 border border-tableBorder">
+                        {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
+                      </th>
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
