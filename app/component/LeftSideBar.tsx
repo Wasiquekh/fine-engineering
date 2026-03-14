@@ -107,6 +107,15 @@ const ProductionUserMenu = ({
                 </div>
               </Link>
 
+              {(assignTo === "Riyaaz" || assignTo === "Ramzaan") && (
+                <Link href={`/production_module_3?filter=KANBAN&client=Amar%20Equipment&assign_to=${assignTo}`}>
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                  </div>
+                </Link>
+              )}
+
               <div
                 onClick={() => setIsProdAmarEqReviewOpen(!isProdAmarEqReviewOpen)}
                 className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
@@ -130,12 +139,16 @@ const ProductionUserMenu = ({
                       <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE" && isActive)}>TSO Service</p>
                     </div>
                   </Link>
-                  <Link href={`/review?filter=KANBAN&client=Amar%20Equipment&assign_to=${assignTo}`}>
-                    <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)}>
-                      <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)} />
-                      <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)}>Kanban</p>
-                    </div>
-                  </Link>
+                  {(assignTo === "Riyaaz" || assignTo === "Ramzaan") && (
+                    <Link href={`/review?filter=KANBAN&client=Amar%20Equipment&assign_to=${assignTo}`}>
+                      <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)}>
+                        <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)} />
+                        <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)}>
+                          Kanban
+                        </p>
+                      </div>
+                    </Link>
+                  )}
                   <Link href={`/review/welding?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`}>
                     <div className={itemCls(pathname === "/review/welding" && client === "Amar Equipment" && isActive)}>
                       <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Equipment" && isActive)} />
@@ -176,6 +189,16 @@ const ProductionUserMenu = ({
                   <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Urgent/TSO</p>
                 </div>
               </Link>
+
+              {(assignTo === "Riyaaz" || assignTo === "Ramzaan") && (
+                <Link href={`/production_module_3?filter=KANBAN&client=Amar%20Biosystem&assign_to=${assignTo}`}>
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
+                  </div>
+                </Link>
+              )}
+
               <div
                 onClick={() => setIsProdAmarBioReviewOpen(!isProdAmarBioReviewOpen)}
                 className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
@@ -198,12 +221,16 @@ const ProductionUserMenu = ({
                       <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE" && isActive)}>TSO Service</p>
                     </div>
                   </Link>
-                  <Link href={`/review?filter=KANBAN&client=Amar%20Biosystem&assign_to=${assignTo}`}>
-                    <div className={itemCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN" && isActive)}>
-                      <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN" && isActive)} />
-                      <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN" && isActive)}>Kanban</p>
-                    </div>
-                  </Link>
+                  {(assignTo === "Riyaaz" || assignTo === "Ramzaan") && (
+                    <Link href={`/review?filter=KANBAN&client=Amar%20Biosystem&assign_to=${assignTo}`}>
+                      <div className={itemCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN" && isActive)}>
+                        <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN" && isActive)} />
+                        <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "KANBAN" && isActive)}>
+                          Kanban
+                        </p>
+                      </div>
+                    </Link>
+                  )}
                   <Link href={`/review/welding?filter=JOB_SERVICE&client=Amar%20Biosystem&assign_to=${assignTo}`}>
                     <div className={itemCls(pathname === "/review/welding" && client === "Amar Biosystem" && isActive)}>
                       <MdPrecisionManufacturing className={iconCls(pathname === "/review/welding" && client === "Amar Biosystem" && isActive)} />
@@ -435,19 +462,19 @@ const LeftSideBar: React.FC = () => {
 
                     {isMaterialApprovedAmarOpen && (
                       <div className="pl-4 flex flex-col gap-1">
-                        <Link href="/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=Usmaan">
+                        <Link href="/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Equipment">
                           <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                             <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
                           </div>
                         </Link>
-                        <Link href="/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Equipment&assign_to=Usmaan">
+                        <Link href="/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Equipment">
                           <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                             <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
                           </div>
                         </Link>
-                        <Link href="/inventory_material_approve?filter=KANBAN&client=Amar%20Equipment&assign_to=Usmaan">
+                        <Link href="/inventory_material_approve?filter=KANBAN&client=Amar%20Equipment">
                           <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                             <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
@@ -473,19 +500,19 @@ const LeftSideBar: React.FC = () => {
 
                     {isMaterialApprovedAmarBioOpen && (
                       <div className="pl-4 flex flex-col gap-1">
-                        <Link href="/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Biosystem&assign_to=Usmaan">
+                        <Link href="/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Biosystem">
                           <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                             <MdWorkOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Job Service</p>
                           </div>
                         </Link>
-                        <Link href="/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Biosystem&assign_to=Usmaan">
+                        <Link href="/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Biosystem">
                           <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                             <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
                           </div>
                         </Link>
-                        <Link href="/inventory_material_approve?filter=KANBAN&client=Amar%20Biosystem&assign_to=Usmaan">
+                        <Link href="/inventory_material_approve?filter=KANBAN&client=Amar%20Biosystem">
                           <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                             <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Kanban</p>
