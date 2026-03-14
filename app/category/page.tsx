@@ -48,7 +48,6 @@ const clientOptions = [
 
 // Options for Material Type
 const materialTypeOptions = [{ value: "GST", label: "GST" }];
-
 // Validation Schema for Category form
 const validationSchema = Yup.object().shape({
   job_no: Yup.string().required("Job No is required"),
@@ -88,7 +87,13 @@ export default function Home() {
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [data, setData] = useState<any | []>([]);
-  console.log("DDDDDDDDDDDDDDDD", data);
+  const [activeClient, setActiveClient] = useState<string>("All");
+
+  const filteredData =
+    activeClient === "All"
+      ? data
+      : data.filter((item: any) => item.client_name === activeClient);
+  console.log("DDDDDDDDDDDDDDDD", filteredData);
 
   const storage = new StorageManager();
   const userID = storage.getUserId();
@@ -249,7 +254,22 @@ export default function Home() {
             {/* ----------------Table----------------------- */}
             <div className="relative overflow-x-auto sm:rounded-lg">
               {/* Search and filter table row */}
-              <div className="flex justify-end items-center mb-6 w-full mx-auto">
+              <div className="flex justify-between items-center mb-6 w-full mx-auto">
+                <div className="flex gap-3">
+                  {["All", "Amar Equipment", "Amar Biosystem"].map((client) => (
+                    <button
+                      key={client}
+                      onClick={() => setActiveClient(client)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                        activeClient === client
+                          ? "bg-primary-600 text-white"
+                          : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {client}
+                    </button>
+                  ))}
+                </div>
                 <div className="flex justify-center items-center gap-4">
                   <div
                     className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 group hover:bg-primary-500"
@@ -369,7 +389,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.length === 0 ? (
+                  {filteredData.length === 0 ? (
                     <tr>
                       <td
                         colSpan={8}
@@ -381,7 +401,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    data.map((item) => (
+                    filteredData.map((item) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
