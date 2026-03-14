@@ -331,8 +331,7 @@ export default function Home() {
                                 )
                               }
                               className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent_due_date &&
-                                new Date(item.urgent_due_date) < new Date(new Date().setHours(0, 0, 0, 0))
+                                item.urgent
                                   ? "text-red-600 hover:text-red-700"
                                   : "text-blue-600 hover:text-blue-800"
                               }`}
