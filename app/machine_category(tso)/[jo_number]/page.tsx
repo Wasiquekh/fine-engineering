@@ -355,7 +355,8 @@ export default function JoNumberPage() {
                   setSubSize("");
                   setWorker("");
                 }}
-                className="w-full px-4 py-2 border rounded-md"
+                disabled={!selectedSerialNo || !selectedJob?.is_approved}
+                className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">Select</option>
                 <option value="Lathe">Lathe</option>
@@ -378,8 +379,8 @@ export default function JoNumberPage() {
                   setSubSize("");
                   setWorker("");
                 }}
-                className="w-full px-4 py-2 border rounded-md"
-                disabled={!selectedOption}
+                className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={!selectedOption || !selectedJob?.is_approved}
               >
                 <option value="">Select</option>
                 {getSizeOptions().map((o) => (
@@ -399,7 +400,8 @@ export default function JoNumberPage() {
                 <select
                   value={subSize}
                   onChange={(e) => setSubSize(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-md"
+                  disabled={!machineSize || !selectedJob?.is_approved}
+                  className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Select</option>
                   {getSubSizeOptions().map((o) => (
@@ -420,7 +422,8 @@ export default function JoNumberPage() {
                 <select
                   value={worker}
                   onChange={(e) => setWorker(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-md"
+                  disabled={!machineSize || !selectedJob?.is_approved}
+                  className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Select</option>
                   {workerOptions.map((o) => (
@@ -444,8 +447,8 @@ export default function JoNumberPage() {
                   <select
                     value={selectedQuantity}
                     onChange={(e) => setSelectedQuantity(e.target.value)}
-                    className="flex-1 px-3 py-1.5 border rounded-md text-sm"
-                    disabled={!selectedSerialNo || quantityOptions.length === 0}
+                    className="flex-1 px-3 py-1.5 border rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    disabled={!selectedSerialNo || quantityOptions.length === 0 || !selectedJob?.is_approved}
                   >
                     <option value="">Select</option>
                     {quantityOptions.map((o) => (
