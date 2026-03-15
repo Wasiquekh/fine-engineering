@@ -39,6 +39,7 @@ export default function JobDetailsPage() {
   const searchParams = useSearchParams();
   const clientParam = searchParams.get("client");
   const filterParam = searchParams.get("filter");
+  const assignToParam = searchParams.get("assign_to");
 
   const uniqueJobDetails = useMemo(() => {
     const seen = new Set();
@@ -60,7 +61,9 @@ export default function JobDetailsPage() {
           if (clientParam) {
             params.append('client_name', clientParam);
           }
-          params.append('assign_to', 'Usmaan');
+          if (assignToParam) {
+            params.append('assign_to', assignToParam);
+          }
 
           const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
 
@@ -71,7 +74,7 @@ export default function JobDetailsPage() {
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
             fetchedJobs.forEach((job: JobDetail) => {
               if (job.assign_to) {
-                const isStandard = ["Usmaan", "Ashfaq", "Ramzaan"].includes(job.assign_to);
+                const isStandard = ["Usmaan", "Ashfaq", "Ramzaan", "Riyaaz"].includes(job.assign_to);
                 initialAssignments[job.id] = {
                   assignTo: isStandard ? job.assign_to : "Others",
                   otherName: isStandard ? "" : job.assign_to,
@@ -92,7 +95,7 @@ export default function JobDetailsPage() {
       };
       fetchData();
     }
-  }, [tso_no, clientParam]);
+  }, [tso_no, clientParam, assignToParam]);
 
   const handleAssignmentChange = (id: string, field: string, value: string) => {
     setAssignments((prev) => ({
@@ -266,6 +269,7 @@ export default function JobDetailsPage() {
                                 <option value="Usmaan">Usmaan</option>
                                 <option value="Ashfaq">Ashfaq</option>
                                 <option value="Ramzaan">Ramzaan</option>
+                                <option value="Riyaaz">Riyaaz</option>
                                 <option value="Others">Others</option>
                               </select>
                             )}

@@ -289,7 +289,7 @@ export default function Home() {
                           <p
                             onClick={() =>
                               router.push(
-                                `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                `/production_module_2/${encodeURIComponent(item.tso_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}&assign_to=${encodeURIComponent(assignToParam || "")}`
                               )
                             }
                             className={`text-base leading-normal cursor-pointer underline ${
