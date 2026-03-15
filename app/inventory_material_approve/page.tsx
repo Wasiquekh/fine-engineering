@@ -22,6 +22,7 @@ const axiosProvider = new AxiosProvider();
     total_qty: number;
     jo_numbers: string;
     jo_numbers_list?: Set<string>;
+    assign_to: string;
   }
 
 export default function Home() {
@@ -91,7 +92,7 @@ export default function Home() {
             ? `/fineengg_erp/jobs/${item.id}/approve-vendors`
             : `/fineengg_erp/jobs/${item.id}/approve`;
 
-          return axiosProvider.post(endpoint, {});
+          return axiosProvider.post(endpoint, { apply_to_group: true });
         });
   
         await Promise.all(approvalPromises);
@@ -125,7 +126,7 @@ export default function Home() {
         }
 
         const notApprovePromises = itemsToNotApprove.map((item) =>
-          axiosProvider.post(`/fineengg_erp/jobs/${item.id}/not-approve`, {})
+          axiosProvider.post(`/fineengg_erp/jobs/${item.id}/not-approve`, { apply_to_group: true })
         );
 
         await Promise.all(notApprovePromises);
@@ -150,8 +151,6 @@ export default function Home() {
 
       // const clientParam = searchParams.get("client");
       // const filterParam = searchParams.get("filter");
-      const assignTo = searchParams.get("assign_to");
-      const assignToNot = searchParams.get("assign_to_not");
 
       if (clientParam) {
         params.append("client_name", clientParam);
@@ -161,13 +160,13 @@ export default function Home() {
         params.append("job_type", filterParam);
       }
 
-      if (assignTo) {
-        params.append("assign_to", assignTo);
-      }
+      searchParams.getAll("assign_to").forEach((val) => {
+        params.append("assign_to", val);
+      });
 
-      if (assignToNot) {
-        params.append("assign_to_not", assignToNot);
-      }
+      searchParams.getAll("assign_to_not").forEach((val) => {
+        params.append("assign_to_not", val);
+      });
 
       const url = `/fineengg_erp/jobs?${params.toString()}`;
 
@@ -228,6 +227,7 @@ export default function Home() {
           is_rejected: 1,
           total_qty: 0,
           jo_numbers_list: new Set<string>(),
+          assign_to_list: new Set<string>(),
         };
       }
 
@@ -242,6 +242,9 @@ export default function Home() {
       if (item.jo_number) {
         acc[groupKey].jo_numbers_list.add(item.jo_number);
       }
+      if (item.assign_to) {
+        acc[groupKey].assign_to_list.add(item.assign_to);
+      }
 
       return acc;
     }, {} as Record<string, JobGroup>);
@@ -249,6 +252,7 @@ export default function Home() {
     return Object.values(groups).map((group: any): JobGroup => ({
       ...group,
       jo_numbers: Array.from(group.jo_numbers_list).join(", "),
+      assign_to: Array.from(group.assign_to_list).join(", "),
     }));
   }, [filteredData]);
 
@@ -376,6 +380,16 @@ export default function Home() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
+                          Assign To
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
                           Quantity
                         </div>
                       </div>
@@ -406,7 +420,7 @@ export default function Home() {
                   {groupedData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={activeFilter === "KANBAN" ? 6 : 7}
+                        colSpan={activeFilter === "KANBAN" ? 7 : 8}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -443,6 +457,11 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
                           <p className="text-[#232323] text-base leading-normal">
                             {group.job_category || "N/A"}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-base leading-normal">
+                            {group.assign_to || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">

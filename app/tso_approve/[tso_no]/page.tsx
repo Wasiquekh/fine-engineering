@@ -84,8 +84,6 @@ export default function JobDetailsPage() {
 
       const clientParam = searchParams.get("client");
       const filterParam = searchParams.get("filter");
-      const assignTo = searchParams.get("assign_to");
-      const assignToNot = searchParams.get("assign_to_not");
 
       if (clientParam) {
         params.append("client_name", clientParam);
@@ -93,12 +91,12 @@ export default function JobDetailsPage() {
       if (filterParam) {
         params.append("job_type", filterParam);
       }
-      if (assignTo) {
-        params.append("assign_to", assignTo);
-      }
-      if (assignToNot) {
-        params.append("assign_to_not", assignToNot);
-      }
+      searchParams.getAll("assign_to").forEach((val) => {
+        params.append("assign_to", val);
+      });
+      searchParams.getAll("assign_to_not").forEach((val) => {
+        params.append("assign_to_not", val);
+      });
       const response = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
       const jobItems = response.data.data.map((item: any) => ({
         ...item,
@@ -124,7 +122,7 @@ export default function JobDetailsPage() {
 
   useEffect(() => {
     fetchData();
-  }, [tsoNo]);
+  }, [tsoNo, searchParams]);
 
   return (
     <>
