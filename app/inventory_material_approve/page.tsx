@@ -172,7 +172,9 @@ export default function Home() {
 
       const response = await axiosProvider.get(url);
 
-      const updatedData = response.data.data.map((item: any) => ({
+      const updatedData = response.data.data
+        .filter((item: any) => item.status !== "completed")
+        .map((item: any) => ({
         ...item,
         is_approve: item.job_status === "approved" ? 1 : 0,
         is_rejected: item.job_status === "not-approved" ? 1 : 0,

@@ -98,7 +98,9 @@ export default function JobDetailsPage() {
         params.append("assign_to_not", val);
       });
       const response = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
-      const jobItems = response.data.data.map((item: any) => ({
+      const jobItems = response.data.data
+        .filter((item: any) => item.status !== 'completed')
+        .map((item: any) => ({
         ...item,
         is_approve: item.job_status === 'approved' ? 1 : 0,
         is_rejected: item.job_status === 'not-approved' ? 1 : 0,
