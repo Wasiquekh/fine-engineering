@@ -446,10 +446,8 @@ export default function Home() {
 
           {/* Main content middle section */}
           <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
-            {/* ----------------Table----------------------- */}
-            <div className="relative overflow-x-auto sm:rounded-lg">
-              {/* Search and filter table row */}
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
+            {/* Search and filter table row */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                   <button
                     onClick={() => setActiveFilter("ALL")}
@@ -590,113 +588,33 @@ export default function Home() {
                 </div>
               </div>
 
+            {/* ----------------Table----------------------- */}
+            <div className="relative overflow-x-auto sm:rounded-lg">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job No
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          J/O Number
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job Type
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job Category
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item Description
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item No
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Quantity
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          MOC
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Bin Location
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Actions
-                        </div>
-                      </div>
-                    </th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Client Name</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Job No</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">J/O Number</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Product Desc</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Product Qty</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Item Desc</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Item No</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Qty</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">MOC</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Job Order Date</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Mtl Rcd Date</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Mtl Challan No</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Bin Location</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Mtl Remark</th>
+                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={15}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -710,51 +628,20 @@ export default function Home() {
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
                       >
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.job_no || "N/A"}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.jo_number || "N/A"}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.job_type}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.job_category || "N/A"}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.item_description}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.item_no}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.qty}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.moc}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.bin_location}
-                          </p>
-                        </td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.client_name || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.job_no || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.jo_number || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.product_desc || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.product_qty || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.item_description || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.item_no || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.qty || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.moc || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.job_order_date || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.mtl_rcd_date || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.mtl_challan_no || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.bin_location || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.material_remark || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <button
