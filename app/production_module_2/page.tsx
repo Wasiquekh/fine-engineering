@@ -91,7 +91,7 @@ export default function Home() {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      const endpoint = "/fineengg_erp/jobs";
+      const endpoint = "/fineengg_erp/system/jobs";
       const params = new URLSearchParams();
 
       if (clientParam) {

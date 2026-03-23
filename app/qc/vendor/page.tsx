@@ -30,6 +30,8 @@ type Row = {
   machine_code?: string | null;
   job_type?: string | null;
   tso_no?: string | null;
+  job_category?: string | null;
+  worker_name?: string | null;
   job?: { 
     id?: string | null;
     job_no?: string | null;
@@ -82,7 +84,7 @@ export default function QcVendorPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories", {
+      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -118,7 +120,7 @@ export default function QcVendorPage() {
       let allData: Row[] = [];
 
       for (const jobType of jobTypes) {
-        const res = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+        const res = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
           params: {
             status,
             job_type: jobType,
@@ -158,7 +160,7 @@ export default function QcVendorPage() {
     if (jobServiceCategoryFilter === "ALL") return rows;
 
     return rows.filter((item) => {
-      const category = item.job?.job_category || "";
+      const category = item.job_category || item.job?.job_category || "";
       return category === jobServiceCategoryFilter;
     });
   }, [rows, jobServiceCategoryFilter]);
@@ -202,175 +204,146 @@ export default function QcVendorPage() {
     });
   };
 
-  const jobSummary = useMemo(() => {
-    const summary: Record<
-      string,
-      {
-        totalQty: number;
-        uniqueJoCount: number;
-        jobCategory: string;
-        assigningDate: string;
-        jobType: string;
-        vendorName: string;
-      }
-    > = {};
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    const groups: Record<string, Row[]> = {};
 
-    jobIdentifiers.forEach((identifier) => {
-      const items = getItemsForIdentifier(identifier);
-
-      const totalQty = items.reduce(
-        (sum, item) => sum + (Number(item.quantity_no) || 0),
-        0
-      );
-
-      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
-
-      const jobCategory =
-        items.length > 0
-          ? items[0].job?.job_category || "N/A"
-          : "N/A";
-
-      const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
-      
-      const jobType = items.length > 0 
-        ? (items[0].job_type || items[0].job?.job_type || "JOB_SERVICE")
-        : "JOB_SERVICE";
-
-      const vendorName = items.length > 0 ? items[0].vendor_name || "N/A" : "N/A";
-
-      summary[identifier] = {
-        totalQty,
-        uniqueJoCount,
-        jobCategory,
-        assigningDate,
-        jobType,
-        vendorName,
-      };
+    items.forEach((item) => {
+      const jo = item.jo_no || "Unknown";
+      if (!groups[jo]) groups[jo] = [];
+      groups[jo].push(item);
     });
 
-    return summary;
-  }, [filteredData, jobIdentifiers]);
-
-  const askDecision = async () => {
-    const decision = await Swal.fire({
-      title: "QC Result?",
-      text: "Select what to do next",
-      icon: "question",
-      showCancelButton: true,
-      showDenyButton: true,
-      confirmButtonText: "OK",
-      denyButtonText: "Not OK",
-      cancelButtonText: "Rework",
-      confirmButtonColor: "#22c55e",
-      denyButtonColor: "#f59e0b",
-      cancelButtonColor: "#ef4444",
-    });
-
-    if (decision.isConfirmed) return "ok" as const;
-    if (decision.isDenied) return "not_ok" as const;
-    if (decision.dismiss === Swal.DismissReason.cancel) return "rework" as const;
-    return "none" as const;
+    return groups;
   };
 
-  const doNotOk = async (r: Row) => {
-    const { value: reason } = await Swal.fire({
-      title: "Reason for Not OK",
-      input: "textarea",
-      inputPlaceholder: "Enter reason...",
+  // Action confirmation helper
+  const actionConfirm = async (title: string, text: string, confirm: string) => {
+    const r = await Swal.fire({
+      title,
+      text,
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Submit",
-      confirmButtonColor: "#d33",
+      confirmButtonText: confirm,
     });
-
-    if (!reason) return;
-
-    const job_id = getJobId(r);
-    const updated_by = storage.getUserId();
-
-    if (!job_id || !updated_by) {
-      toast.error("Job ID / User ID missing");
-      return;
-    }
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/not-ok`, {
-        reason,
-        updated_by,
-        review_for: REVIEW_FOR,
-      });
-
-      toast.success("Marked Not OK");
-      goNotOkPage();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Not OK failed");
-    }
+    return r.isConfirmed;
   };
 
-  const doRework = async (r: Row) => {
-    const updated_by = storage.getUserId();
-  
-    if (!updated_by) {
-      toast.error("User ID missing");
-      return;
-    }
-  
-    // Ask for confirmation with reason
+  // SERIAL-WISE REWORK (using reject endpoint)
+  const handleSerialRework = async (item: Row) => {
+    if (!item) return;
+
     const { value: reason, isConfirmed } = await Swal.fire({
       title: "Send for Rework",
       html: `
         <div class="text-left">
-          <p class="mb-2"><strong>Job Type:</strong> ${r.job_type || r.job?.job_type || 'N/A'}</p>
-          <p class="mb-2"><strong>JO No:</strong> ${r.jo_no || 'N/A'}</p>
-          <p class="mb-2"><strong>Serial No:</strong> ${r.serial_no || 'N/A'}</p>
-          <p class="mb-4"><strong>Quantity:</strong> ${r.quantity_no || 'N/A'}</p>
+          <p class="mb-2"><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
+          <p class="mb-2"><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p class="mb-2"><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
+          <p class="mb-4"><strong>Quantity:</strong> ${item.quantity_no || 'N/A'}</p>
           <p class="text-sm text-gray-600">This item will be sent back to production with status "machine"</p>
         </div>
       `,
       input: "textarea",
       inputPlaceholder: "Enter reason for rework...",
-      inputAttributes: {
-        'aria-label': 'rework reason'
-      },
       showCancelButton: true,
       confirmButtonText: "Yes, Send to Rework",
       confirmButtonColor: "#ef4444",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
       inputValidator: (value) => {
         if (!value) return "Reason is required!";
         return null;
       },
-      width: '500px',
     });
-  
+
     if (!isConfirmed || !reason) return;
-  
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
     try {
-      // Use the correct endpoint: /assign-to-worker/:id/reject
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/reject`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
         updated_by,
-        // Note: Your current backend doesn't accept reason, but we'll keep it for future
-        // reason: reason 
       });
-  
-      toast.success(`Item ${r.serial_no || ''} sent for Rework`);
-      
-      // Navigate to production module or refresh data
-      // goReworkPage(); // Uncomment if you want to navigate away
-      fetchData(); // Refresh the current page data
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Rework failed");
+
+      toast.success(`Item ${item.serial_no} sent for rework`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Rework failed");
     }
   };
 
-  const openOutgoingForm = async (r: Row) => {
-    const maxQty = Number(r.quantity_no ?? 0);
+  // SERIAL-WISE NOT OK
+  const handleSerialNotOk = async (item: Row) => {
+    if (!item) return;
 
-    const { value } = await Swal.fire({
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: "Mark as Not OK",
+      html: `
+        <div class="text-left">
+          <p class="mb-2"><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
+          <p class="mb-2"><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p class="mb-2"><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
+          <p class="mb-4"><strong>Quantity:</strong> ${item.quantity_no || 'N/A'}</p>
+        </div>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for Not OK...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Mark Not OK",
+      confirmButtonColor: "#f59e0b",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+    });
+
+    if (!isConfirmed || !reason) return;
+
+    const job_id = getJobId(item);
+    const updated_by = storage.getUserId();
+
+    if (!job_id || !updated_by) {
+      toast.error("Job or User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
+        reason,
+        updated_by,
+        review_for: REVIEW_FOR,
+      });
+
+      toast.success(`Item ${item.serial_no} marked as Not OK`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to mark as Not OK");
+    }
+  };
+
+  // SERIAL-WISE OK (outgoing/incoming)
+  const handleSerialOk = async (item: Row) => {
+    if (tab === "outgoing") {
+      await openOutgoingForm(item);
+    } else {
+      await openIncomingForm(item);
+    }
+  };
+
+  const openOutgoingForm = async (item: Row) => {
+    const maxQty = Number(item.quantity_no ?? 0);
+
+    const { value, isConfirmed } = await Swal.fire({
       title: "QC Vendor • Outgoing",
       html: `
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
-          Pending Qty: <b>${maxQty}</b>
+          <p><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
+          <p><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p><strong>Pending Qty:</strong> <b>${maxQty}</b></p>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
         <input id="qc_quantity" type="number" class="swal2-input" placeholder="QC Quantity (<= ${maxQty})" />
@@ -394,10 +367,10 @@ export default function QcVendorPage() {
       },
     });
 
-    if (!value) return;
+    if (!isConfirmed || !value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/qc-outgoing`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-outgoing`, {
         ...value,
         review_for: REVIEW_FOR,
       });
@@ -408,20 +381,21 @@ export default function QcVendorPage() {
           : "Outgoing saved"
       );
       fetchData();
-      setSelectedJobNo(null);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Outgoing submit failed");
     }
   };
 
-  const openIncomingForm = async (r: Row) => {
-    const maxQty = Number(r.quantity_no ?? 0);
+  const openIncomingForm = async (item: Row) => {
+    const maxQty = Number(item.quantity_no ?? 0);
 
-    const { value } = await Swal.fire({
+    const { value, isConfirmed } = await Swal.fire({
       title: "QC Vendor • Incoming",
       html: `
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
-          Pending Qty: <b>${maxQty}</b>
+          <p><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
+          <p><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p><strong>Pending Qty:</strong> <b>${maxQty}</b></p>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
         <input id="qc_quantity" type="number" class="swal2-input" placeholder="Incoming Qty (<= ${maxQty})" />
@@ -442,10 +416,10 @@ export default function QcVendorPage() {
       },
     });
 
-    if (!value) return;
+    if (!isConfirmed || !value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${r.id}/qc-incoming`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
         ...value,
         review_for: REVIEW_FOR,
       });
@@ -461,16 +435,150 @@ export default function QcVendorPage() {
     }
   };
 
-  const handleAction = async (r: Row) => {
-    const d = await askDecision();
-
-    if (d === "ok") {
-      if (tab === "outgoing") return openOutgoingForm(r);
-      return openIncomingForm(r);
+  // Batch operations for JO
+  const handleJoOk = async (items: Row[]) => {
+    if (!items || items.length === 0) return;
+    
+    if (tab === "outgoing") {
+      toast.info("Please process outgoing items individually");
+      return;
     }
 
-    if (d === "not_ok") return doNotOk(r);
-    if (d === "rework") return doRework(r);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of items) {
+      try {
+        const maxQty = Number(item.quantity_no ?? 0);
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
+          qc_date: new Date().toISOString().split('T')[0],
+          qc_quantity: maxQty,
+          review_for: REVIEW_FOR,
+        });
+        successCount++;
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} item(s) processed successfully`);
+      fetchData();
+    }
+    if (failCount > 0) {
+      toast.error(`Failed to process ${failCount} item(s)`);
+    }
+  };
+
+  const handleJoNotOk = async (items: Row[]) => {
+    if (!items || items.length === 0) return;
+
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: "Mark JO as Not OK",
+      html: `
+        <p>Marking <strong>${items.length}</strong> item(s) as Not OK</p>
+        <p class="text-sm text-gray-600 mt-2">This will mark all items in this JO as Not OK</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for Not OK...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Mark Not OK",
+      confirmButtonColor: "#f59e0b",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+    });
+
+    if (!isConfirmed || !reason) return;
+
+    const job_id = getJobId(items[0]);
+    const updated_by = storage.getUserId();
+
+    if (!job_id || !updated_by) {
+      toast.error("Job or User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
+        reason,
+        updated_by,
+        review_for: REVIEW_FOR,
+      });
+
+      toast.success(`${items.length} item(s) marked as Not OK`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to mark as Not OK");
+    }
+  };
+
+  const handleJoRework = async (items: Row[]) => {
+    if (!items || items.length === 0) return;
+
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: "Send JO for Rework",
+      html: `
+        <p>Sending <strong>${items.length}</strong> item(s) for rework</p>
+        <p class="text-sm text-gray-600 mt-2">These items will be sent back to production with status "machine"</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for rework...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Send to Rework",
+      confirmButtonColor: "#ef4444",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+    });
+
+    if (!isConfirmed || !reason) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of items) {
+      try {
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+          updated_by,
+        });
+        successCount++;
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} item(s) sent for rework successfully`);
+    }
+    if (failCount > 0) {
+      toast.error(`Failed to process ${failCount} item(s)`);
+    }
+    
+    fetchData();
+  };
+
+  // Get job type badge color
+  const getJobTypeBadge = (jobType: string | null | undefined) => {
+    switch(jobType) {
+      case "TSO_SERVICE":
+        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
+      case "KANBAN":
+        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
+      case "JOB_SERVICE":
+        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">-</span>;
+    }
   };
 
   // Get display name for identifier
@@ -482,18 +590,6 @@ export default function QcVendorPage() {
       return `KANBAN: ${actualId}`;
     }
     return actualId;
-  };
-
-  // Get job type badge color
-  const getJobTypeBadge = (jobType: string) => {
-    switch(jobType) {
-      case "TSO_SERVICE":
-        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
-      case "KANBAN":
-        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
-      default:
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
-    }
   };
 
   // Count by job type
@@ -514,17 +610,6 @@ export default function QcVendorPage() {
     
     return counts;
   }, [rows]);
-
-  // Group items by JO No for display
-  const groupItemsByJo = (items: Row[]) => {
-    const groups: Record<string, Row[]> = {};
-    items.forEach((item) => {
-      const jo = item.jo_no || "Unknown";
-      if (!groups[jo]) groups[jo] = [];
-      groups[jo].push(item);
-    });
-    return groups;
-  };
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -555,27 +640,35 @@ export default function QcVendorPage() {
                 </p>
               </div>
 
-              <div className="inline-flex rounded-lg bg-gray-100 p-1">
-                <button
-                  onClick={() => setTab("outgoing")}
-                  className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                    tab === "outgoing"
-                      ? "bg-primary-600 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-white"
-                  }`}
-                >
-                  Outgoing
-                </button>
-                <button
-                  onClick={() => setTab("incoming")}
-                  className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                    tab === "incoming"
-                      ? "bg-primary-600 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-white"
-                  }`}
-                >
-                  Incoming
-                </button>
+              <div className="flex gap-2">
+                <div className="inline-flex rounded-lg bg-gray-100 p-1">
+                  <button
+                    onClick={() => {
+                      setTab("outgoing");
+                      setSelectedJobNo(null);
+                    }}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                      tab === "outgoing"
+                        ? "bg-primary-600 text-white shadow-sm"
+                        : "text-gray-700 hover:bg-white"
+                    }`}
+                  >
+                    Outgoing
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTab("incoming");
+                      setSelectedJobNo(null);
+                    }}
+                    className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                      tab === "incoming"
+                        ? "bg-primary-600 text-white shadow-sm"
+                        : "text-gray-700 hover:bg-white"
+                    }`}
+                  >
+                    Incoming
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -628,7 +721,7 @@ export default function QcVendorPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  Details: {getIdentifierDisplayName(selectedJobNo)}
+                  {getIdentifierDisplayName(selectedJobNo)}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -648,31 +741,47 @@ export default function QcVendorPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => {
-                      const items = getItemsForIdentifier(selectedJobNo);
-                      const groupedByJo = groupItemsByJo(items);
-                      
-                      if (Object.keys(groupedByJo).length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
-                              <p className="text-[#666666] text-base">No JO data found</p>
-                            </td>
-                          </tr>
-                        );
-                      }
-
-                      return Object.entries(groupedByJo).map(([jo, joItems]) => (
+                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
+                          <p className="text-[#666666] text-base">No JO data found</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
                         <Fragment key={jo}>
-                          {/* JO Group Header */}
+                          {/* JO Group Header with Batch Actions */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
-                              JO: {jo}
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={5}>
+                              JO: {jo} ({items.length} item(s))
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={2}></td>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleJoOk(items)}
+                                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                                >
+                                  OK All
+                                </button>
+                                <button
+                                  onClick={() => handleJoNotOk(items)}
+                                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+                                >
+                                  Not OK All
+                                </button>
+                                <button
+                                  onClick={() => handleJoRework(items)}
+                                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                                >
+                                  Rework All
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           
                           {/* Individual Items with Actions */}
-                          {joItems.map((item) => (
+                          {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder"></td>
                               <td className="px-2 py-2 border border-tableBorder">
@@ -687,20 +796,34 @@ export default function QcVendorPage() {
                               <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                <button
-                                  onClick={() => handleAction(item)}
-                                  className={`px-3 py-1.5 rounded-md text-white text-xs font-semibold hover:opacity-90 ${
-                                    tab === "outgoing" ? "bg-blue-600" : "bg-green-600"
-                                  }`}
-                                >
-                                  {tab === "outgoing" ? "Fill Outgoing" : "Fill Incoming"}
-                                </button>
+                                <div className="flex flex-col gap-1">
+                                  <button
+                                    onClick={() => handleSerialOk(item)}
+                                    className={`px-2 py-1 rounded text-xs text-white ${
+                                      tab === "outgoing" ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"
+                                    }`}
+                                  >
+                                    {tab === "outgoing" ? "Outgoing" : "Incoming"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSerialNotOk(item)}
+                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                  >
+                                    Not OK
+                                  </button>
+                                  <button
+                                    onClick={() => handleSerialRework(item)}
+                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                  >
+                                    Rework
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
                         </Fragment>
-                      ));
-                    })()}
+                      ))
+                    )}
                   </tbody>
                 </table>
               </>
@@ -736,7 +859,13 @@ export default function QcVendorPage() {
                       </tr>
                     ) : (
                       jobIdentifiers.map((identifier) => {
-                        const summary = jobSummary[identifier];
+                        const items = getItemsForIdentifier(identifier);
+                        const totalQty = items.reduce((sum, i) => sum + (Number(i.quantity_no) || 0), 0);
+                        const uniqueJoCount = new Set(items.map(i => i.jo_no)).size;
+                        const jobCategory = items[0]?.job_category || items[0]?.job?.job_category || "N/A";
+                        const assigningDate = items[0]?.assigning_date || "-";
+                        const vendorName = items[0]?.vendor_name || "N/A";
+                        const jobType = items[0]?.job_type || items[0]?.job?.job_type || "JOB_SERVICE";
 
                         return (
                           <tr
@@ -750,22 +879,22 @@ export default function QcVendorPage() {
                               </p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              {getJobTypeBadge(summary.jobType)}
+                              {getJobTypeBadge(jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
+                              <p className="text-[#232323] text-base">{jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.vendorName}</p>
+                              <p className="text-[#232323] text-base">{vendorName}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
+                              <p className="text-[#232323] text-base">{uniqueJoCount}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
+                              <p className="text-[#232323] text-base">{totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                              <p className="text-[#232323] text-base">{assigningDate}</p>
                             </td>
                           </tr>
                         );
@@ -785,7 +914,7 @@ export default function QcVendorPage() {
               KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length}
             </div>
             <div className="text-xs text-gray-400">
-              ✅ Vendor Not OK goes to <b>/pp_not-ok/vendor</b>. QC from that page returns to <b>/qc/vendor</b>.
+              ✅ Click on any row to view JO details with serial-wise actions
             </div>
           </div>
         </div>

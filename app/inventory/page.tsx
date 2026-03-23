@@ -187,7 +187,7 @@ export default function Home() {
 
   const fetchData = useCallback(async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/jobs");
+      const response = await axiosProvider.get("/fineengg_erp/system/jobs");
       setData(response.data.data);
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
@@ -231,7 +231,7 @@ export default function Home() {
       };
 
       try {
-        await axiosProvider.post("/fineengg_erp/jobs/bulk", bulkPayload);
+        await axiosProvider.post("/fineengg_erp/system/jobs/bulk", bulkPayload);
         toast.success("Assembly added successfully");
         fetchData();
         setFlyoutOpen(false);
@@ -274,7 +274,7 @@ export default function Home() {
     }
 
     try {
-      await axiosProvider.post("/fineengg_erp/jobs", payload);
+      await axiosProvider.post("/fineengg_erp/system/jobs", payload);
 
       // Different success messages based on job type
       if (values.job_type === "JOB_SERVICE") {
@@ -315,7 +315,7 @@ export default function Home() {
 
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.delete(`/fineengg_erp/jobs/${id}`);
+        const response = await axiosProvider.delete(`/fineengg_erp/system/jobs/${id}`);
 
         if (response.data.success) {
           toast.success("Job deleted successfully");

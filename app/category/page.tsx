@@ -118,14 +118,14 @@ export default function Home() {
       if (isEditMode && editId) {
         // Edit existing category
         const response = await axiosProvider.put(
-          `/fineengg_erp/categories/${editId}`,
+          `/fineengg_erp/system/categories/${editId}`,
           payload
         );
         toast.success("Category updated successfully");
       } else {
         // Add new category
         const response = await axiosProvider.post(
-          "/fineengg_erp/categories",
+          "/fineengg_erp/system/categories",
           payload
         );
         toast.success("Category added successfully");
@@ -180,7 +180,7 @@ export default function Home() {
     if (result.isConfirmed) {
       try {
         const response = await axiosProvider.delete(
-          `/fineengg_erp/categories/${id}`
+          `/fineengg_erp/system/categories/${id}`
         );
 
         if (response.data.success) {
@@ -200,7 +200,7 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      const response = await axiosProvider.get("/fineengg_erp/system/categories");
       setData(response.data.data);
     } catch (error: any) {
       console.error("Error fetching categories:", error);

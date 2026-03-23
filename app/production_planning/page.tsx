@@ -283,7 +283,7 @@ export default function Home() {
           return; // Prevent form submission
         }
       }
-      const endpoint = values.job_type === "PENDING_MATERIAL" ? "/fineengg_erp/pending-materials" : "/fineengg_erp/jobs";
+      const endpoint = values.job_type === "PENDING_MATERIAL" ? "/fineengg_erp/system/pending-materials" : "/fineengg_erp/system/jobs";
       const response = await axiosProvider.post(endpoint, payload);
 
       // Different success messages based on job type
@@ -336,7 +336,7 @@ export default function Home() {
         params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
 
         response = await axiosProvider.post(
-          `/fineengg_erp/jobs/mark-urgent-by-tso`,
+          `/fineengg_erp/system/jobs/mark-urgent-by-tso`,
           params,
           {
             headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
@@ -348,14 +348,14 @@ export default function Home() {
         params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
 
         response = await axiosProvider.post(
-          `/fineengg_erp/jobs/mark-urgent-by-jo-number`,
+          `/fineengg_erp/system/jobs/mark-urgent-by-jo-number`,
           params,
           {
             headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
           }
         );
       } else {
-        response = await axiosProvider.post(`/fineengg_erp/jobs/mark-urgent`, {
+        response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent`, {
           job_no: selectedJobId,
           urgent_due_date: urgentDate,
         });
@@ -369,7 +369,7 @@ export default function Home() {
         //   params.append("urgent_due_date", urgentDate);
 
         //   await axiosProvider.post(
-        //     "/fineengg_erp/categories/mark-urgent",
+        //     "/fineengg_erp/system/categories/mark-urgent",
         //     params,
         //     {
         //       headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
@@ -407,13 +407,13 @@ export default function Home() {
     if (result.isConfirmed) {
       try {
         const endpoint = currentDataset === "CATEGORIES" 
-          ? `/fineengg_erp/categories/${id}` 
-          : `/fineengg_erp/jobs/${id}`;
+          ? `/fineengg_erp/system/categories/${id}` 
+          : `/fineengg_erp/system/jobs/${id}`;
         const response = await axiosProvider.delete(endpoint);
 
         if (response.data.success) {
           toast.success("Job deleted successfully");
-          fetchData(currentDataset === "CATEGORIES" ? "/fineengg_erp/categories" : "/fineengg_erp/jobs");
+          fetchData(currentDataset === "CATEGORIES" ? "/fineengg_erp/system/categories" : "/fineengg_erp/system/jobs");
         } else {
           toast.error("Failed to delete job");
         }
@@ -431,9 +431,9 @@ export default function Home() {
 
       if (!baseUrl) {
         if (activeFilter === "JOB_SERVICE") {
-          baseUrl = `/fineengg_erp/categories`;
+          baseUrl = `/fineengg_erp/system/categories`;
         } else {
-          baseUrl = "/fineengg_erp/jobs";
+          baseUrl = "/fineengg_erp/system/jobs";
         }
       }
 
@@ -453,7 +453,7 @@ export default function Home() {
 
   const fetchCategories = async () => {
     try {
-      let url = "/fineengg_erp/categories";
+      let url = "/fineengg_erp/system/categories";
       if (clientParam) {
         url += `?client_name=${encodeURIComponent(clientParam)}`;
       }
@@ -551,12 +551,12 @@ export default function Home() {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      let baseUrl = "/fineengg_erp/jobs";
+      let baseUrl = "/fineengg_erp/system/jobs";
       let dataset: "JOBS" | "CATEGORIES" = "JOBS";
       const params = new URLSearchParams();
 
       if (activeFilter === "JOB_SERVICE") {
-        baseUrl = "/fineengg_erp/categories";
+        baseUrl = "/fineengg_erp/system/categories";
         dataset = "CATEGORIES";
       } else if (activeFilter !== "ALL") {
         // For TSO_SERVICE and KANBAN, filter by job_type on the backend.

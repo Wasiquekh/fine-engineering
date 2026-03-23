@@ -60,7 +60,7 @@ export default function NotOkWeldingPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      const response = await axiosProvider.get("/fineengg_erp/system/categories");
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -104,7 +104,7 @@ export default function NotOkWeldingPage() {
       let allData: Row[] = [];
 
       for (const jobType of jobTypes) {
-        const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+        const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
           params: {
             job_type: jobType,
             status: "not-ok",
@@ -218,7 +218,7 @@ export default function NotOkWeldingPage() {
     if (!updated_by) return toast.error("User ID not found. Please login again.");
 
     try {
-      await axiosProvider.post(`/fineengg_erp/jobs/${job_id}/${endpoint}`, {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/${endpoint}`, {
         updated_by,
         ...params
       });
@@ -254,7 +254,7 @@ export default function NotOkWeldingPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${item.id}/reject`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
         updated_by,
       });
 

@@ -89,7 +89,7 @@ export default function MaterialMovementPage() {
   // Fetch categories
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories");
+      const response = await axiosProvider.get("/fineengg_erp/system/categories");
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];

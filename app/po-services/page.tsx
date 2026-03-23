@@ -43,7 +43,7 @@ export default function POServices() {
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/po-services");
+      const response = await axiosProvider.get("/fineengg_erp/system/po-services");
       setData(response.data.data || []);
     } catch (error: any) {
       console.error("Error fetching PO services:", error);
@@ -69,7 +69,7 @@ export default function POServices() {
 
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.delete(`/fineengg_erp/po-services/${id}`);
+        const response = await axiosProvider.delete(`/fineengg_erp/system/po-services/${id}`);
         if (response.data.success) {
           toast.success("PO Service deleted successfully");
           fetchData();
@@ -117,7 +117,7 @@ export default function POServices() {
     };
 
     try {
-      const response = await axiosProvider.post("/fineengg_erp/po-services", payload);
+      const response = await axiosProvider.post("/fineengg_erp/system/po-services", payload);
       if (response.data.success) {
         toast.success("PO Service created successfully");
         setFlyoutOpen(false);

@@ -89,8 +89,8 @@ export default function Home() {
   
         const approvalPromises = itemsToApprove.map((item) => {
           const endpoint = isVendorTab
-            ? `/fineengg_erp/jobs/${item.id}/approve-vendors`
-            : `/fineengg_erp/jobs/${item.id}/approve`;
+            ? `/fineengg_erp/system/jobs/${item.id}/approve-vendors`
+            : `/fineengg_erp/system/jobs/${item.id}/approve`;
 
           return axiosProvider.post(endpoint, { apply_to_group: true });
         });
@@ -126,7 +126,7 @@ export default function Home() {
         }
 
         const notApprovePromises = itemsToNotApprove.map((item) =>
-          axiosProvider.post(`/fineengg_erp/jobs/${item.id}/not-approve`, { apply_to_group: true })
+          axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/not-approve`, { apply_to_group: true })
         );
 
         await Promise.all(notApprovePromises);
@@ -168,7 +168,7 @@ export default function Home() {
         params.append("assign_to_not", val);
       });
 
-      const url = `/fineengg_erp/jobs?${params.toString()}`;
+      const url = `/fineengg_erp/system/jobs?${params.toString()}`;
 
       const response = await axiosProvider.get(url);
 

@@ -66,7 +66,7 @@ export default function JobDetailsPage() {
           if (assign_to) {
             urlParams.append("assign_to", assign_to);
           }
-          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?${urlParams.toString()}`);
+          const jobsResponse = await axiosProvider.get(`/fineengg_erp/system/jobs?${urlParams.toString()}`);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;

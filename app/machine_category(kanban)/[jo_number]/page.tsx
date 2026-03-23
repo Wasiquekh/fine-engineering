@@ -60,7 +60,7 @@ export default function JoNumberPage() {
     setLoading(true);
     try {
       const response = await axiosProvider.get(
-        `/fineengg_erp/jobs?job_type=KANBAN&jo_number=${encodeURIComponent(jo_number)}`
+        `/fineengg_erp/system/jobs?job_type=KANBAN&jo_number=${encodeURIComponent(jo_number)}`
       );
       if (response.data && Array.isArray(response.data.data)) {
         const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
@@ -80,7 +80,7 @@ export default function JoNumberPage() {
   const fetchAssignedJobs = useCallback(async () => {
     if (!jo_number) return;
     try {
-      const response = await axiosProvider.get("/fineengg_erp/assign-to-worker");
+      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker");
       if (response.data && Array.isArray(response.data.data)) {
         const filtered = response.data.data.filter(
           (job: AssignedJob) => String(job.jo_no) === String(jo_number)
@@ -216,7 +216,7 @@ export default function JoNumberPage() {
     };
 
     try {
-      await axiosProvider.post("/fineengg_erp/assign-to-worker", payload);
+      await axiosProvider.post("/fineengg_erp/system/assign-to-worker", payload);
       toast.success("Job assigned successfully");
       setSelectedSerialNo("");
       fetchJobs();

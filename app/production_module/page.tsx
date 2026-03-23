@@ -97,7 +97,7 @@ export default function Home() {
       if (assignToParam) {
         params.append("assign_to", assignToParam);
       }
-      let url = "/fineengg_erp/categories";
+      let url = "/fineengg_erp/system/categories";
       const queryString = params.toString();
       if (queryString) {
         url += `?${queryString}`;
@@ -129,7 +129,7 @@ export default function Home() {
     let isMounted = true;
     const loadData = async () => {
       // This component always fetches jobs. Categories are for filter tabs only.
-      const endpoint = "/fineengg_erp/jobs";
+      const endpoint = "/fineengg_erp/system/jobs";
       const params = new URLSearchParams();
 
       if (clientParam) {

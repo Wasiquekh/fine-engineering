@@ -57,7 +57,7 @@ export default function QcMainPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories", {
+      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -96,7 +96,7 @@ export default function QcMainPage() {
         assign_to: assignTo
       });
 
-      const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
         params: {
           job_type: filterParam,
           status: "in-review",
@@ -257,7 +257,7 @@ export default function QcMainPage() {
 
   const postAction = async (id: string, endpoint: string, successMsg: string, serialNo?: string) => {
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/${endpoint}`, null);
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
       const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
       toast.success(msg);
       fetchData();

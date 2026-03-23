@@ -14,11 +14,16 @@ const axiosProvider = new AxiosProvider();
 export default function JobDetailsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [jobInfo, setJobInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const isVendorTab = !!searchParams.get("assign_to_not");
   const tsoNo = params.tso_no ? decodeURIComponent(params.tso_no as string) : "";
+  
+  // Get assign_to and assign_to_not from searchParams
+  const assignTo = searchParams.get("assign_to");
+  const assignToNot = searchParams.get("assign_to_not");
 
   const handleApprove = async (id: string) => {
     const result = await Swal.fire({
@@ -33,10 +38,11 @@ export default function JobDetailsPage() {
     });
 
     if (result.isConfirmed) {
+      setLoading(true);
       try {
         const endpoint = isVendorTab
-          ? `/fineengg_erp/jobs/${id}/approve-vendors`
-          : `/fineengg_erp/jobs/${id}/approve`;
+          ? `/fineengg_erp/system/jobs/${id}/approve-vendors`
+          : `/fineengg_erp/system/jobs/${id}/approve`;
 
         const response = await axiosProvider.post(endpoint, { apply_to_group: false });
         if (response.data.success) {
@@ -47,7 +53,9 @@ export default function JobDetailsPage() {
         }
       } catch (error: any) {
         console.error("Error approving item:", error);
-        toast.error("Failed to approve item");
+        toast.error(error?.response?.data?.error || "Failed to approve item");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -65,19 +73,23 @@ export default function JobDetailsPage() {
     });
 
     if (result.isConfirmed) {
+      setLoading(true);
       try {
-        await axiosProvider.post(`/fineengg_erp/jobs/${id}/not-approve`, { apply_to_group: false });
+        await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/not-approve`, { apply_to_group: false });
         toast.success("Item marked as not approved.");
         fetchData();
       } catch (error: any) {
         console.error("Error marking item as not approved:", error);
-        toast.error("Failed to mark as not approved.");
+        toast.error(error?.response?.data?.error || "Failed to mark as not approved.");
+      } finally {
+        setLoading(false);
       }
     }
   };
 
   const fetchData = async () => {
     if (!tsoNo) return;
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       params.append("tso_no", tsoNo);
@@ -91,16 +103,17 @@ export default function JobDetailsPage() {
       if (filterParam) {
         params.append("job_type", filterParam);
       }
-      searchParams.getAll("assign_to").forEach((val) => {
-        params.append("assign_to", val);
-      });
-      searchParams.getAll("assign_to_not").forEach((val) => {
-        params.append("assign_to_not", val);
-      });
-      const response = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
-      const jobItems = response.data.data
-        .filter((item: any) => item.status !== 'completed')
-        .map((item: any) => ({
+      
+      // Handle assign_to and assign_to_not parameters
+      if (assignTo) {
+        params.append("assign_to", assignTo);
+      }
+      if (assignToNot) {
+        params.append("assign_to_not", assignToNot);
+      }
+      
+      const response = await axiosProvider.get(`/fineengg_erp/system/jobs?${params.toString()}`);
+      const jobItems = response.data.data.map((item: any) => ({
         ...item,
         is_approve: item.job_status === 'approved' ? 1 : 0,
         is_rejected: item.job_status === 'not-approved' ? 1 : 0,
@@ -118,13 +131,15 @@ export default function JobDetailsPage() {
       }
     } catch (error: any) {
       console.error("Error fetching job details:", error);
-      toast.error("Failed to load job details");
+      toast.error(error?.response?.data?.error || "Failed to load job details");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [tsoNo, searchParams]);
+  }, [tsoNo, searchParams, assignTo, assignToNot]);
 
   return (
     <>
@@ -146,101 +161,108 @@ export default function JobDetailsPage() {
             <button
               onClick={() => router.back()}
               className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded mb-6"
+              disabled={loading}
             >
               <HiArrowLeft />
               Back
             </button>
             <div className="mb-6">
               <h1 className="text-2xl font-bold text-gray-800">Job Details: {tsoNo}</h1>
-              {/* {jobInfo && (
-                  <div className="text-sm text-gray-500 mt-1">
-                      <span>Job Type: {jobInfo.job_type}</span>
-                      <span className="mx-2">|</span>
-                      <span>Job Category: {jobInfo.job_category}</span>
-                  </div>
-              )} */}
+              {jobInfo && (
+                <div className="text-sm text-gray-500 mt-1">
+                  <span>Job Type: {jobInfo.job_type}</span>
+                  <span className="mx-2">|</span>
+                  <span>Job Category: {jobInfo.job_category}</span>
+                </div>
+              )}
             </div>
 
             <div className="relative overflow-x-auto sm:rounded-lg">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">J/O Number</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">Item Description</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">Item No</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">Quantity</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">MOC</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">Bin Location</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">Status</th>
-                    <th scope="col" className="px-2 py-3 border border-tableBorder">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">No items found for this job.</p>
-                      </td>
+              {loading ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Loading...</p>
+                </div>
+              ) : (
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                  <thead className="text-xs text-[#999999]">
+                    <tr className="border border-tableBorder">
+                      <th scope="col" className="p-3 border border-tableBorder">TSO Number</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">Item Description</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">Item No</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">Quantity</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">MOC</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">Bin Location</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">Status</th>
+                      <th scope="col" className="px-2 py-3 border border-tableBorder">Actions</th>
                     </tr>
-                  ) : (
-                    items.map((item: any) => (
-                      <tr className="border border-tableBorder bg-white hover:bg-primary-100" key={item.id}>
-                        <td className="px-2 py-2 border border-tableBorder">{item.jo_number || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{item.item_description}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <span
-                            className={`px-2 py-1 rounded text-sm ${
-                              item.is_approve
-                                ? "bg-green-100 text-green-600"
-                                : item.is_rejected
-                                ? "bg-red-100 text-red-600"
-                                : "bg-yellow-100 text-yellow-600"
-                            }`}
-                          >
-                            {item.is_approve ? "Approved" : (item.is_rejected ? "Not Approved" : "Pending")}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => !item.is_approve && handleApprove(item.id)}
-                              disabled={!!item.is_approve || !!item.is_rejected}
-                              className={`p-1.5 rounded transition-colors ${
-                                item.is_approve
-                                  ? "bg-green-100 text-green-600 cursor-not-allowed"
-                                  : item.is_rejected
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                              }`}
-                              title={item.is_approve ? "Approved" : "Approve"}
-                            >
-                              <HiCheck className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => !item.is_approve && !item.is_rejected && handleNotApprove(item.id)}
-                              disabled={!!item.is_approve || !!item.is_rejected}
-                              className={`p-1.5 rounded transition-colors ${
-                                item.is_rejected
-                                  ? "bg-red-100 text-red-600 cursor-not-allowed"
-                                  : item.is_approve
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-red-100 text-red-600 hover:bg-red-200"
-                              }`}
-                              title={item.is_rejected ? "Not Approved" : "Not Approve"}
-                            >
-                              <HiX className="w-4 h-4" />
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody>
+                    {items.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-6 text-center border border-tableBorder">
+                          <p className="text-[#666666] text-base">No items found for this job.</p>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      items.map((item: any) => (
+                        <tr className="border border-tableBorder bg-white hover:bg-primary-100" key={item.id}>
+                          <td className="px-2 py-2 border border-tableBorder">{item.tso_no || "N/A"}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.item_description}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <span
+                              className={`px-2 py-1 rounded text-sm ${
+                                item.is_approve
+                                  ? "bg-green-100 text-green-600"
+                                  : item.is_rejected
+                                  ? "bg-red-100 text-red-600"
+                                  : "bg-yellow-100 text-yellow-600"
+                              }`}
+                            >
+                              {item.is_approve ? "Approved" : (item.is_rejected ? "Not Approved" : "Pending")}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => !item.is_approve && !item.is_rejected && handleApprove(item.id)}
+                                disabled={!!item.is_approve || !!item.is_rejected || loading}
+                                className={`p-1.5 rounded transition-colors ${
+                                  item.is_approve
+                                    ? "bg-green-100 text-green-600 cursor-not-allowed"
+                                    : item.is_rejected
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                                }`}
+                                title={item.is_approve ? "Approved" : "Approve"}
+                              >
+                                <HiCheck className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => !item.is_approve && !item.is_rejected && handleNotApprove(item.id)}
+                                disabled={!!item.is_approve || !!item.is_rejected || loading}
+                                className={`p-1.5 rounded transition-colors ${
+                                  item.is_rejected
+                                    ? "bg-red-100 text-red-600 cursor-not-allowed"
+                                    : item.is_approve
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-red-100 text-red-600 hover:bg-red-200"
+                                }`}
+                                title={item.is_rejected ? "Not Approved" : "Not Approve"}
+                              >
+                                <HiX className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>

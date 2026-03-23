@@ -65,7 +65,7 @@ export default function JobDetailsPage() {
             params.append('assign_to', assignToParam);
           }
 
-          const jobsResponse = await axiosProvider.get(`/fineengg_erp/jobs?${params.toString()}`);
+          const jobsResponse = await axiosProvider.get(`/fineengg_erp/system/jobs?${params.toString()}`);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
@@ -133,7 +133,7 @@ export default function JobDetailsPage() {
       params.append('assign_to', assignToName);
       params.append('assign_date', formattedDate);
 
-      await axiosProvider.post(`/fineengg_erp/jobs/${id}/assign`, params);
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/assign`, params);
       toast.success("Job assigned successfully");
 
       setJobDetails((prev) =>

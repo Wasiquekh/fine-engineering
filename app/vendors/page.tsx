@@ -32,7 +32,7 @@ export default function Home() {
 
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.post(`/fineengg_erp/jobs/${id}/approve`, {});
+        const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/approve`, {});
 
         if (response.data.success) {
           toast.success("Job approved successfully");
@@ -54,7 +54,7 @@ export default function Home() {
 
   const fetchData = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/jobs");
+      const response = await axiosProvider.get("/fineengg_erp/system/jobs");
       const updatedData = response.data.data.map((item: any) => ({
         ...item,
         is_approve: item.is_approved ? 1 : 0,

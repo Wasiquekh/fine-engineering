@@ -59,7 +59,7 @@ export default function ReviewVendorPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/categories", {
+      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -95,7 +95,7 @@ export default function ReviewVendorPage() {
       let allData: QcRow[] = [];
 
       for (const jobType of jobTypes) {
-        const response = await axiosProvider.get("/fineengg_erp/assign-to-worker", {
+        const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
           params: {
             job_type: jobType,
             status: "in-review",
@@ -259,7 +259,7 @@ export default function ReviewVendorPage() {
 
   const postAction = async (id: string, endpoint: string, successMsg: string) => {
     try {
-      await axiosProvider.post(`/fineengg_erp/assign-to-worker/${id}/${endpoint}`, null);
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
       toast.success(successMsg);
       fetchData();
       setSelectedJobNo(null);
