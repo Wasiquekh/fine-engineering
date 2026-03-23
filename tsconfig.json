@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "target": "ES2015",  // Add this line
     "lib": [
       "dom",
       "dom.iterable",
@@ -26,8 +27,10 @@
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx"
-, "app/customer/page.tsx", "app/firebase-config.js"  ],
+    "**/*.tsx",
+    "app/customer/page.tsx",
+    "app/firebase-config.js"
+  ],
   "exclude": [
     "node_modules"
   ]
