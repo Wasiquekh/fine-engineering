@@ -84,7 +84,7 @@ export default function OtpHome() {
     try {
       console.log("Generating QR code for userId:", userId);
       
-      const res = await axiosProvider.post(`/fineengg_erp/system/generateqrcode?userId=${userId}`, {});
+      const res = await axiosProvider.post(`/fineengg_erp/system/system/generateqrcode?userId=${userId}`, {});
       
       console.log("QR Code response:", res.data);
       
@@ -153,7 +153,7 @@ export default function OtpHome() {
         payload.secretKey = secretKey;
       }
       
-      const res = await axiosProvider.post("/fineengg_erp/system/verifytotp", payload);
+      const res = await axiosProvider.post("/fineengg_erp/system/system/verifytotp", payload);
 
       console.log("Verify TOTP response:", res.data);
 

@@ -43,7 +43,7 @@ export default function PermissionManager({ role, onClose, onSave }: PermissionM
     setLoading(true);
     try {
       // Fetch all permissions
-      const permsRes = await axiosProvider.get("/fineengg_erp/system/permissions");
+      const permsRes = await axiosProvider.get("/fineengg_erp/system/system/permissions");
       if (permsRes.data.success) {
         const permsData = permsRes.data.data || [];
         setPermissions(permsData);
@@ -65,7 +65,7 @@ export default function PermissionManager({ role, onClose, onSave }: PermissionM
       }
 
       // Fetch role permissions
-      const rolePermsRes = await axiosProvider.get(`/fineengg_erp/system/role-permissions?roleId=${role.id}`);
+      const rolePermsRes = await axiosProvider.get(`/fineengg_erp/system/system/role-permissions?roleId=${role.id}`);
       if (rolePermsRes.data.success) {
         setRolePermissions(rolePermsRes.data.data.map((p: any) => p.permission_id));
       }
@@ -127,7 +127,7 @@ export default function PermissionManager({ role, onClose, onSave }: PermissionM
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await axiosProvider.post("/fineengg_erp/system/assign-permissions", {
+      const res = await axiosProvider.post("/fineengg_erp/system/system/assign-permissions", {
         roleId: role.id,
         permissionIds: rolePermissions
       });

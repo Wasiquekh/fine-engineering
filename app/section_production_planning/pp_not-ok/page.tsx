@@ -14,7 +14,28 @@ import { FaArrowLeft } from "react-icons/fa";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
-// Types
+// TSO Service Categories
+const tsoServiceCategory = [
+  { value: "drawing", label: "Drawing" },
+  { value: "sample", label: "Sample" },
+];
+
+// Kanban Categories
+const kanbanCategory = [
+  { value: "VESSEL", label: "VESSEL" },
+  { value: "HEAD", label: "HEAD" },
+  { value: "CLAMP", label: "CLAMP" },
+  { value: "PILLER_DRIVE_ASSEMBLY", label: "PILLER DRIVE ASSEMBLY" },
+  { value: "HEATER_PLATE", label: "HEATER PLATE" },
+  { value: "COMPRESSION_RING", label: "COMPRESSION RING" },
+  { value: "HEATER_SHELL", label: "HEATER SHELL" },
+  { value: "OUTER_RING", label: "OUTER RING" },
+  { value: "COOLING_COIL", label: "COOLING COIL" },
+  { value: "SPARGER", label: "SPARGER" },
+  { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
+  { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
+];
+
 type QcRow = {
   id: string;
   job_id?: string | null;
@@ -31,39 +52,32 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
-  job_type?: string | null;
   job?: {
     id?: string | null;
     job_no?: string | null;
     tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
-    job_type?: string | null;
   } | null;
 };
 
-export default function ReviewVendorPage() {
+export default function QcMainPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
+  const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
+  const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
 
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
-  const assignTo = searchParams.get("assign_to") || "";
-
-  console.log("Review Vendor Page - URL Params:", { filterParam, client, assignTo });
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/system/categories", {
-        params: {
-          ...(client ? { client_name: client } : {}),
-        },
-      } as any);
+      const response = await axiosProvider.get("/fineengg_erp/system/categories");
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -80,7 +94,8 @@ export default function ReviewVendorPage() {
         }
       });
 
-      setCategories(Array.from(uniqueMap.values()));
+      const formattedCats = Array.from(uniqueMap.values());
+      setCategories(formattedCats);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
@@ -90,36 +105,26 @@ export default function ReviewVendorPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch ALL job types for vendor review
-      const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
-      let allData: QcRow[] = [];
+      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+        params: {
+          job_type: filterParam,
+          status: "not-ok",
+          ...(client ? { client_name: client } : {}),
+        },
+      } as any);
 
-      for (const jobType of jobTypes) {
-        const response = await axiosProvider.get("/fineengg_erp/system/system/assign-to-worker", {
-          params: {
-            job_type: jobType,
-            status: "in-review",
-            review_for: "vendor",
-            ...(client ? { client_name: client } : {}),
-          },
-        } as any);
+      let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
 
-        const fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
-        
-        // Add job_type to each item
-        const dataWithJobType = fetchedData.map((item: any) => ({
-          ...item,
-          job_type: jobType
-        }));
-        
-        allData = [...allData, ...dataWithJobType];
+      if (filterParam === "JOB_SERVICE") {
+        fetchedData = fetchedData.filter(
+          (item: any) => item?.review_for !== "vendor" && item?.review_for !== "welding"
+        );
       }
 
-      console.log(`Fetched ${allData.length} vendor review items`);
-      setData(allData);
+      setData(fetchedData);
     } catch (error) {
-      console.error("Error fetching vendor review data:", error);
-      toast.error("Failed to load vendor review data");
+      console.error("Error fetching QC data:", error);
+      toast.error("Failed to load QC data");
       setData([]);
     } finally {
       setLoading(false);
@@ -128,55 +133,154 @@ export default function ReviewVendorPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, [client]);
+  }, []);
 
   useEffect(() => {
     setSelectedJobNo(null);
     fetchData();
-  }, [client]);
+  }, [filterParam, client]);
+
+  const getJobId = (item: QcRow) => item.job_id || item.job?.id;
+
+  const actionConfirm = async (title: string, text: string, confirm: string) => {
+    const r = await Swal.fire({
+      title,
+      text,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: confirm,
+    });
+    return r.isConfirmed;
+  };
+
+  const handleBackToQC = async (item: QcRow) => {
+    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC.", "Yes, Send to QC"))) return;
+    
+    const job_id = getJobId(item);
+    const updated_by = storage.getUserId();
+
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/backToQc`, {
+        updated_by,
+      });
+
+      toast.success("Serial sent back to QC successfully");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to send back to QC");
+    }
+  };
+
+  // Rework function using reject endpoint (rework = reject)
+  const handleRework = async (item: QcRow) => {
+    if (!item) return;
+
+    if (!(await actionConfirm(
+      "Send for rework?",
+      `Serial: ${item.serial_no || 'N/A'} will be sent for rework.`,
+      "Yes, Rework"
+    ))) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+        updated_by,
+      });
+
+      toast.success(`Item ${item.serial_no} sent for rework`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Rework failed");
+    }
+  };
+
+  const handleReject = async (item: QcRow) => {
+    if (!(await actionConfirm("Reject this serial?", "This will reject the selected Not OK serial.", "Yes, Reject"))) return;
+    
+    const job_id = getJobId(item);
+    const updated_by = storage.getUserId();
+
+    if (!job_id) return toast.error("Job ID not found.");
+    if (!updated_by) return toast.error("User ID not found. Please login again.");
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/reject-not-ok`, {
+        updated_by,
+      });
+
+      toast.success("Serial rejected successfully");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Reject failed");
+    }
+  };
 
   const filteredData = useMemo(() => {
-    if (jobServiceCategoryFilter === "ALL") return data;
+    let currentData = [...data];
 
-    return data.filter((item) => {
-      const category = item.job_category || item.job?.job_category || "";
-      return category === jobServiceCategoryFilter;
-    });
-  }, [data, jobServiceCategoryFilter]);
+    if (filterParam === "JOB_SERVICE") {
+      if (jobServiceCategoryFilter !== "ALL") {
+        currentData = currentData.filter((item) => {
+          const category = item.job_category || item.job?.job_category || "";
+          return category === jobServiceCategoryFilter;
+        });
+      }
+    } else if (filterParam === "TSO_SERVICE") {
+      if (tsoSubFilter !== "ALL") {
+        currentData = currentData.filter((item) => {
+          const category = item.job_category || item.job?.job_category || "";
+          return category === tsoSubFilter;
+        });
+      }
+    } else if (filterParam === "KANBAN") {
+      if (kanbanSubFilter !== "ALL") {
+        currentData = currentData.filter((item) => {
+          const category = item.job_category || item.job?.job_category || "";
+          return category === kanbanSubFilter;
+        });
+      }
+    }
 
-  // Get unique identifiers based on job type
+    return currentData;
+  }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
+
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
-    
     filteredData.forEach((item) => {
-      const jobType = item.job_type || item.job?.job_type;
-      
-      if (jobType === "TSO_SERVICE") {
-        const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(`TSO:${tsoNo}`);
+      let identifier: string | null | undefined;
+      if (filterParam === "TSO_SERVICE") {
+        identifier = item.tso_no || item.job?.tso_no;
+      } else if (filterParam === "KANBAN") {
+        identifier = item.jo_no || item.job_no || item.job?.job_no;
       } else {
-        const jobNo = item.job_no || item.job?.job_no;
-        if (jobNo) ids.add(`JOB:${jobNo}`);
+        identifier = item.job_no || item.job?.job_no;
       }
+      if (identifier) ids.add(identifier);
     });
-    
     return Array.from(ids);
-  }, [filteredData]);
+  }, [filteredData, filterParam]);
 
   const getJoGroupsForIdentifier = (identifier: string) => {
-    const [type, actualId] = identifier.split(':');
-    
     const items = filteredData.filter((item) => {
-      const jobType = item.job_type || item.job?.job_type;
-      
-      if (type === "TSO" && jobType === "TSO_SERVICE") {
-        return (item.tso_no || item.job?.tso_no) === actualId;
-      } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
-        return (item.job_no || item.job?.job_no) === actualId;
+      let itemIdentifier: string | null | undefined;
+      if (filterParam === "TSO_SERVICE") {
+        itemIdentifier = item.tso_no || item.job?.tso_no;
+      } else if (filterParam === "KANBAN") {
+        itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
+      } else {
+        itemIdentifier = item.job_no || item.job?.job_no;
       }
-      return false;
+      return itemIdentifier === identifier;
     });
-    
     const groups: Record<string, QcRow[]> = {};
 
     items.forEach((item) => {
@@ -196,22 +300,20 @@ export default function ReviewVendorPage() {
         uniqueJoCount: number;
         jobCategory: string;
         assigningDate: string;
-        jobType: string;
       }
     > = {};
 
     jobIdentifiers.forEach((identifier) => {
-      const [type, actualId] = identifier.split(':');
-      
       const items = filteredData.filter((item) => {
-        const jobType = item.job_type || item.job?.job_type;
-        
-        if (type === "TSO" && jobType === "TSO_SERVICE") {
-          return (item.tso_no || item.job?.tso_no) === actualId;
-        } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
-          return (item.job_no || item.job?.job_no) === actualId;
+        let itemIdentifier: string | null | undefined;
+        if (filterParam === "TSO_SERVICE") {
+          itemIdentifier = item.tso_no || item.job?.tso_no;
+        } else if (filterParam === "KANBAN") {
+          itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
+        } else {
+          itemIdentifier = item.job_no || item.job?.job_no;
         }
-        return false;
+        return itemIdentifier === identifier;
       });
 
       const totalQty = items.reduce(
@@ -227,106 +329,24 @@ export default function ReviewVendorPage() {
           : "N/A";
 
       const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
-      
-      const jobType = items.length > 0 
-        ? (items[0].job_type || items[0].job?.job_type || "JOB_SERVICE")
-        : "JOB_SERVICE";
 
       summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
-        jobType,
       };
     });
 
     return summary;
-  }, [filteredData, jobIdentifiers]);
+  }, [filteredData, jobIdentifiers, filterParam]);
 
-  const uniqueCategories = useMemo(() => categories, [categories]);
-
-  const actionConfirm = async (title: string, text: string, confirm: string) => {
-    const r = await Swal.fire({
-      title,
-      text,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: confirm,
-    });
-    return r.isConfirmed;
-  };
-
-  const postAction = async (id: string, endpoint: string, successMsg: string) => {
-    try {
-      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${id}/${endpoint}`, null);
-      toast.success(successMsg);
-      fetchData();
-      setSelectedJobNo(null);
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Action failed");
-    }
-  };
-
-  const handleQc = async (id: string) => {
-    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC"))) return;
-    postAction(id, "ready-for-qc", "Moved to Ready for QC");
-  };
-
-  const handleMachine = async (id: string) => {
-    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine"))) return;
-    postAction(id, "reject", "Moved to In-Progress");
-  };
-
-  const handleWelding = async (id: string) => {
-    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding"))) return;
-    postAction(id, "welding", "Moved to QC Welding");
-  };
-
-  const handleVendor = async (id: string) => {
-    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor"))) return;
-    postAction(id, "vendor", "Moved to Vendor Outsource");
-  };
-
-  // Get display name for identifier
-  const getIdentifierDisplayName = (identifier: string) => {
-    const [type, actualId] = identifier.split(':');
-    if (type === "TSO") {
-      return `TSO: ${actualId}`;
-    }
-    return actualId;
-  };
-
-  // Get job type badge
-  const getJobTypeBadge = (jobType: string) => {
-    switch(jobType) {
-      case "TSO_SERVICE":
-        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
-      case "KANBAN":
-        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
-      default:
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
-    }
-  };
-
-  // Count by job type
-  const countsByType = useMemo(() => {
-    const counts = {
-      JOB_SERVICE: 0,
-      TSO_SERVICE: 0,
-      KANBAN: 0,
-      TOTAL: data.length
-    };
-    
-    data.forEach(item => {
-      const type = item.job_type || item.job?.job_type;
-      if (type === "JOB_SERVICE") counts.JOB_SERVICE++;
-      else if (type === "TSO_SERVICE") counts.TSO_SERVICE++;
-      else if (type === "KANBAN") counts.KANBAN++;
-    });
-    
-    return counts;
-  }, [data]);
+  const uniqueCategories = useMemo(() => {
+    if (filterParam === "JOB_SERVICE") return categories;
+    if (filterParam === "TSO_SERVICE") return tsoServiceCategory;
+    if (filterParam === "KANBAN") return kanbanCategory;
+    return [];
+  }, [filterParam, categories]);
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -347,41 +367,62 @@ export default function ReviewVendorPage() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
             <h1 className="text-xl font-semibold text-firstBlack">
-              Review Vendor • All Services
+              Not Ok • {filterParam.replace("_", " ")}
               {client && ` • ${client}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Status: <span className="font-semibold">in-review</span> | review_for:{" "}
-              <span className="font-semibold">vendor</span>
+              Status: <span className="font-semibold">not-ok</span>
             </p>
-            <div className="flex gap-3 mt-2 text-xs">
-              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">TSO: {countsByType.TSO_SERVICE}</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">KANBAN: {countsByType.KANBAN}</span>
-              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">TOTAL: {countsByType.TOTAL}</span>
-            </div>
           </div>
 
           {uniqueCategories.length > 0 && (
             <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
               <button
-                onClick={() => setJobServiceCategoryFilter("ALL")}
+                onClick={() => {
+                  if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter("ALL");
+                  if (filterParam === "TSO_SERVICE") setTsoSubFilter("ALL");
+                  if (filterParam === "KANBAN") setKanbanSubFilter("ALL");
+                }}
                 className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                  jobServiceCategoryFilter === "ALL"
-                    ? "bg-primary-600 text-white"
+                  filterParam === "JOB_SERVICE"
+                    ? jobServiceCategoryFilter === "ALL"
+                      ? "bg-primary-600 text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                    : filterParam === "TSO_SERVICE"
+                    ? tsoSubFilter === "ALL"
+                      ? "bg-primary-600 text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                    : filterParam === "KANBAN"
+                    ? kanbanSubFilter === "ALL"
+                      ? "bg-primary-600 text-white"
+                      : "text-gray-600 hover:bg-gray-100"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                All Categories
+                All
               </button>
 
               {uniqueCategories.map((cat) => (
                 <button
                   key={cat.value}
-                  onClick={() => setJobServiceCategoryFilter(cat.value)}
+                  onClick={() => {
+                    if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter(cat.value);
+                    if (filterParam === "TSO_SERVICE") setTsoSubFilter(cat.value);
+                    if (filterParam === "KANBAN") setKanbanSubFilter(cat.value);
+                  }}
                   className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    jobServiceCategoryFilter === cat.value
-                      ? "bg-primary-600 text-white"
+                    filterParam === "JOB_SERVICE"
+                      ? jobServiceCategoryFilter === cat.value
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                      : filterParam === "TSO_SERVICE"
+                      ? tsoSubFilter === cat.value
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                      : filterParam === "KANBAN"
+                      ? kanbanSubFilter === cat.value
+                        ? "bg-primary-600 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
@@ -403,7 +444,11 @@ export default function ReviewVendorPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {selectedJobNo.startsWith('TSO:') ? 'TSO' : 'Job'}: {selectedJobNo.split(':')[1] || selectedJobNo}
+                  {filterParam === "TSO_SERVICE"
+                    ? "TSO"
+                    : filterParam === "KANBAN"
+                    ? "J/O Number"
+                    : "Job"}: {selectedJobNo}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -421,6 +466,7 @@ export default function ReviewVendorPage() {
                       <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
@@ -437,7 +483,7 @@ export default function ReviewVendorPage() {
                               JO: {jo}
                             </td>
                           </tr>
-                          
+
                           {/* Individual Items with Actions */}
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
@@ -453,32 +499,25 @@ export default function ReviewVendorPage() {
                               <td className="px-2 py-2 border border-tableBorder">
                                 <div className="flex items-center gap-1 flex-wrap">
                                   <button
-                                    onClick={() => handleQc(item.id)}
+                                    onClick={() => handleBackToQC(item)}
                                     className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Ready for QC"
+                                    title="Send back to QC"
                                   >
                                     QC
                                   </button>
                                   <button
-                                    onClick={() => handleMachine(item.id)}
-                                    className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
-                                    title="Send to Machine"
+                                    onClick={() => handleRework(item)}
+                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                    title="Send for rework"
                                   >
-                                    M/C
+                                    Rework
                                   </button>
                                   <button
-                                    onClick={() => handleWelding(item.id)}
-                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    title="Send to Welding"
+                                    onClick={() => handleReject(item)}
+                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                    title="Reject this serial"
                                   >
-                                    WLD
-                                  </button>
-                                  <button
-                                    onClick={() => handleVendor(item.id)}
-                                    className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-                                    title="Send to Vendor"
-                                  >
-                                    VEN
+                                    Reject
                                   </button>
                                 </div>
                               </td>
@@ -489,17 +528,32 @@ export default function ReviewVendorPage() {
                     )}
                   </tbody>
                 </table>
+
+                <div className="text-xs text-gray-400 mt-2 px-2 text-right">
+                  Actions are per serial number
+                </div>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Vendor Review - All Services</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  {filterParam === "TSO_SERVICE"
+                    ? "Not OK TSOs"
+                    : filterParam === "KANBAN"
+                    ? "Not OK Kanban"
+                    : "Not OK Jobs"}
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">Job/TSO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Type</th>
-                      <th className="px-2 py-0 border border-tableBorder">Category</th>
+                      <th className="p-3 border border-tableBorder">
+                        {filterParam === "TSO_SERVICE"
+                          ? "TSO No"
+                          : filterParam === "KANBAN"
+                          ? "J/O Number"
+                          : "Job No"}
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">Job Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
@@ -509,14 +563,14 @@ export default function ReviewVendorPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No vendor review data found</p>
+                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                          <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
                     ) : (
@@ -530,12 +584,7 @@ export default function ReviewVendorPage() {
                             onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">
-                                {getIdentifierDisplayName(identifier)}
-                              </p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {getJobTypeBadge(summary.jobType)}
+                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.jobCategory}</p>
@@ -559,13 +608,8 @@ export default function ReviewVendorPage() {
             )}
           </div>
 
-          <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
-            <div>
-              Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
-            </div>
-            <div className="text-xs text-gray-400">
-              Actions are per serial number
-            </div>
+          <div className="text-xs text-gray-500 mt-3 px-2">
+            Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
           </div>
         </div>
       </div>

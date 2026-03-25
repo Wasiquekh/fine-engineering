@@ -77,7 +77,7 @@ export default function QcMainPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
+      const response = await axiosProvider.get("/fineengg_erp/system/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -109,7 +109,7 @@ export default function QcMainPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+      const response = await axiosProvider.get("/fineengg_erp/system/system/assign-to-worker", {
         params: {
           job_type: filterParam,
           status: "ready-for-qc",
@@ -310,7 +310,7 @@ export default function QcMainPage() {
     try {
       // Process all items in the JO
       for (const item of items) {
-        await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+        await axiosProvider.post("/fineengg_erp/system/system/jobs/dispatch", {
           job_id,
           chalan_no: formValues.chalan_no,
           dispatch_date: formValues.dispatch_date,
@@ -352,7 +352,7 @@ export default function QcMainPage() {
     }
   
     try {
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
+      await axiosProvider.post(`/fineengg_erp/system/system/jobs/${job_id}/not-ok`, {
         reason,
         updated_by,
       });
@@ -403,7 +403,7 @@ export default function QcMainPage() {
     // Process each item individually using the reject endpoint
     for (const item of items) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+        await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/reject`, {
           updated_by,
           // Note: The current backend doesn't accept reason, but we'll keep it for future
           // reason: reason 
@@ -457,7 +457,7 @@ export default function QcMainPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/reject`, {
         updated_by,
         // Note: The current backend doesn't accept reason, but we'll keep it for future
         // reason: reason

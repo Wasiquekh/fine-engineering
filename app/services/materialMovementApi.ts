@@ -8,7 +8,7 @@ export const getMaterialMovement = async (params: Record<string, any>) => {
     console.log("API Request Params:", params);
     
     const response = await axiosProvider.get(
-      "/fineengg_erp/material/material-movement",
+      "/fineengg_erp/system/material/material-movement",
       { params } as any
     );
     

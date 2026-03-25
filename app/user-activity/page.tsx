@@ -146,7 +146,7 @@ export default function UserActivityPage() {
   // Fetch users for filter dropdown
   const fetchUserOptions = async () => {
     try {
-      const res = await axiosProvider.get("/fineengg_erp/system/getallusername");
+      const res = await axiosProvider.get("/fineengg_erp/system/system/getallusername");
       if (res.data.success) {
         const users = res.data.data.users || [];
         const options = users.map((user: User) => ({
@@ -163,7 +163,7 @@ export default function UserActivityPage() {
   // Fetch workers for filter dropdown
   const fetchWorkerOptions = async () => {
     try {
-      const res = await axiosProvider.get("/fineengg_erp/worker/workers");
+      const res = await axiosProvider.get("/fineengg_erp/system/worker/workers");
       if (res.data.success) {
         const workers = res.data.data || [];
         const options = workers.map((worker: Worker) => ({
@@ -194,7 +194,7 @@ export default function UserActivityPage() {
   const fetchActivities = async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get(`/fineengg_erp/system/getallactivites?page=${page}&limit=${limit}`);
+      const res = await axiosProvider.get(`/fineengg_erp/system/system/getallactivites?page=${page}&limit=${limit}`);
       if (res.data.success) {
         setActivities(res.data.data.activities || []);
         setTotalPages(res.data.data.totalPages || 1);
@@ -227,7 +227,7 @@ export default function UserActivityPage() {
       }
 
       const res = await axiosProvider.post(
-        `/fineengg_erp/system/filteruseractivites?page=${page}&limit=${limit}`,
+        `/fineengg_erp/system/system/filteruseractivites?page=${page}&limit=${limit}`,
         apiFilterData
       );
       

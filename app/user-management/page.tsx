@@ -96,7 +96,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get(`/fineengg_erp/system/getalluser?page=${page}&limit=${limit}`);
+      const res = await axiosProvider.get(`/fineengg_erp/system/system/getalluser?page=${page}&limit=${limit}`);
       if (res.data.success) {
         setUsers(res.data.data.users || []);
         setTotalPages(res.data.data.totalPages || 1);
@@ -112,7 +112,7 @@ export default function UserManagementPage() {
   const fetchRoles = async () => {
     try {
       // ✅ CORRECT PATH
-      const res = await axiosProvider.get("/fineengg_erp/system/roles");
+      const res = await axiosProvider.get("/fineengg_erp/system/system/roles");
       if (res.data.success) {
         setRoles(res.data.data || []);
       }
@@ -123,7 +123,7 @@ export default function UserManagementPage() {
 
   const fetchPermissions = async () => {
     try {
-      const res = await axiosProvider.get("/fineengg_erp/system/permissions");
+      const res = await axiosProvider.get("/fineengg_erp/system/system/permissions");
       if (res.data.success) {
         setPermissions(res.data.data || []);
       }
@@ -134,7 +134,7 @@ export default function UserManagementPage() {
 
   const fetchRolePermissions = async (roleId: string) => {
     try {
-      const res = await axiosProvider.get(`/fineengg_erp/system/role-permissions?roleId=${roleId}`);
+      const res = await axiosProvider.get(`/fineengg_erp/system/system/role-permissions?roleId=${roleId}`);
       if (res.data.success) {
         setRolePermissions(res.data.data.map((p: any) => p.permission_id));
       }
@@ -156,7 +156,7 @@ export default function UserManagementPage() {
 
     if (result.isConfirmed) {
       try {
-        const res = await axiosProvider.post("/fineengg_erp/system/deleteuser", { id: user.id });
+        const res = await axiosProvider.post("/fineengg_erp/system/system/deleteuser", { id: user.id });
         if (res.data.success) {
           toast.success("User deleted successfully");
           fetchUsers();
@@ -235,7 +235,7 @@ export default function UserManagementPage() {
         roleName: selectedRole?.name
       };
       
-      const res = await axiosProvider.post("/fineengg_erp/system/register", payload);
+      const res = await axiosProvider.post("/fineengg_erp/system/system/register", payload);
       
       if (res.data.success) {
         toast.success("User created successfully");
@@ -250,7 +250,7 @@ export default function UserManagementPage() {
 
   const handleEditUser = async (values: any) => {
     try {
-      const res = await axiosProvider.post("/fineengg_erp/system/updateuser", {
+      const res = await axiosProvider.post("/fineengg_erp/system/system/updateuser", {
         id: selectedUser?.id,
         ...values
       });
@@ -269,7 +269,7 @@ export default function UserManagementPage() {
     if (!selectedRoleForPermission) return;
     
     try {
-      const res = await axiosProvider.post("/fineengg_erp/system/assign-permissions", {
+      const res = await axiosProvider.post("/fineengg_erp/system/system/assign-permissions", {
         roleId: selectedRoleForPermission.id,
         permissionIds: rolePermissions
       });
@@ -746,7 +746,7 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
 
     try {
       // ✅ CORRECT PATH
-      const res = await axiosProvider.post("/fineengg_erp/system/createrole", {
+      const res = await axiosProvider.post("/fineengg_erp/system/system/createrole", {
         name: formData.name,
         level: parseInt(formData.level)
       });
@@ -766,7 +766,7 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
   
     try {
       // ✅ CORRECT PATH
-      const res = await axiosProvider.put(`/fineengg_erp/system/roles/${editingRole.id}`, {
+      const res = await axiosProvider.put(`/fineengg_erp/system/system/roles/${editingRole.id}`, {
         name: editingRole.name,
         level: editingRole.level
       });
@@ -794,7 +794,7 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
     if (result.isConfirmed) {
       try {
         // ✅ CORRECT PATH
-        const res = await axiosProvider.delete(`/fineengg_erp/system/roles/${role.id}`);
+        const res = await axiosProvider.delete(`/fineengg_erp/system/system/roles/${role.id}`);
         if (res.data.success) {
           toast.success(`Role "${role.name}" deleted successfully`);
           onRoleUpdate();

@@ -16,7 +16,7 @@ export async function getAssignments(params: {
   if (params.page) qs.set("page", String(params.page));
   if (params.limit) qs.set("limit", String(params.limit));
 
-  const res = await api.get(`/fineengg_erp/system/assign-to-worker?${qs.toString()}`);
+  const res = await api.get(`/fineengg_erp/system/system/assign-to-worker?${qs.toString()}`);
   return res.data;
 }
 
@@ -32,14 +32,14 @@ export async function getReviewAssignmentsPublic(params: {
   if (params.page) qs.set("page", String(params.page));
   if (params.limit) qs.set("limit", String(params.limit));
 
-  const res = await api.get(`/fineengg_erp/system/assign-to-worker?${qs.toString()}`);
+  const res = await api.get(`/fineengg_erp/system/system/assign-to-worker?${qs.toString()}`);
   return res.data;
 }
 
 export async function postAssignVendor(id: string, vendor_name: string) {
   // backend: POST /assign-to-worker/:id/assign-vendor
   const res = await api.post(
-    `/fineengg_erp/system/assign-to-worker/${id}/assign-vendor`,
+    `/fineengg_erp/system/system/assign-to-worker/${id}/assign-vendor`,
     { vendor_name },
     { headers: { "Content-Type": "application/json" } } as any
   );
@@ -49,7 +49,7 @@ export async function postAssignVendor(id: string, vendor_name: string) {
 export async function postQcOutgoing(id: string, payload: any) {
   // backend: POST /assign-to-worker/:id/qc-outgoing
   const res = await api.post(
-    `/fineengg_erp/system/assign-to-worker/${id}/qc-outgoing`,
+    `/fineengg_erp/system/system/assign-to-worker/${id}/qc-outgoing`,
     payload,
     { headers: { "Content-Type": "application/json" } } as any
   );

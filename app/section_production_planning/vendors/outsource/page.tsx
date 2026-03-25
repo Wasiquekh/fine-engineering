@@ -1,113 +1,65 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState, Fragment } from "react";
-import LeftSideBar from "../../component/LeftSideBar";
-import DesktopHeader from "../../component/DesktopHeader";
-import AxiosProvider from "../../../provider/AxiosProvider";
-import { useSearchParams } from "next/navigation";
-import StorageManager from "../../../provider/StorageManager";
-import Swal from "sweetalert2";
+import LeftSideBar from "../../../component/LeftSideBar";
+import DesktopHeader from "../../../component/DesktopHeader";
 import { toast } from "react-toastify";
+import { ASSIGN_STATUS } from "../../../constants/assignStatus";
+import { getAssignments, postAssignVendor } from "../../../services/assignToWorkerApi";
+import { useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa";
+import Image from "next/image";
 
-const axiosProvider = new AxiosProvider();
-const storage = new StorageManager();
+type Row = any;
 
-// Types
-type QcRow = {
-  id: string;
-  job_id?: string | null;
-  job_no?: string | null;
-  tso_no?: string | null;
-  jo_no?: string | null;
-  serial_no?: string | null;
-  item_no?: number | string | null;
-  machine_category?: string | null;
-  machine_size?: string | null;
-  machine_code?: string | null;
-  worker_name?: string | null;
-  quantity_no?: number | string | null;
-  assigning_date?: string | null;
-  review_for?: "vendor" | "welding" | null;
-  job_category?: string | null;
-  job_type?: string | null;
-  job?: {
-    id?: string | null;
-    job_no?: string | null;
-    tso_no?: string | null;
-    job_category?: string | null;
-    client_name?: string | null;
-    job_type?: string | null;
-  } | null;
-};
+const VENDOR_OPTIONS = ["Ashfaq", "Others"];
 
-export default function ReviewVendorPage() {
-  const [data, setData] = useState<QcRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function VendorOutsourcePage() {
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
-
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
 
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const filterParam = searchParams.get("filter") || "ALL";
   const client = searchParams.get("client") || "";
-  const assignTo = searchParams.get("assign_to") || "";
 
-  console.log("Review Vendor Page - URL Params:", { filterParam, client, assignTo });
+  const fetchCategories = async (data: Row[]) => {
+    const uniqueMap = new Map<string, { value: string; label: string }>();
 
-  const fetchCategories = async () => {
-    try {
-      const response = await axiosProvider.get("/fineengg_erp/system/system/categories", {
-        params: {
-          ...(client ? { client_name: client } : {}),
-        },
-      } as any);
-      const cats = Array.isArray(response?.data?.data)
-        ? response.data.data
-        : response?.data?.data?.categories || [];
+    data.forEach((item: any) => {
+      const jobCategory = String(item?.job_category || item?.job?.job_category || "").trim();
+      if (jobCategory && !uniqueMap.has(jobCategory)) {
+        uniqueMap.set(jobCategory, {
+          value: jobCategory,
+          label: jobCategory,
+        });
+      }
+    });
 
-      const uniqueMap = new Map<string, { value: string; label: string }>();
-
-      cats.forEach((cat: any) => {
-        const jobCategory = String(cat?.job_category || "").trim();
-        if (jobCategory && !uniqueMap.has(jobCategory)) {
-          uniqueMap.set(jobCategory, {
-            value: jobCategory,
-            label: jobCategory,
-          });
-        }
-      });
-
-      setCategories(Array.from(uniqueMap.values()));
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      setCategories([]);
-    }
+    setCategories(Array.from(uniqueMap.values()));
   };
 
   const fetchData = async () => {
-    setLoading(true);
     try {
-      // Fetch ALL job types for vendor review
+      setLoading(true);
+      
+      // Fetch ALL job types for vendor outsource
       const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
-      let allData: QcRow[] = [];
+      let allData: Row[] = [];
 
       for (const jobType of jobTypes) {
-        const response = await axiosProvider.get("/fineengg_erp/system/system/assign-to-worker", {
-          params: {
-            job_type: jobType,
-            status: "in-review",
-            review_for: "vendor",
-            ...(client ? { client_name: client } : {}),
-          },
-        } as any);
+        const data = await getAssignments({
+          status: ASSIGN_STATUS.VENDOR_OUTSOURCE,
+          job_type: jobType,
+          ...(client ? { client_name: client } : {}),
+        });
 
-        const fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
+        const list = Array.isArray(data) ? data : data?.data || [];
         
         // Add job_type to each item
-        const dataWithJobType = fetchedData.map((item: any) => ({
+        const dataWithJobType = list.map((item: any) => ({
           ...item,
           job_type: jobType
         }));
@@ -115,20 +67,15 @@ export default function ReviewVendorPage() {
         allData = [...allData, ...dataWithJobType];
       }
 
-      console.log(`Fetched ${allData.length} vendor review items`);
-      setData(allData);
-    } catch (error) {
-      console.error("Error fetching vendor review data:", error);
-      toast.error("Failed to load vendor review data");
-      setData([]);
+      setRows(allData);
+      fetchCategories(allData);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to load outsource list");
+      setRows([]);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchCategories();
-  }, [client]);
 
   useEffect(() => {
     setSelectedJobNo(null);
@@ -136,13 +83,13 @@ export default function ReviewVendorPage() {
   }, [client]);
 
   const filteredData = useMemo(() => {
-    if (jobServiceCategoryFilter === "ALL") return data;
+    if (jobServiceCategoryFilter === "ALL") return rows;
 
-    return data.filter((item) => {
+    return rows.filter((item) => {
       const category = item.job_category || item.job?.job_category || "";
       return category === jobServiceCategoryFilter;
     });
-  }, [data, jobServiceCategoryFilter]);
+  }, [rows, jobServiceCategoryFilter]);
 
   // Get unique identifiers based on job type
   const jobIdentifiers = useMemo(() => {
@@ -177,7 +124,7 @@ export default function ReviewVendorPage() {
       return false;
     });
     
-    const groups: Record<string, QcRow[]> = {};
+    const groups: Record<string, Row[]> = {};
 
     items.forEach((item) => {
       const jo = item.jo_no || "Unknown";
@@ -244,48 +191,23 @@ export default function ReviewVendorPage() {
     return summary;
   }, [filteredData, jobIdentifiers]);
 
-  const uniqueCategories = useMemo(() => categories, [categories]);
+  const onAssign = async (r: Row) => {
+    const picked = vendorPick[r.id] || "Ashfaq";
+    const finalName = picked === "Others" ? (otherName[r.id] || "").trim() : picked;
 
-  const actionConfirm = async (title: string, text: string, confirm: string) => {
-    const r = await Swal.fire({
-      title,
-      text,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: confirm,
-    });
-    return r.isConfirmed;
-  };
+    if (!finalName) {
+      toast.error("Please enter vendor name for Others");
+      return;
+    }
 
-  const postAction = async (id: string, endpoint: string, successMsg: string) => {
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${id}/${endpoint}`, null);
-      toast.success(successMsg);
+      await postAssignVendor(r.id, finalName);
+      toast.success(`Assigned to vendor: ${finalName}`);
       fetchData();
       setSelectedJobNo(null);
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Action failed");
+      toast.error(e?.response?.data?.error || "Failed to assign vendor");
     }
-  };
-
-  const handleQc = async (id: string) => {
-    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC"))) return;
-    postAction(id, "ready-for-qc", "Moved to Ready for QC");
-  };
-
-  const handleMachine = async (id: string) => {
-    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine"))) return;
-    postAction(id, "reject", "Moved to In-Progress");
-  };
-
-  const handleWelding = async (id: string) => {
-    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding"))) return;
-    postAction(id, "welding", "Moved to QC Welding");
-  };
-
-  const handleVendor = async (id: string) => {
-    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor"))) return;
-    postAction(id, "vendor", "Moved to Vendor Outsource");
   };
 
   // Get display name for identifier
@@ -315,10 +237,10 @@ export default function ReviewVendorPage() {
       JOB_SERVICE: 0,
       TSO_SERVICE: 0,
       KANBAN: 0,
-      TOTAL: data.length
+      TOTAL: rows.length
     };
     
-    data.forEach(item => {
+    rows.forEach(item => {
       const type = item.job_type || item.job?.job_type;
       if (type === "JOB_SERVICE") counts.JOB_SERVICE++;
       else if (type === "TSO_SERVICE") counts.TSO_SERVICE++;
@@ -326,7 +248,11 @@ export default function ReviewVendorPage() {
     });
     
     return counts;
-  }, [data]);
+  }, [rows]);
+
+  // per-row UI states
+  const [vendorPick, setVendorPick] = useState<Record<string, string>>({});
+  const [otherName, setOtherName] = useState<Record<string, string>>({});
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -347,12 +273,11 @@ export default function ReviewVendorPage() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
             <h1 className="text-xl font-semibold text-firstBlack">
-              Review Vendor • All Services
+              Vendor Outsource • All Services
               {client && ` • ${client}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Status: <span className="font-semibold">in-review</span> | review_for:{" "}
-              <span className="font-semibold">vendor</span>
+              Status: <span className="font-semibold">{ASSIGN_STATUS.VENDOR_OUTSOURCE}</span>
             </p>
             <div className="flex gap-3 mt-2 text-xs">
               <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
@@ -362,7 +287,7 @@ export default function ReviewVendorPage() {
             </div>
           </div>
 
-          {uniqueCategories.length > 0 && (
+          {categories.length > 0 && (
             <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
               <button
                 onClick={() => setJobServiceCategoryFilter("ALL")}
@@ -375,7 +300,7 @@ export default function ReviewVendorPage() {
                 All Categories
               </button>
 
-              {uniqueCategories.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.value}
                   onClick={() => setJobServiceCategoryFilter(cat.value)}
@@ -406,93 +331,101 @@ export default function ReviewVendorPage() {
                   {selectedJobNo.startsWith('TSO:') ? 'TSO' : 'Job'}: {selectedJobNo.split(':')[1] || selectedJobNo}
                 </h2>
 
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">JO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No JO data found</p>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left text-gray-500">
+                    <thead className="text-xs text-[#999999]">
+                      <tr className="border border-tableBorder">
+                        <th className="p-3 border border-tableBorder">JO No</th>
+                        <th className="px-2 py-0 border border-tableBorder">Serial No</th>
+                        <th className="px-2 py-0 border border-tableBorder">Item No</th>
+                        <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
+                        <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
+                        <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
+                        <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
+                        <th className="px-2 py-0 border border-tableBorder">Quantity</th>
+                        <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                        <th className="px-2 py-0 border border-tableBorder">Assign Vendor</th>
                       </tr>
-                    ) : (
-                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                        <Fragment key={jo}>
-                          {/* JO Group Header */}
-                          <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
-                              JO: {jo}
-                            </td>
-                          </tr>
-                          
-                          {/* Individual Items with Actions */}
-                          {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
-                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <button
-                                    onClick={() => handleQc(item.id)}
-                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Ready for QC"
-                                  >
-                                    QC
-                                  </button>
-                                  <button
-                                    onClick={() => handleMachine(item.id)}
-                                    className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
-                                    title="Send to Machine"
-                                  >
-                                    M/C
-                                  </button>
-                                  <button
-                                    onClick={() => handleWelding(item.id)}
-                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    title="Send to Welding"
-                                  >
-                                    WLD
-                                  </button>
-                                  <button
-                                    onClick={() => handleVendor(item.id)}
-                                    className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-                                    title="Send to Vendor"
-                                  >
-                                    VEN
-                                  </button>
-                                </div>
+                    </thead>
+                    <tbody>
+                      {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
+                            <p className="text-[#666666] text-base">No JO data found</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
+                          <Fragment key={jo}>
+                            {/* JO Group Header */}
+                            <tr className="border border-tableBorder bg-gray-100">
+                              <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
+                                JO: {jo}
                               </td>
                             </tr>
-                          ))}
-                        </Fragment>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                            
+                            {/* Individual Items with Actions */}
+                            {items.map((item) => {
+                              const picked = vendorPick[item.id] || "Ashfaq";
+                              return (
+                                <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
+                                  <td className="px-2 py-2 border border-tableBorder"></td>
+                                  <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">
+                                    <div className="flex flex-col gap-2 min-w-[200px]">
+                                      <select
+                                        className="border border-customBorder bg-white rounded-lg px-3 py-1 text-xs outline-none focus:ring-2 focus:ring-primary-200"
+                                        value={picked}
+                                        onChange={(e) =>
+                                          setVendorPick((p) => ({ ...p, [item.id]: e.target.value }))
+                                        }
+                                      >
+                                        {VENDOR_OPTIONS.map((v) => (
+                                          <option key={v} value={v}>
+                                            {v}
+                                          </option>
+                                        ))}
+                                      </select>
+
+                                      {picked === "Others" ? (
+                                        <input
+                                          className="border border-customBorder bg-white rounded-lg px-3 py-1 text-xs outline-none focus:ring-2 focus:ring-primary-200"
+                                          placeholder="Vendor name"
+                                          value={otherName[item.id] || ""}
+                                          onChange={(e) =>
+                                            setOtherName((p) => ({ ...p, [item.id]: e.target.value }))
+                                          }
+                                        />
+                                      ) : null}
+
+                                      <button
+                                        onClick={() => onAssign(item)}
+                                        className="px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs font-semibold"
+                                      >
+                                        Assign
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </Fragment>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Vendor Review - All Services</h2>
+                <h2 className="text-xl font-bold mb-4">Vendor Outsource - All Services</h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
@@ -516,7 +449,7 @@ export default function ReviewVendorPage() {
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No vendor review data found</p>
+                          <p className="text-[#666666] text-base">No vendor outsource data found</p>
                         </td>
                       </tr>
                     ) : (
@@ -562,9 +495,6 @@ export default function ReviewVendorPage() {
           <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
             <div>
               Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
-            </div>
-            <div className="text-xs text-gray-400">
-              Actions are per serial number
             </div>
           </div>
         </div>
