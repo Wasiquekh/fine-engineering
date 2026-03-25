@@ -159,7 +159,7 @@ export default function MaterialsMasterPage() {
       }
 
       await axiosProvider.post("/materials_master", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data" } as any,
       });
 
       toast.success("Material added successfully");
