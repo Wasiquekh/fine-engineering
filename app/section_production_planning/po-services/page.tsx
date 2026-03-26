@@ -16,30 +16,43 @@ import DatePickerInput from "../../component/DatePickerInput";
 const axiosProvider = new AxiosProvider();
 
 const validationSchema = Yup.object().shape({
-  po_no: Yup.string().required("PO No is required"),
+  po_no: Yup.number().required("PO No is required").typeError("PO No must be a number"),
   po_date: Yup.date().required("PO Date is required").nullable(),
-  pn_no: Yup.string().required("PN No is required"),
+  pn_no: Yup.number().required("PN No is required").typeError("PN No must be a number"),
+  client_name: Yup.string().required("Client Name is required"),
   description: Yup.string().required("Description is required"),
   po_qnty: Yup.number().required("Quantity is required").positive("Quantity must be positive").typeError("Quantity must be a number"),
-  job_no: Yup.string().required("Job No is required"),
+  job_no: Yup.string().nullable(),
+  item_no: Yup.number().required("Item No is required").typeError("Item No must be a number"),
+  moc: Yup.string().required("MOC is required"),
+  drg_no: Yup.string().required("Drawing No is required"),
+  assign_to: Yup.string().required("Assign To is required"),
+  category: Yup.string().required("Category is required"),
 });
 
 export default function POServices() {
   const [data, setData] = useState<any[]>([]);
-  const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
-  const [addCategory, setAddCategory] = useState<string>("");
+
+  const initialValues = {
+    po_no: "",
+    po_date: "",
+    pn_no: "",
+    description: "",
+    po_qnty: "",
+    job_no: "",
+    item_no: "",
+    moc: "",
+    drg_no: "",
+    assign_to: "",
+    category: "",
+    client_name: "",
+  };
+
+  const [formInitialValues, setFormInitialValues] = useState(initialValues);
 
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter");
-
-  useEffect(() => {
-    if (filterParam) {
-      setActiveFilter(filterParam);
-    } else {
-      setActiveFilter("ALL");
-    }
-  }, [filterParam]);
+  const clientParam = searchParams.get("client");
 
   const fetchData = async () => {
     try {
@@ -83,26 +96,11 @@ export default function POServices() {
     }
   };
 
-  const initialValues = {
-    po_no: "",
-    po_date: "",
-    pn_no: "",
-    description: "",
-    po_qnty: "",
-    job_no: "",
-  };
-
   const handleSubmit = async (values: any, { resetForm }: any) => {
-    const category = addCategory || (activeFilter !== "ALL" ? activeFilter : "");
-
-    if (!category || category === "ALL") {
-      toast.error("Please select a category (Fine or Press Flow) to add a PO Service.");
-      return;
-    }
-
     const formatDate = (date: any) => {
       if (!date) return null;
       const d = new Date(date);
+      if (isNaN(d.getTime())) return null;
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
@@ -112,8 +110,11 @@ export default function POServices() {
     const payload = {
       ...values,
       po_date: formatDate(values.po_date),
-      po_qnty: Number(values.po_qnty),
-      jo_category: category,
+      po_qnty: values.po_qnty !== "" ? Number(values.po_qnty) : null,
+      po_no: values.po_no !== "" ? Number(values.po_no) : null,
+      pn_no: values.pn_no !== "" ? Number(values.pn_no) : null,
+      item_no: values.item_no !== "" ? Number(values.item_no) : null,
+      job_no: values.job_no === "" ? null : values.job_no,
     };
 
     try {
@@ -133,10 +134,21 @@ export default function POServices() {
   };
 
   const filteredData = useMemo(() => {
-    if (activeFilter === "ALL") return data;
-    // Assuming 'jo_category' is the field name for Fine/Press Flow
-    return data.filter((item) => item.jo_category === activeFilter);
-  }, [data, activeFilter]);
+    const filterParam = searchParams.get("filter"); // Re-fetch filterParam here if needed for assign_to
+    return data.filter((item) => {
+      // Filter by Assignment (if 'filter' param is a name like 'Ramzaan')
+      const assignParam = filterParam ? filterParam.toLowerCase() : null;
+      // Assuming "fine", "press_flow", "all" are category filters, not assign_to names
+      const isNameFilter = assignParam && !["fine", "press_flow", "all"].includes(assignParam);
+      const matchesAssignment = !isNameFilter || (item.assign_to && item.assign_to.toLowerCase() === assignParam);
+
+      // Filter by Client (e.g. Amar Equipment)
+      const clientFilter = clientParam ? clientParam.toLowerCase() : null;
+      const matchesClient = !clientFilter || (item.client_name && item.client_name.toLowerCase() === clientFilter);
+
+      return matchesAssignment && matchesClient;
+    });
+  }, [data, searchParams, clientParam]);
 
   return (
     <>
@@ -167,34 +179,19 @@ export default function POServices() {
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-firstBlack">
-              {activeFilter === "ALL" ? "All PO Services" : 
-               activeFilter === "FINE" ? "Fine PO Services" : "Press Flow PO Services"}
+              All PO Services
             </h2>
             <div className="flex gap-3">
-              {(activeFilter === "ALL" || activeFilter === "FINE") && (
                 <button
                   onClick={() => {
-                    setAddCategory("FINE");
+                    setFormInitialValues(initialValues);
                     setFlyoutOpen(true);
                   }}
                   className="flex items-center gap-2 py-2 px-4 rounded-[4px] bg-primary-600 text-white group hover:bg-primary-500"
                 >
                   <HiPlus className="w-5 h-5" />
-                  <p className="text-base font-medium">Add Fine</p>
+                  <p className="text-base font-medium">Add PO</p>
                 </button>
-              )}
-              {(activeFilter === "ALL" || activeFilter === "PRESS_FLOW") && (
-                <button
-                  onClick={() => {
-                    setAddCategory("PRESS_FLOW");
-                    setFlyoutOpen(true);
-                  }}
-                  className="flex items-center gap-2 py-2 px-4 rounded-[4px] bg-primary-600 text-white group hover:bg-primary-500"
-                >
-                  <HiPlus className="w-5 h-5" />
-                  <p className="text-base font-medium">Add Press Flow</p>
-                </button>
-              )}
             </div>
           </div>
 
@@ -233,6 +230,27 @@ export default function POServices() {
                   <th scope="col" className="px-2 py-0 border border-tableBorder">
                     <div className="flex items-center gap-2">
                       <div className="font-medium text-firstBlack text-base leading-normal">
+                        Item No
+                      </div>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-firstBlack text-base leading-normal">
+                        MOC
+                      </div>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-firstBlack text-base leading-normal">
+                        Drg No
+                      </div>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-firstBlack text-base leading-normal">
                         Description
                       </div>
                     </div>
@@ -241,6 +259,20 @@ export default function POServices() {
                     <div className="flex items-center gap-2">
                       <div className="font-medium text-firstBlack text-base leading-normal">
                         Quantity
+                      </div>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-firstBlack text-base leading-normal">
+                        Category
+                      </div>
+                    </div>
+                  </th>
+                  <th scope="col" className="px-2 py-0 border border-tableBorder">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-firstBlack text-base leading-normal">
+                        Assign To
                       </div>
                     </div>
                   </th>
@@ -256,7 +288,7 @@ export default function POServices() {
               <tbody>
                 {filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                    <td colSpan={12} className="px-4 py-6 text-center border border-tableBorder">
                       <p className="text-[#666666] text-base">No data found</p>
                     </td>
                   </tr>
@@ -276,10 +308,25 @@ export default function POServices() {
                         <p className="text-[#232323] text-base leading-normal">{item.job_no || "N/A"}</p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
+                        <p className="text-[#232323] text-base leading-normal">{item.item_no || "N/A"}</p>
+                      </td>
+                      <td className="px-2 py-2 border border-tableBorder">
+                        <p className="text-[#232323] text-base leading-normal">{item.moc || "N/A"}</p>
+                      </td>
+                      <td className="px-2 py-2 border border-tableBorder">
+                        <p className="text-[#232323] text-base leading-normal">{item.drg_no || "N/A"}</p>
+                      </td>
+                      <td className="px-2 py-2 border border-tableBorder">
                         <p className="text-[#232323] text-base leading-normal">{item.description || "N/A"}</p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
                         <p className="text-[#232323] text-base leading-normal">{item.po_qnty || "N/A"}</p>
+                      </td>
+                      <td className="px-2 py-2 border border-tableBorder">
+                        <p className="text-[#232323] text-base leading-normal">{item.category || "N/A"}</p>
+                      </td>
+                      <td className="px-2 py-2 border border-tableBorder">
+                        <p className="text-[#232323] text-base leading-normal">{item.assign_to || "N/A"}</p>
                       </td>
                       <td className="px-2 py-2 border border-tableBorder">
                         <div className="flex items-center gap-2">
@@ -321,7 +368,8 @@ export default function POServices() {
           <div className="w-full border-b border-[#E7E7E7] mb-4 sm:mb-6"></div>
 
           <Formik
-            initialValues={initialValues}
+            initialValues={formInitialValues}
+            enableReinitialize={true}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
           >
@@ -331,7 +379,7 @@ export default function POServices() {
                   <div className="w-full">
                     <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">PO No</p>
                     <Field
-                      type="text"
+                      type="number"
                       name="po_no"
                       className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
                       placeholder="Enter PO No"
@@ -350,9 +398,23 @@ export default function POServices() {
                   </div>
 
                   <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Client</p>
+                    <Field
+                      as="select"
+                      name="client_name"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6"
+                    >
+                      <option value="">Select Client</option>
+                      <option value="Amar Equipment">Amar Equipment</option>
+                      <option value="Amar Biosystem">Amar Biosystem</option>
+                    </Field>
+                    <ErrorMessage name="client_name" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
                     <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">PN No</p>
                     <Field
-                      type="text"
+                      type="number"
                       name="pn_no"
                       className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
                       placeholder="Enter PN No"
@@ -369,6 +431,78 @@ export default function POServices() {
                       placeholder="Enter Job No"
                     />
                     <ErrorMessage name="job_no" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">DRG No</p>
+                    <Field
+                      type="text"
+                      name="drg_no"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                      placeholder="Enter DRG No"
+                    />
+                    <ErrorMessage name="drg_no" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Item No</p>
+                    <Field
+                      type="number"
+                      name="item_no"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                      placeholder="Enter Item No"
+                    />
+                    <ErrorMessage name="item_no" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">MOC</p>
+                    <Field
+                      type="text"
+                      name="moc"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                      placeholder="Enter MOC"
+                    />
+                    <ErrorMessage name="moc" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Drawing No</p>
+                    <Field
+                      type="text"
+                      name="drg_no"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                      placeholder="Enter Drawing No"
+                    />
+                    <ErrorMessage name="drg_no" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Category</p>
+                    <Field
+                      as="select"
+                      name="category"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6"
+                    >
+                      <option value="">Select Category</option>
+                      <option value="FINE">Fine</option>
+                      <option value="PRESS_FLOW">Press Flow</option>
+                    </Field>
+                    <ErrorMessage name="category" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+
+                  <div className="w-full">
+                    <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Assign To</p>
+                    <Field
+                      as="select"
+                      name="assign_to"
+                      className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6"
+                    >
+                      <option value="">Select Assignment</option>
+                      <option value="Riyaaz">Riyaaz</option>
+                      <option value="Ramzaam">Ramzaam</option>
+                    </Field>
+                    <ErrorMessage name="assign_to" component="div" className="text-red-500 text-sm mt-1" />
                   </div>
 
                   <div className="w-full">

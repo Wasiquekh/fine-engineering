@@ -979,7 +979,7 @@ export default function Home() {
                             <p
                               onClick={() =>
                                 router.push(
-                                  `/section_production_planning/production_planning_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                  `/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
                                 )
                               }
                               className={`text-base leading-normal cursor-pointer underline ${
@@ -1070,7 +1070,7 @@ export default function Home() {
                             <p
                               onClick={() =>
                                 router.push(
-                                  `/section_production_planning/production_planning_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
+                                  `/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
                                 )
                               }
                               className={`text-base leading-normal cursor-pointer underline ${
