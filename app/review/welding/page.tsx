@@ -56,7 +56,7 @@ export default function ReviewWeldingPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/system/categories", {
+      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -92,7 +92,7 @@ export default function ReviewWeldingPage() {
       let allData: QcRow[] = [];
 
       for (const jobType of jobTypes) {
-        const response = await axiosProvider.get("/fineengg_erp/system/system/assign-to-worker", {
+        const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
           params: {
             job_type: jobType,
             status: "in-review",
@@ -240,7 +240,7 @@ export default function ReviewWeldingPage() {
 
   const postAction = async (id: string, endpoint: string, successMsg: string) => {
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${id}/${endpoint}`, null);
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
       toast.success(successMsg);
       fetchData();
       setSelectedJobNo(null);

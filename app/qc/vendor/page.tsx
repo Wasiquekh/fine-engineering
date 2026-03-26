@@ -84,7 +84,7 @@ export default function QcVendorPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/system/categories", {
+      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -120,7 +120,7 @@ export default function QcVendorPage() {
       let allData: Row[] = [];
 
       for (const jobType of jobTypes) {
-        const res = await axiosProvider.get("/fineengg_erp/system/system/assign-to-worker", {
+        const res = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
           params: {
             status,
             job_type: jobType,
@@ -265,7 +265,7 @@ export default function QcVendorPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/reject`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
         updated_by,
       });
 
@@ -312,7 +312,7 @@ export default function QcVendorPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/jobs/${job_id}/not-ok`, {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
         reason,
         updated_by,
         review_for: REVIEW_FOR,
@@ -370,7 +370,7 @@ export default function QcVendorPage() {
     if (!isConfirmed || !value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/qc-outgoing`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-outgoing`, {
         ...value,
         review_for: REVIEW_FOR,
       });
@@ -419,7 +419,7 @@ export default function QcVendorPage() {
     if (!isConfirmed || !value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/qc-incoming`, {
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
         ...value,
         review_for: REVIEW_FOR,
       });
@@ -450,7 +450,7 @@ export default function QcVendorPage() {
     for (const item of items) {
       try {
         const maxQty = Number(item.quantity_no ?? 0);
-        await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/qc-incoming`, {
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
           qc_date: new Date().toISOString().split('T')[0],
           qc_quantity: maxQty,
           review_for: REVIEW_FOR,
@@ -501,7 +501,7 @@ export default function QcVendorPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/system/jobs/${job_id}/not-ok`, {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
         reason,
         updated_by,
         review_for: REVIEW_FOR,
@@ -548,7 +548,7 @@ export default function QcVendorPage() {
 
     for (const item of items) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system/system/assign-to-worker/${item.id}/reject`, {
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
           updated_by,
         });
         successCount++;

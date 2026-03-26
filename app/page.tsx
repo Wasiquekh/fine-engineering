@@ -39,7 +39,7 @@ export default function LoginHome() {
   const handleSubmitLogin = async (values: FormValues) => {
     setLoading(true);
     try {
-      const res = await axiosProvider.post("/fineengg_erp/system/system/login", {
+      const res = await axiosProvider.post("/fineengg_erp/system/login", {
         email: values.email,
         password: values.password,
       });

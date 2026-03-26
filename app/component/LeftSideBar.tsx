@@ -494,7 +494,7 @@ const LeftSideBar: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await axiosProvider.post("/fineengg_erp/system/system/logout", {});
+      await axiosProvider.post("/fineengg_erp/system/logout", {});
       storage.clearAll();
       window.location.href = "/";
     } catch (error) {
