@@ -116,6 +116,12 @@ export default function ReviewVendorPage() {
       }
 
       console.log(`Fetched ${allData.length} vendor review items`);
+      console.log("Items by type:", {
+        JOB: allData.filter(d => d.job_type === "JOB_SERVICE").length,
+        TSO: allData.filter(d => d.job_type === "TSO_SERVICE").length,
+        KANBAN: allData.filter(d => d.job_type === "KANBAN").length
+      });
+      
       setData(allData);
     } catch (error) {
       console.error("Error fetching vendor review data:", error);
@@ -144,39 +150,56 @@ export default function ReviewVendorPage() {
     });
   }, [data, jobServiceCategoryFilter]);
 
-  // Get unique identifiers based on job type
+  // FIXED: Get unique identifiers based on job type
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     
     filteredData.forEach((item) => {
       const jobType = item.job_type || item.job?.job_type;
+      let identifier: string | null | undefined = null;
       
       if (jobType === "TSO_SERVICE") {
-        const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(`TSO:${tsoNo}`);
-      } else {
-        const jobNo = item.job_no || item.job?.job_no;
-        if (jobNo) ids.add(`JOB:${jobNo}`);
+        identifier = item.tso_no || item.job?.tso_no;
+        if (identifier) ids.add(`TSO:${identifier}`);
+      } 
+      else if (jobType === "KANBAN") {
+        // KANBAN uses jo_no as primary identifier
+        identifier = item.jo_no;
+        if (identifier) ids.add(`KANBAN:${identifier}`);
+      } 
+      else {
+        // JOB_SERVICE uses job_no
+        identifier = item.job_no || item.job?.job_no;
+        if (identifier) ids.add(`JOB:${identifier}`);
       }
     });
     
+    console.log("Job Identifiers:", Array.from(ids));
     return Array.from(ids);
   }, [filteredData]);
 
-  const getJoGroupsForIdentifier = (identifier: string) => {
+  // FIXED: Get items for identifier
+  const getItemsForIdentifier = (identifier: string) => {
     const [type, actualId] = identifier.split(':');
     
-    const items = filteredData.filter((item) => {
+    return filteredData.filter((item) => {
       const jobType = item.job_type || item.job?.job_type;
       
       if (type === "TSO" && jobType === "TSO_SERVICE") {
         return (item.tso_no || item.job?.tso_no) === actualId;
-      } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
+      } 
+      else if (type === "KANBAN" && jobType === "KANBAN") {
+        return item.jo_no === actualId;
+      } 
+      else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
         return (item.job_no || item.job?.job_no) === actualId;
       }
       return false;
     });
-    
+  };
+
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
     const groups: Record<string, QcRow[]> = {};
 
     items.forEach((item) => {
@@ -201,19 +224,8 @@ export default function ReviewVendorPage() {
     > = {};
 
     jobIdentifiers.forEach((identifier) => {
-      const [type, actualId] = identifier.split(':');
+      const items = getItemsForIdentifier(identifier);
       
-      const items = filteredData.filter((item) => {
-        const jobType = item.job_type || item.job?.job_type;
-        
-        if (type === "TSO" && jobType === "TSO_SERVICE") {
-          return (item.tso_no || item.job?.tso_no) === actualId;
-        } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
-          return (item.job_no || item.job?.job_no) === actualId;
-        }
-        return false;
-      });
-
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
         0
@@ -246,10 +258,12 @@ export default function ReviewVendorPage() {
 
   const uniqueCategories = useMemo(() => categories, [categories]);
 
-  const actionConfirm = async (title: string, text: string, confirm: string) => {
+  // Updated actionConfirm to include serial number
+  const actionConfirm = async (title: string, text: string, confirm: string, serialNo?: string) => {
+    const message = serialNo ? `${text} (Serial: ${serialNo})` : text;
     const r = await Swal.fire({
       title,
-      text,
+      text: message,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: confirm,
@@ -257,10 +271,12 @@ export default function ReviewVendorPage() {
     return r.isConfirmed;
   };
 
-  const postAction = async (id: string, endpoint: string, successMsg: string) => {
+  // Updated postAction to include serial number in success message
+  const postAction = async (id: string, endpoint: string, successMsg: string, serialNo?: string) => {
     try {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
-      toast.success(successMsg);
+      const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
+      toast.success(msg);
       fetchData();
       setSelectedJobNo(null);
     } catch (e: any) {
@@ -268,31 +284,34 @@ export default function ReviewVendorPage() {
     }
   };
 
-  const handleQc = async (id: string) => {
-    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC"))) return;
-    postAction(id, "ready-for-qc", "Moved to Ready for QC");
+  // Updated handlers with serial number parameter
+  const handleQc = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC", serialNo))) return;
+    postAction(id, "ready-for-qc", "Moved to Ready for QC", serialNo);
   };
 
-  const handleMachine = async (id: string) => {
-    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine"))) return;
-    postAction(id, "reject", "Moved to In-Progress");
+  const handleMachine = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine", serialNo))) return;
+    postAction(id, "reject", "Moved to In-Progress", serialNo);
   };
 
-  const handleWelding = async (id: string) => {
-    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding"))) return;
-    postAction(id, "welding", "Moved to QC Welding");
+  const handleWelding = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding", serialNo))) return;
+    postAction(id, "welding", "Moved to QC Welding", serialNo);
   };
 
-  const handleVendor = async (id: string) => {
-    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor"))) return;
-    postAction(id, "vendor", "Moved to Vendor Outsource");
+  const handleVendor = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor", serialNo))) return;
+    postAction(id, "vendor", "Moved to Vendor Outsource", serialNo);
   };
 
-  // Get display name for identifier
+  // FIXED: Get display name for identifier
   const getIdentifierDisplayName = (identifier: string) => {
     const [type, actualId] = identifier.split(':');
     if (type === "TSO") {
       return `TSO: ${actualId}`;
+    } else if (type === "KANBAN") {
+      return `KANBAN: ${actualId}`;
     }
     return actualId;
   };
@@ -403,13 +422,14 @@ export default function ReviewVendorPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {selectedJobNo.startsWith('TSO:') ? 'TSO' : 'Job'}: {selectedJobNo.split(':')[1] || selectedJobNo}
+                  {getIdentifierDisplayName(selectedJobNo)}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Type</th>
                       <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Item No</th>
                       <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
@@ -424,7 +444,7 @@ export default function ReviewVendorPage() {
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No JO data found</p>
                         </td>
                       </tr>
@@ -433,15 +453,18 @@ export default function ReviewVendorPage() {
                         <Fragment key={jo}>
                           {/* JO Group Header */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
-                              JO: {jo}
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
+                              JO: {jo} ({items.length} item(s))
                             </td>
                           </tr>
                           
                           {/* Individual Items with Actions */}
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">{jo}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
@@ -453,30 +476,30 @@ export default function ReviewVendorPage() {
                               <td className="px-2 py-2 border border-tableBorder">
                                 <div className="flex items-center gap-1 flex-wrap">
                                   <button
-                                    onClick={() => handleQc(item.id)}
+                                    onClick={() => handleQc(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Ready for QC"
+                                    title={`Ready for QC - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     QC
                                   </button>
                                   <button
-                                    onClick={() => handleMachine(item.id)}
+                                    onClick={() => handleMachine(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
-                                    title="Send to Machine"
+                                    title={`Send to Machine - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     M/C
                                   </button>
                                   <button
-                                    onClick={() => handleWelding(item.id)}
+                                    onClick={() => handleWelding(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    title="Send to Welding"
+                                    title={`Send to Welding - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     WLD
                                   </button>
                                   <button
-                                    onClick={() => handleVendor(item.id)}
+                                    onClick={() => handleVendor(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-                                    title="Send to Vendor"
+                                    title={`Send to Vendor - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     VEN
                                   </button>
@@ -522,6 +545,7 @@ export default function ReviewVendorPage() {
                     ) : (
                       jobIdentifiers.map((identifier) => {
                         const summary = jobSummary[identifier];
+                        if (!summary) return null;
 
                         return (
                           <tr
@@ -564,7 +588,7 @@ export default function ReviewVendorPage() {
               Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
             </div>
             <div className="text-xs text-gray-400">
-              Actions are per serial number
+              Actions are per serial number - hover buttons to see serial
             </div>
           </div>
         </div>

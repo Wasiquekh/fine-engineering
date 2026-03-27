@@ -14,6 +14,7 @@ import SelectInput from "../../component/SelectInput";
 import DatePickerInput from "../../component/DatePickerInput";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import Swal from "sweetalert2";
+import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 
@@ -428,6 +429,7 @@ export default function Home() {
           -moz-appearance: textfield;
         }
       `}</style>
+      <PageGuard requiredPermission="inventory.view">
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
         {/* Main content right section */}
@@ -665,6 +667,7 @@ export default function Home() {
 
       {/* FITLER FLYOUT */}
       <>
+     
         {/* DARK BG SCREEN */}
         {isFlyoutOpen && (
           <div
@@ -1169,7 +1172,8 @@ export default function Home() {
           </div>
         </div>
       </>
-      {/* FITLER FLYOUT END */}
+  
+      </PageGuard>
     </>
   );
 }

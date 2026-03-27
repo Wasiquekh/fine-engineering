@@ -8,6 +8,7 @@ import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Link from "next/link";
 import Image from "next/image";
+import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 
@@ -150,6 +151,7 @@ export default function JobDetailsPage() {
   };
 
   return (
+
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">

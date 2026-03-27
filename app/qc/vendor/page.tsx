@@ -32,6 +32,7 @@ type Row = {
   tso_no?: string | null;
   job_category?: string | null;
   worker_name?: string | null;
+  job_no?: string | null;
   job?: { 
     id?: string | null;
     job_no?: string | null;
@@ -138,6 +139,13 @@ export default function QcVendorPage() {
         allData = [...allData, ...dataWithJobType];
       }
 
+      console.log("Total rows fetched:", allData.length);
+      console.log("Rows by type:", {
+        JOB: allData.filter(r => r.job_type === "JOB_SERVICE").length,
+        TSO: allData.filter(r => r.job_type === "TSO_SERVICE").length,
+        KANBAN: allData.filter(r => r.job_type === "KANBAN").length
+      });
+
       setRows(allData);
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to load QC Vendor");
@@ -165,42 +173,45 @@ export default function QcVendorPage() {
     });
   }, [rows, jobServiceCategoryFilter]);
 
-  // Get unique identifiers based on job type
+  // FIXED: Get unique identifiers based on job type - LIKE REFERENCE CODE
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     
     filteredData.forEach((item) => {
       const jobType = item.job_type || item.job?.job_type;
+      let identifier: string | null | undefined;
       
       if (jobType === "TSO_SERVICE") {
-        const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(`TSO:${tsoNo}`);
+        identifier = item.tso_no || item.job?.tso_no;
       } else if (jobType === "KANBAN") {
-        const jobNo = item.job?.job_no;
-        if (jobNo) ids.add(`KANBAN:${jobNo}`);
+        // KANBAN uses jo_no as primary identifier
+        identifier = item.jo_no;
       } else {
-        const jobNo = item.job?.job_no;
-        if (jobNo) ids.add(`JOB:${jobNo}`);
+        // JOB_SERVICE uses job_no
+        identifier = item.job_no || item.job?.job_no;
       }
+      
+      if (identifier) ids.add(identifier);
     });
     
     return Array.from(ids);
   }, [filteredData]);
 
+  // FIXED: Get items for identifier - LIKE REFERENCE CODE
   const getItemsForIdentifier = (identifier: string) => {
-    const [type, actualId] = identifier.split(':');
-    
     return filteredData.filter((item) => {
       const jobType = item.job_type || item.job?.job_type;
+      let itemIdentifier: string | null | undefined;
       
-      if (type === "TSO" && jobType === "TSO_SERVICE") {
-        return (item.tso_no || item.job?.tso_no) === actualId;
-      } else if (type === "KANBAN" && jobType === "KANBAN") {
-        return item.job?.job_no === actualId;
-      } else if (type === "JOB" && jobType === "JOB_SERVICE") {
-        return item.job?.job_no === actualId;
+      if (jobType === "TSO_SERVICE") {
+        itemIdentifier = item.tso_no || item.job?.tso_no;
+      } else if (jobType === "KANBAN") {
+        itemIdentifier = item.jo_no;
+      } else {
+        itemIdentifier = item.job_no || item.job?.job_no;
       }
-      return false;
+      
+      return itemIdentifier === identifier;
     });
   };
 
@@ -216,6 +227,53 @@ export default function QcVendorPage() {
 
     return groups;
   };
+
+  // Get job summary data
+  const jobSummary = useMemo(() => {
+    const summary: Record<
+      string,
+      {
+        totalQty: number;
+        uniqueJoCount: number;
+        jobCategory: string;
+        assigningDate: string;
+        vendorName: string;
+        jobType: string;
+      }
+    > = {};
+
+    jobIdentifiers.forEach((identifier) => {
+      const items = getItemsForIdentifier(identifier);
+      
+      const totalQty = items.reduce(
+        (sum, item) => sum + (Number(item.quantity_no) || 0),
+        0
+      );
+
+      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
+
+      const jobCategory = items.length > 0
+        ? items[0].job_category || items[0].job?.job_category || "N/A"
+        : "N/A";
+
+      const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
+      
+      const vendorName = items.length > 0 ? items[0].vendor_name || "N/A" : "N/A";
+      
+      const jobType = items.length > 0 ? items[0].job_type || items[0].job?.job_type || "JOB_SERVICE" : "JOB_SERVICE";
+
+      summary[identifier] = {
+        totalQty,
+        uniqueJoCount,
+        jobCategory,
+        assigningDate,
+        vendorName,
+        jobType,
+      };
+    });
+
+    return summary;
+  }, [filteredData, jobIdentifiers]);
 
   // Action confirmation helper
   const actionConfirm = async (title: string, text: string, confirm: string) => {
@@ -343,6 +401,7 @@ export default function QcVendorPage() {
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
           <p><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
           <p><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
           <p><strong>Pending Qty:</strong> <b>${maxQty}</b></p>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
@@ -395,6 +454,7 @@ export default function QcVendorPage() {
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
           <p><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
           <p><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
           <p><strong>Pending Qty:</strong> <b>${maxQty}</b></p>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
@@ -581,17 +641,6 @@ export default function QcVendorPage() {
     }
   };
 
-  // Get display name for identifier
-  const getIdentifierDisplayName = (identifier: string) => {
-    const [type, actualId] = identifier.split(':');
-    if (type === "TSO") {
-      return `TSO: ${actualId}`;
-    } else if (type === "KANBAN") {
-      return `KANBAN: ${actualId}`;
-    }
-    return actualId;
-  };
-
   // Count by job type
   const countsByType = useMemo(() => {
     const counts = {
@@ -721,7 +770,7 @@ export default function QcVendorPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {getIdentifierDisplayName(selectedJobNo)}
+                  {selectedJobNo}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
@@ -783,7 +832,7 @@ export default function QcVendorPage() {
                           {/* Individual Items with Actions */}
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">{jo}</td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
                               </td>
@@ -834,7 +883,9 @@ export default function QcVendorPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">Job/TSO No</th>
+                      <th className="p-3 border border-tableBorder">
+                        {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
+                      </th>
                       <th className="px-2 py-0 border border-tableBorder">Type</th>
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Vendor</th>
@@ -859,13 +910,8 @@ export default function QcVendorPage() {
                       </tr>
                     ) : (
                       jobIdentifiers.map((identifier) => {
-                        const items = getItemsForIdentifier(identifier);
-                        const totalQty = items.reduce((sum, i) => sum + (Number(i.quantity_no) || 0), 0);
-                        const uniqueJoCount = new Set(items.map(i => i.jo_no)).size;
-                        const jobCategory = items[0]?.job_category || items[0]?.job?.job_category || "N/A";
-                        const assigningDate = items[0]?.assigning_date || "-";
-                        const vendorName = items[0]?.vendor_name || "N/A";
-                        const jobType = items[0]?.job_type || items[0]?.job?.job_type || "JOB_SERVICE";
+                        const summary = jobSummary[identifier];
+                        if (!summary) return null;
 
                         return (
                           <tr
@@ -874,27 +920,25 @@ export default function QcVendorPage() {
                             onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">
-                                {getIdentifierDisplayName(identifier)}
-                              </p>
+                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              {getJobTypeBadge(jobType)}
+                              {getJobTypeBadge(summary.jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{jobCategory}</p>
+                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{vendorName}</p>
+                              <p className="text-[#232323] text-base">{summary.vendorName}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{uniqueJoCount}</p>
+                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{totalQty}</p>
+                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{assigningDate}</p>
+                              <p className="text-[#232323] text-base">{summary.assigningDate}</p>
                             </td>
                           </tr>
                         );
@@ -909,7 +953,7 @@ export default function QcVendorPage() {
           <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
             <div>
               Total Items: {filteredData.length} | 
-              Jobs: {jobIdentifiers.filter(id => id.startsWith('JOB:')).length} | 
+              Jobs: {jobIdentifiers.filter(id => !id.startsWith('TSO:') && !id.startsWith('KANBAN:')).length} | 
               TSO: {jobIdentifiers.filter(id => id.startsWith('TSO:')).length} |
               KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length}
             </div>

@@ -249,7 +249,7 @@ const ProductionUserMenu = ({
                             </Link>
                           )}
                           
-                          {canViewReviewVendor && (
+                          {  (
                             <Link href={`/review/vendor?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`}>
                               <div className={itemCls(pathname === "/review/vendor" && client === "Amar Equipment" && isActive)}>
                                 <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Equipment" && isActive)} />
@@ -862,7 +862,7 @@ const LeftSideBar: React.FC = () => {
 
                 {/* Outsource */}
                 {hasOutsourceView && (
-                  <Link href="/section_production_planning/vendors/outsource?filter=JOB_SERVICE">
+                  <Link href="/section_production_planning/vendors/outsource">
                     <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                       <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                       <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Outsource</p>

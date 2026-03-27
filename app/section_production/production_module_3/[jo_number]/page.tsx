@@ -127,6 +127,7 @@ export default function JobDetailsPage() {
   };
 
   return (
+   
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
@@ -283,5 +284,6 @@ export default function JobDetailsPage() {
         </div>
       </div>
     </div>
+   
   );
 }

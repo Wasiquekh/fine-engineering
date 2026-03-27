@@ -27,6 +27,7 @@ import DesktopHeader from "../component/DesktopHeader";
 import { Tooltip } from "react-tooltip";
 import { FaEllipsisVertical } from "react-icons/fa6";
 import { useAuthRedirect } from "../component/hooks/useAuthRedirect";
+import PageGuard from "../component/PageGuard";
 
 interface User {
   id: string;
@@ -160,6 +161,7 @@ export default function Home() {
       <div className=" flex justify-end  min-h-screen">
         {/* Left sidebar */}
         <LeftSideBar />
+        <PageGuard requiredPermission="user.management.view">
         {/* Main content right section */}
         <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px]  rounded p-4 mt-0 relative">
           <div className="absolute bottom-0 right-0">
@@ -320,6 +322,7 @@ export default function Home() {
           </div>
           {/* END PAGINATION */}
         </div>
+        </PageGuard>
       </div>
 
       <SidebarUserUpdateForm

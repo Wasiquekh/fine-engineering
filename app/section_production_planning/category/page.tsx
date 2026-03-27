@@ -22,6 +22,7 @@ import * as Yup from "yup";
 import SelectInput from "../../component/SelectInput";
 import DatePickerInput from "../../component/DatePickerInput";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import PageGuard from "../../component/PageGuard";
 import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
@@ -230,6 +231,7 @@ export default function Home() {
           -moz-appearance: textfield;
         }
       `}</style>
+       <PageGuard requiredPermission="category.view">
       
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
@@ -751,6 +753,7 @@ export default function Home() {
         </div>
       </>
       {/* FITLER FLYOUT END */}
+      </PageGuard>
     </>
   );
 }

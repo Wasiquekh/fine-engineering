@@ -8,8 +8,8 @@ import { IoCheckmarkCircleSharp } from "react-icons/io5";
 import LineChartComponent from "../component/LineChartComponent";
 import PieChartComponent from "../component/PieChartComponent";
 import CountUp from "react-countup";
-import { useAuthRedirect } from "../component/hooks/useAuthRedirect";
-
+import PageGuard from "../component/PageGuard";
+import { useAuthRedirect } from "../component/hooks/useAuthRedirect"
 export default function Home() {
   // const isChecking = useAuthRedirect();
   // if (isChecking) {
@@ -28,6 +28,7 @@ export default function Home() {
 
   return (
     <>
+    <PageGuard requiredPermission="dashboard.view">
       <div className=" flex justify-end">
         {/* Left sidebar */}
         <LeftSideBar />
@@ -528,6 +529,7 @@ export default function Home() {
           className=" w-full h-full -z-10 hidden"
         />
       </div>
+      </PageGuard>
     </>
   );
 }
