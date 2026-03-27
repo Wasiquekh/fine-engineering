@@ -14,7 +14,7 @@ import SelectInput from "../../component/SelectInput";
 import DatePickerInput from "../../component/DatePickerInput";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import Swal from "sweetalert2";
-import PageGuard from "../component/PageGuard";
+import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 

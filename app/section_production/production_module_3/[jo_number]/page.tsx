@@ -8,7 +8,6 @@ import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Link from "next/link";
 import Image from "next/image";
-import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 

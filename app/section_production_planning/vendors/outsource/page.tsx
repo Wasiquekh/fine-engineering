@@ -9,7 +9,7 @@ import { getAssignments, postAssignVendor } from "../../../services/assignToWork
 import { useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa";
 import Image from "next/image";
-import PageGuard from "../../component/PageGuard";
+import PageGuard from "../../../component/PageGuard";
 
 type Row = any;
 
