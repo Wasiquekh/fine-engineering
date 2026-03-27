@@ -1,10 +1,10 @@
-// app/layout.tsx (or wherever your RootLayout is located)
+// app/layout.tsx
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from "next/dynamic";
 import { ReactNode } from "react";
 import "react-toastify/dist/ReactToastify.css";
-
+import RouteGuard from "./component/RouteGuard";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -38,7 +38,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className={inter.className}>
         <ErrorBoundary>
           <AppProvider>
-            {children}
+            <RouteGuard>
+              {children}
+            </RouteGuard>
             <ToastContainer
               position="top-right"
               autoClose={3000}

@@ -24,6 +24,7 @@ import StorageManager from "../../provider/StorageManager";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import { useAuthRedirect } from "../component/hooks/useAuthRedirect";
+import PageGuard from "../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -324,6 +325,7 @@ export default function UserManagementPage() {
     <>
       <div className="flex justify-end min-h-screen bg-[#F5F7FA]">
         <LeftSideBar />
+        <PageGuard requiredPermission="user.management.view">
         <div className="w-full md:w-[83%] min-h-screen p-4 relative">
           <div className="absolute bottom-0 right-0">
             <Image
@@ -518,6 +520,7 @@ export default function UserManagementPage() {
             </div>
           </div>
         </div>
+        </PageGuard>
       </div>
 
       {/* Add User Modal */}

@@ -5,6 +5,7 @@ import LeftSideBar from "../../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 
@@ -142,6 +143,7 @@ export default function Home() {
 
   return (
     <>
+     
       <div className="flex justify-end min-h-screen">
         <LeftSideBar />
         {/* Main content right section */}
@@ -357,6 +359,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+  
     </>
   );
 }

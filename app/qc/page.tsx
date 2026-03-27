@@ -10,6 +10,7 @@ import StorageManager from "../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
+import PageGuard from "../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -473,6 +474,7 @@ export default function QcMainPage() {
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
+      <PageGuard requiredPermission="qc.view">
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
         <div className="absolute bottom-0 right-0">
           <Image
@@ -745,6 +747,7 @@ export default function QcMainPage() {
           </div>
         </div>
       </div>
+      </PageGuard>
     </div>
   );
 }

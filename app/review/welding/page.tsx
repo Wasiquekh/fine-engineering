@@ -227,10 +227,12 @@ export default function ReviewWeldingPage() {
 
   const uniqueCategories = useMemo(() => categories, [categories]);
 
-  const actionConfirm = async (title: string, text: string, confirm: string) => {
+  // Updated actionConfirm to include serial number
+  const actionConfirm = async (title: string, text: string, confirm: string, serialNo?: string) => {
+    const message = serialNo ? `${text} (Serial: ${serialNo})` : text;
     const r = await Swal.fire({
       title,
-      text,
+      text: message,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: confirm,
@@ -238,10 +240,12 @@ export default function ReviewWeldingPage() {
     return r.isConfirmed;
   };
 
-  const postAction = async (id: string, endpoint: string, successMsg: string) => {
+  // Updated postAction to include serial number in success message
+  const postAction = async (id: string, endpoint: string, successMsg: string, serialNo?: string) => {
     try {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
-      toast.success(successMsg);
+      const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
+      toast.success(msg);
       fetchData();
       setSelectedJobNo(null);
     } catch (e: any) {
@@ -249,24 +253,25 @@ export default function ReviewWeldingPage() {
     }
   };
 
-  const handleQc = async (id: string) => {
-    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC"))) return;
-    postAction(id, "ready-for-qc", "Moved to Ready for QC");
+  // Updated handlers with serial number parameter
+  const handleQc = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC", serialNo))) return;
+    postAction(id, "ready-for-qc", "Moved to Ready for QC", serialNo);
   };
 
-  const handleMachine = async (id: string) => {
-    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine"))) return;
-    postAction(id, "reject", "Moved to In-Progress");
+  const handleMachine = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine", serialNo))) return;
+    postAction(id, "reject", "Moved to In-Progress", serialNo);
   };
 
-  const handleWelding = async (id: string) => {
-    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding"))) return;
-    postAction(id, "welding", "Moved to QC Welding");
+  const handleWelding = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding", serialNo))) return;
+    postAction(id, "welding", "Moved to QC Welding", serialNo);
   };
 
-  const handleVendor = async (id: string) => {
-    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor"))) return;
-    postAction(id, "vendor", "Moved to Vendor Outsource");
+  const handleVendor = async (id: string, serialNo?: string) => {
+    if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor", serialNo))) return;
+    postAction(id, "vendor", "Moved to Vendor Outsource", serialNo);
   };
 
   // Get display name for identifier
@@ -444,7 +449,7 @@ export default function ReviewWeldingPage() {
                           {/* Individual Items with Actions */}
                           {joItems.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">{jo}</td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
                               </td>
@@ -459,30 +464,30 @@ export default function ReviewWeldingPage() {
                               <td className="px-2 py-2 border border-tableBorder">
                                 <div className="flex items-center gap-1 flex-wrap">
                                   <button
-                                    onClick={() => handleQc(item.id)}
+                                    onClick={() => handleQc(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Ready for QC"
+                                    title={`Ready for QC - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     QC
                                   </button>
                                   <button
-                                    onClick={() => handleMachine(item.id)}
+                                    onClick={() => handleMachine(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
-                                    title="Send back to Machine"
+                                    title={`Send back to Machine - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     M/C
                                   </button>
                                   <button
-                                    onClick={() => handleWelding(item.id)}
+                                    onClick={() => handleWelding(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    title="Send to Welding"
+                                    title={`Send to Welding - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     WLD
                                   </button>
                                   <button
-                                    onClick={() => handleVendor(item.id)}
+                                    onClick={() => handleVendor(item.id, item.serial_no || undefined)}
                                     className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-                                    title="Send to Vendor"
+                                    title={`Send to Vendor - Serial: ${item.serial_no || 'N/A'}`}
                                   >
                                     VEN
                                   </button>
@@ -573,7 +578,7 @@ export default function ReviewWeldingPage() {
               KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length}
             </div>
             <div className="text-xs text-gray-400">
-              Actions are per serial number
+              Actions are per serial number - hover buttons to see serial
             </div>
           </div>
         </div>

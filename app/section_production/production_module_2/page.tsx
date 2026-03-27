@@ -5,6 +5,7 @@ import LeftSideBar from "../../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 
@@ -119,7 +120,7 @@ export default function Home() {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
-        if (isMounted) setData([]); // Clear data on error
+        if (isMounted) setData([]);
       }
     };
 
@@ -131,15 +132,16 @@ export default function Home() {
   }, [clientParam, assignToParam, urgentParam]);
 
   return (
-    <>
-      <div className="flex justify-end min-h-screen">
-        <LeftSideBar />
+    <div className="flex justify-end min-h-screen">
+      <LeftSideBar />
+      {/* PageGuard only for content, not for sidebar */}
+    
         {/* Main content right section */}
         <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
           <div className="absolute bottom-0 right-0">
             <Image
               src="/images/sideDesign.svg"
-              alt="side desgin"
+              alt="side design"
               width={100}
               height={100}
               className="w-full h-full"
@@ -160,7 +162,6 @@ export default function Home() {
                   onTabClick={setTsoSubFilter}
                 />
               </div>
-
             </div>
 
             {/* ----------------Table----------------------- */}
@@ -265,7 +266,7 @@ export default function Home() {
                         </div>
                       </div>
                     </th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.length === 0 ? (
@@ -360,7 +361,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </div>
-    </>
+    </div>
   );
 }

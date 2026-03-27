@@ -218,6 +218,7 @@ export default function OtpHome() {
   }
 
   return (
+    
     <div className="fixed inset-0 overflow-hidden">
       <div className="bg-[#F5F5F5] hidden md:block fixed inset-0">
         <Image

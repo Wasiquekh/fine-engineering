@@ -5,6 +5,7 @@ import LeftSideBar from "../../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import PageGuard from "../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
 
@@ -402,6 +403,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+
     </>
   );
 }
