@@ -50,6 +50,11 @@ export default class AxiosProvider {
     );
   }
 
+  // Public getter to access the axios instance
+  public get axios(): AxiosInstance {
+    return this.instance;
+  }
+
   private async handleRequest(
     config: InternalAxiosRequestConfig
   ): Promise<InternalAxiosRequestConfig> {
