@@ -23,6 +23,8 @@ const initialValues = {
   diameter: "",
   length: "",
   width: "",
+  across_flat: "",
+  center_to_face: "",
   hsn_code: "",
   min_stock_level: "",
   max_stock_level: "",
@@ -32,7 +34,11 @@ const initialValues = {
   conversion_factor: "",
   rack_no: "",
   bin_shelf_location: "",
-  mtc: null as File | null,
+  visual_status: "",
+  dimensional_status: "",
+  mtc_received: "",
+  heat_no_matched: "",
+  final_status: "",
 };
 
 const stepSchemas = [
@@ -41,13 +47,24 @@ const stepSchemas = [
     material_name: Yup.string().required("Material Name is required"),
     material_desc: Yup.string().notRequired(),
     grade: Yup.string().notRequired(),
-  }),
-  Yup.object({
     thickness: Yup.number().typeError("Thickness must be a number").nullable(),
     diameter: Yup.number().typeError("Diameter must be a number").nullable(),
     length: Yup.number().typeError("Length must be a number").nullable(),
     width: Yup.number().typeError("Width must be a number").nullable(),
+    across_flat: Yup.number().typeError("Across Flat must be a number").nullable(),
+    center_to_face: Yup.number().typeError("Center to Face must be a number").nullable(),
     hsn_code: Yup.string().notRequired(),
+  }),
+  Yup.object({
+    purchase_uom: Yup.string().required("Purchase UOM is required"),
+    issue_production_uom: Yup.string().required("Issue Production UOM is required"),
+    conversion_factor: Yup.number()
+      .typeError("Conversion Factor must be a number")
+      .required("Conversion Factor is required"),
+  }),
+  Yup.object({
+    rack_no: Yup.string().notRequired(),
+    bin_shelf_location: Yup.string().notRequired(),
   }),
   Yup.object({
     min_stock_level: Yup.number()
@@ -59,24 +76,22 @@ const stepSchemas = [
     re_order_qty: Yup.number()
       .typeError("Re Order Qty must be a number")
       .required("Re Order Qty is required"),
-    purchase_uom: Yup.string().required("Purchase UOM is required"),
-    issue_production_uom: Yup.string().required("Issue Production UOM is required"),
-    conversion_factor: Yup.number()
-      .typeError("Conversion Factor must be a number")
-      .required("Conversion Factor is required"),
   }),
   Yup.object({
-    rack_no: Yup.string().notRequired(),
-    bin_shelf_location: Yup.string().notRequired(),
-    mtc: Yup.mixed<File>().nullable().notRequired(),
+    visual_status: Yup.string().required("Visual Status is required"),
+    dimensional_status: Yup.string().required("Dimensional Status is required"),
+    mtc_received: Yup.string().required("MTC Received status is required"),
+    heat_no_matched: Yup.string().required("Heat No Matched status is required"),
+    final_status: Yup.string().required("Final Status is required"),
   }),
 ];
 
 const stepTitles = [
-  "Basic Details",
-  "Dimensions & HSN",
-  "Stock & UOM",
-  "Storage & Document",
+  "Item Identification",
+  "Unit & Conversion",
+  "Warehouse & Storage",
+  "Inventory Control",
+  "Quality Control",
 ];
 
 export default function MaterialsMasterPage() {
@@ -84,9 +99,20 @@ export default function MaterialsMasterPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [data, setData] = useState<any[]>([]);
 
+  const fieldsByStep = useMemo(() => [
+    [
+      "unique_item_code", "material_name", "material_desc", "grade",
+      "thickness", "diameter", "length", "width", "across_flat", "center_to_face", "hsn_code"
+    ],
+    ["purchase_uom", "issue_production_uom", "conversion_factor"],
+    ["rack_no", "bin_shelf_location"],
+    ["min_stock_level", "max_stock_level", "re_order_qty"],
+    ["visual_status", "dimensional_status", "mtc_received", "heat_no_matched", "final_status"],
+  ], []);
+
   const fetchData = async () => {
     try {
-      const res = await axiosProvider.get("/materials_master");
+      const res = await axiosProvider.get("/fineengg_erp/system/materials");
       setData(res?.data?.data || []);
     } catch (error) {
       console.error(error);
@@ -123,7 +149,7 @@ export default function MaterialsMasterPage() {
     if (!result.isConfirmed) return;
 
     try {
-      await axiosProvider.delete(`/materials_master/${id}`);
+      await axiosProvider.delete(`/fineengg_erp/system/materials/${id}`);
       toast.success("Material deleted successfully");
       fetchData();
     } catch (error) {
@@ -134,33 +160,34 @@ export default function MaterialsMasterPage() {
 
   const handleSubmit = async (values: any, actions: any) => {
     try {
-      const formData = new FormData();
+      const payload = {
+        unique_item_code: values.unique_item_code,
+        material_name: values.material_name,
+        material_desc: values.material_desc || "",
+        grade: values.grade || "",
+        thickness: values.thickness ? Number(values.thickness) : 0,
+        diameter: values.diameter ? Number(values.diameter) : 0,
+        length: values.length ? Number(values.length) : 0,
+        width: values.width ? Number(values.width) : 0,
+        across_flat: values.across_flat || "",
+        center_to_face_distance: values.center_to_face || "",
+        hsn_code: values.hsn_code || "",
+        min_stock_level: values.min_stock_level ? Number(values.min_stock_level) : 0,
+        max_stock_level: values.max_stock_level ? Number(values.max_stock_level) : 0,
+        re_order_qty: values.re_order_qty ? Number(values.re_order_qty) : 0,
+        purchase_uom: values.purchase_uom || "",
+        issue_production_uom: values.issue_production_uom || "",
+        conversion_factor: values.conversion_factor ? Number(values.conversion_factor) : 0,
+        rack_no: values.rack_no || "",
+        bin_shelf_location: values.bin_shelf_location || "",
+        visual_status: values.visual_status || "",
+        dimentional_status: values.dimensional_status || "",
+        mtc_recieved: values.mtc_received === "yes",
+        heat_no_matched: values.heat_no_matched === "yes",
+        final_status: values.final_status || "",
+      };
 
-      formData.append("unique_item_code", values.unique_item_code);
-      formData.append("material_name", values.material_name);
-      formData.append("material_desc", values.material_desc || "");
-      formData.append("grade", values.grade || "");
-      formData.append("thickness", values.thickness || "");
-      formData.append("diameter", values.diameter || "");
-      formData.append("length", values.length || "");
-      formData.append("width", values.width || "");
-      formData.append("hsn_code", values.hsn_code || "");
-      formData.append("min_stock_level", values.min_stock_level || "0");
-      formData.append("max_stock_level", values.max_stock_level || "0");
-      formData.append("re_order_qty", values.re_order_qty || "0");
-      formData.append("purchase_uom", values.purchase_uom || "");
-      formData.append("issue_production_uom", values.issue_production_uom || "");
-      formData.append("conversion_factor", values.conversion_factor || "");
-      formData.append("rack_no", values.rack_no || "");
-      formData.append("bin_shelf_location", values.bin_shelf_location || "");
-
-      if (values.mtc instanceof File) {
-        formData.append("mtc", values.mtc);
-      }
-
-      await axiosProvider.post("/materials_master", formData, {
-        headers: { "Content-Type": "multipart/form-data" } as any,
-      });
+      await axiosProvider.post("/fineengg_erp/system/materials", payload);
 
       toast.success("Material added successfully");
       actions.resetForm();
@@ -174,7 +201,12 @@ export default function MaterialsMasterPage() {
     }
   };
 
-  const renderStepFields = (values: any, setFieldValue: any) => {
+  const renderStepFields = (
+    values: any,
+    setFieldValue: any,
+    touched: any,
+    errors: any
+  ) => {
     switch (activeStep) {
       case 0:
         return (
@@ -226,34 +258,35 @@ export default function MaterialsMasterPage() {
               />
               <ErrorMessage name="grade" component="div" className="text-red-500 text-sm mt-1" />
             </div>
-          </div>
-        );
 
-      case 1:
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2 mt-4">
+              <p className="font-bold text-gray-700 border-b pb-2 mb-4">Technical Specification</p>
+            </div>
+
             {[
               ["thickness", "Thickness"],
               ["diameter", "Diameter"],
               ["length", "Length"],
               ["width", "Width"],
+              ["across_flat", "Across Flat"],
+              ["center_to_face", "Center to Face"],
             ].map(([key, label]) => (
               <div key={key}>
                 <label className="block mb-2 font-medium">{label}</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   name={key}
                   value={values[key]}
                   onChange={(e) => setFieldValue(key, e.target.value)}
                   className="w-full border rounded px-4 py-3"
-                  placeholder={`Enter ${label.toLowerCase()}`}
+                  placeholder="0.00"
                 />
                 <ErrorMessage name={key} component="div" className="text-red-500 text-sm mt-1" />
               </div>
             ))}
 
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 mt-2">
               <label className="block mb-2 font-medium">HSN Code</label>
               <input
                 name="hsn_code"
@@ -267,7 +300,79 @@ export default function MaterialsMasterPage() {
           </div>
         );
 
+      case 1:
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-2 font-medium">Purchase UOM</label>
+              <input
+                name="purchase_uom"
+                value={values.purchase_uom}
+                onChange={(e) => setFieldValue("purchase_uom", e.target.value)}
+                className="w-full border rounded px-4 py-3"
+                placeholder="e.g. kg"
+              />
+              <ErrorMessage name="purchase_uom" component="div" className="text-red-500 text-sm mt-1" />
+            </div>
+
+            <div>
+              <label className="block mb-2 font-medium">Issue Production UOM</label>
+              <input
+                name="issue_production_uom"
+                value={values.issue_production_uom}
+                onChange={(e) => setFieldValue("issue_production_uom", e.target.value)}
+                className="w-full border rounded px-4 py-3"
+                placeholder="e.g. pcs"
+              />
+              <ErrorMessage name="issue_production_uom" component="div" className="text-red-500 text-sm mt-1" />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block mb-2 font-medium">Conversion Factor</label>
+              <input
+                type="number"
+                step="0.0001"
+                name="conversion_factor"
+                value={values.conversion_factor}
+                onChange={(e) => setFieldValue("conversion_factor", e.target.value)}
+                className="w-full border rounded px-4 py-3"
+                placeholder="1.00"
+              />
+              <ErrorMessage name="conversion_factor" component="div" className="text-red-500 text-sm mt-1" />
+            </div>
+          </div>
+        );
+
       case 2:
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block mb-2 font-medium">Rack No</label>
+              <input
+                name="rack_no"
+                value={values.rack_no}
+                onChange={(e) => setFieldValue("rack_no", e.target.value)}
+                className="w-full border rounded px-4 py-3"
+                placeholder="Enter rack no"
+              />
+              <ErrorMessage name="rack_no" component="div" className="text-red-500 text-sm mt-1" />
+            </div>
+
+            <div>
+              <label className="block mb-2 font-medium">Bin / Shelf Location</label>
+              <input
+                name="bin_shelf_location"
+                value={values.bin_shelf_location}
+                onChange={(e) => setFieldValue("bin_shelf_location", e.target.value)}
+                className="w-full border rounded px-4 py-3"
+                placeholder="Enter location"
+              />
+              <ErrorMessage name="bin_shelf_location" component="div" className="text-red-500 text-sm mt-1" />
+            </div>
+          </div>
+        );
+
+      case 3:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -308,86 +413,129 @@ export default function MaterialsMasterPage() {
               />
               <ErrorMessage name="re_order_qty" component="div" className="text-red-500 text-sm mt-1" />
             </div>
-
-            <div>
-              <label className="block mb-2 font-medium">Conversion Factor</label>
-              <input
-                type="number"
-                step="0.0001"
-                name="conversion_factor"
-                value={values.conversion_factor}
-                onChange={(e) => setFieldValue("conversion_factor", e.target.value)}
-                className="w-full border rounded px-4 py-3"
-              />
-              <ErrorMessage name="conversion_factor" component="div" className="text-red-500 text-sm mt-1" />
-            </div>
-
-            <div>
-              <label className="block mb-2 font-medium">Purchase UOM</label>
-              <input
-                name="purchase_uom"
-                value={values.purchase_uom}
-                onChange={(e) => setFieldValue("purchase_uom", e.target.value)}
-                className="w-full border rounded px-4 py-3"
-                placeholder="kg"
-              />
-              <ErrorMessage name="purchase_uom" component="div" className="text-red-500 text-sm mt-1" />
-            </div>
-
-            <div>
-              <label className="block mb-2 font-medium">Issue Production UOM</label>
-              <input
-                name="issue_production_uom"
-                value={values.issue_production_uom}
-                onChange={(e) => setFieldValue("issue_production_uom", e.target.value)}
-                className="w-full border rounded px-4 py-3"
-                placeholder="pcs"
-              />
-              <ErrorMessage name="issue_production_uom" component="div" className="text-red-500 text-sm mt-1" />
-            </div>
           </div>
         );
 
-      case 3:
+      case 4:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block mb-2 font-medium">Rack No</label>
-              <input
-                name="rack_no"
-                value={values.rack_no}
-                onChange={(e) => setFieldValue("rack_no", e.target.value)}
-                className="w-full border rounded px-4 py-3"
-                placeholder="Enter rack no"
-              />
-              <ErrorMessage name="rack_no" component="div" className="text-red-500 text-sm mt-1" />
+              <label className="block mb-2 font-medium">Visual Status</label>
+              <div className="flex gap-4 p-3 border rounded">
+                {["needed", "not needed"].map((option) => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="visual_status"
+                      value={option}
+                      checked={values.visual_status === option}
+                      onChange={() => setFieldValue("visual_status", option)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <span className="capitalize">{option}</span>
+                  </label>
+                ))}
+              </div>
+              {touched.visual_status && errors.visual_status && (
+                <div className="text-red-500 text-sm mt-1">
+                  {errors.visual_status}
+                </div>
+              )}
             </div>
 
             <div>
-              <label className="block mb-2 font-medium">Bin / Shelf Location</label>
-              <input
-                name="bin_shelf_location"
-                value={values.bin_shelf_location}
-                onChange={(e) => setFieldValue("bin_shelf_location", e.target.value)}
-                className="w-full border rounded px-4 py-3"
-                placeholder="Enter location"
-              />
-              <ErrorMessage name="bin_shelf_location" component="div" className="text-red-500 text-sm mt-1" />
+              <label className="block mb-2 font-medium">Dimensional Status</label>
+              <div className="flex gap-4 p-3 border rounded">
+                {["needed", "not needed"].map((option) => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dimensional_status"
+                      value={option}
+                      checked={values.dimensional_status === option}
+                      onChange={() => setFieldValue("dimensional_status", option)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <span className="capitalize">{option}</span>
+                  </label>
+                ))}
+              </div>
+              {touched.dimensional_status && errors.dimensional_status && (
+                <div className="text-red-500 text-sm mt-1">
+                  {errors.dimensional_status}
+                </div>
+              )}
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block mb-2 font-medium">MTC Document</label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                onChange={(e) => setFieldValue("mtc", e.currentTarget.files?.[0] || null)}
-                className="w-full border rounded px-4 py-3"
-              />
-              <ErrorMessage name="mtc" component="div" className="text-red-500 text-sm mt-1" />
-              {values.mtc && (
-                <p className="text-sm text-gray-600 mt-2">
-                  Selected: {(values.mtc as File).name}
-                </p>
+            <div>
+              <label className="block mb-2 font-medium">MTC Received</label>
+              <div className="flex gap-4 p-3 border rounded"> {/* Changed options to "yes", "no" */}
+                {["yes", "no"].map((option) => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mtc_received"
+                      value={option}
+                      checked={values.mtc_received === option}
+                      onChange={() => setFieldValue("mtc_received", option)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <span className="capitalize">{option}</span>
+                  </label>
+                ))}
+              </div> {/* End of change */}
+              {touched.mtc_received && errors.mtc_received && (
+                <div className="text-red-500 text-sm mt-1">
+                  {errors.mtc_received}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block mb-2 font-medium">Heat No Matched</label>
+              <div className="flex gap-4 p-3 border rounded"> {/* Changed options to "yes", "no" */}
+                {["yes", "no"].map((option) => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="heat_no_matched"
+                      value={option}
+                      checked={values.heat_no_matched === option}
+                      onChange={() => setFieldValue("heat_no_matched", option)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <span className="capitalize">{option}</span>
+                  </label>
+                ))}
+              </div> {/* End of change */}
+              {touched.heat_no_matched && errors.heat_no_matched && (
+                <div className="text-red-500 text-sm mt-1">
+                  {errors.heat_no_matched}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block mb-2 font-medium">Final Status</label>
+              <div className="flex gap-4 p-3 border rounded">
+                {["needed", "not needed"].map((option) => (
+                  <label key={option} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="final_status"
+                      value={option}
+                      checked={values.final_status === option}
+                      onChange={() => setFieldValue("final_status", option)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                    <span className="capitalize">{option}</span>
+                  </label>
+                ))}
+              </div>
+              {touched.final_status && errors.final_status && (
+                <div className="text-red-500 text-sm mt-1">
+                  {errors.final_status}
+                </div>
               )}
             </div>
           </div>
@@ -402,12 +550,28 @@ export default function MaterialsMasterPage() {
     () => [
       "unique_item_code",
       "material_name",
+      "material_desc",
       "grade",
+      "thickness",
+      "diameter",
+      "length",
+      "width",
+      "across_flat",
+      "center_to_face_distance",
       "hsn_code",
+      "min_stock_level",
+      "max_stock_level",
+      "re_order_qty",
       "purchase_uom",
       "issue_production_uom",
+      "conversion_factor",
       "rack_no",
       "bin_shelf_location",
+      "visual_status",
+      "dimentional_status",
+      "mtc_recieved",
+      "heat_no_matched",
+      "final_status",
     ],
     []
   );
@@ -475,7 +639,11 @@ export default function MaterialsMasterPage() {
                       <tr key={item.id} className="border hover:bg-gray-50">
                         {visibleColumns.map((col) => (
                           <td key={col} className="p-3 border whitespace-nowrap">
-                            {item[col] ?? "N/A"}
+                            {typeof item[col] === "boolean"
+                              ? item[col]
+                                ? "Yes"
+                                : "No"
+                              : item[col] ?? "N/A"}
                           </td>
                         ))}
                         <td className="p-3 border">
@@ -514,8 +682,10 @@ export default function MaterialsMasterPage() {
           validationSchema={stepSchemas[activeStep]}
           onSubmit={handleSubmit}
           enableReinitialize
+          validateOnChange={false}
+          validateOnBlur={false}
         >
-          {({ values, setFieldValue, validateForm, isSubmitting }) => (
+          {({ values, setFieldValue, validateForm, isSubmitting, touched, errors, setTouched, setErrors }) => (
             <Form className="h-full flex flex-col">
               <div className="p-6 border-b flex justify-between items-start">
                 <div>
@@ -523,7 +693,7 @@ export default function MaterialsMasterPage() {
                     Add Material
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    Step {activeStep + 1} of 4 — {stepTitles[activeStep]}
+                    Step {activeStep + 1} of 5 — {stepTitles[activeStep]}
                   </p>
                 </div>
 
@@ -550,44 +720,50 @@ export default function MaterialsMasterPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">
-                {renderStepFields(values, setFieldValue)}
+                {renderStepFields(values, setFieldValue, touched, errors)}
               </div>
 
               <div className="p-6 border-t flex gap-3 justify-between">
                 <button
                   type="button"
                   disabled={activeStep === 0}
-                  onClick={() => setActiveStep((prev) => Math.max(prev - 1, 0))}
+                  onClick={async () => {
+                    await setTouched({}, false);
+                    setErrors({});
+
+                    setTimeout(() => {
+                      setActiveStep((prev) => Math.max(prev - 1, 0));
+                    }, 0);
+                  }}
                   className="px-5 py-3 rounded-md border disabled:opacity-40"
                 >
                   Back
                 </button>
 
-                {activeStep < 3 ? (
+                {activeStep < 4 ? (
                   <button
                     type="button"
                     onClick={async () => {
-                      const errors = await validateForm();
-                      const fieldsByStep = [
-                        ["unique_item_code", "material_name", "material_desc", "grade"],
-                        ["thickness", "diameter", "length", "width", "hsn_code"],
-                        [
-                          "min_stock_level",
-                          "max_stock_level",
-                          "re_order_qty",
-                          "purchase_uom",
-                          "issue_production_uom",
-                          "conversion_factor",
-                        ],
-                        ["rack_no", "bin_shelf_location", "mtc"],
-                      ];
-
-                      const hasError = fieldsByStep[activeStep].some(
-                        (field) => Boolean((errors as any)[field])
+                      const currentStepFields = fieldsByStep[activeStep];
+                      const formErrors = await validateForm();
+                      const hasError = currentStepFields.some(
+                        (field) => Boolean((formErrors as any)[field])
                       );
 
                       if (!hasError) {
-                        setActiveStep((prev) => prev + 1);
+                        await setTouched({}, false);
+                        setErrors({});
+
+                        setTimeout(() => {
+                          setActiveStep((prev) => prev + 1);
+                        }, 0);
+                      }else {
+                        // Only touch current fields to show errors if validation fails
+                        const stepTouched = currentStepFields.reduce(
+                          (acc, field) => ({ ...acc, [field]: true }),
+                          {}
+                        );
+                        setTouched(stepTouched, false);
                       }
                     }}
                     className="px-5 py-3 rounded-md bg-primary-600 text-white"
