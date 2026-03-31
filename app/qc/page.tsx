@@ -80,7 +80,7 @@ export default function QcMainPage() {
     try {
       const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
-          ...(client ? { client_name: client } : {}),
+          ...(client ? { "job.client_name": client } : {}),
         },
       } as any);
       const cats = Array.isArray(response?.data?.data)
@@ -114,7 +114,7 @@ export default function QcMainPage() {
         params: {
           job_type: filterParam,
           status: "ready-for-qc",
-          ...(client ? { client_name: client } : {}),
+          ...(client ? { "job.client_name": client } : {}),
         },
       } as any);
 

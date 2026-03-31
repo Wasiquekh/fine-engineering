@@ -226,7 +226,7 @@ const ProductionUserMenu = ({
                             <Link href={`/review?filter=TSO_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`}>
                               <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE" && isActive)}>
                                 <MdDesignServices className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE" && isActive)} />
-                                <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE" && isActive)}>TSO Service</p>
+                                <p className={textCls(pathname === "/review" && client === "Amar Equipment" && filter === "TSO_SERVICE" && isActive)}>Tso Service</p>
                               </div>
                             </Link>
                           )}
@@ -368,7 +368,7 @@ const ProductionUserMenu = ({
                             <Link href={`/review?filter=TSO_SERVICE&client=Amar%20Biosystem&assign_to=${assignTo}`}>
                               <div className={itemCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE" && isActive)}>
                                 <MdDesignServices className={iconCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE" && isActive)} />
-                                <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE" && isActive)}>TSO Service</p>
+                                <p className={textCls(pathname === "/review" && client === "Amar Biosystem" && filter === "TSO_SERVICE" && isActive)}>Tso Service</p>
                               </div>
                             </Link>
                           )}
@@ -512,16 +512,16 @@ const LeftSideBar: React.FC = () => {
   const [isMaterialApprovedAmarBioOpen, setIsMaterialApprovedAmarBioOpen] = useState<boolean>(false);
 
   const [isProductionOpen, setIsProductionOpen] = useState<boolean>(
-    pathname.includes("/section_production_planning/section_production_planning/production_planning") ||
+    pathname.includes("/section_production_planning/production_planning") ||
       pathname === "/section_production_planning/category" ||
-      pathname.includes("/section_production_planning/section_production_planning/po-services") ||
+      pathname.includes("/section_production_planning/po-services") ||
       pathname.includes("/section_production_planning/vendors") ||
       pathname.includes("/section_production_planning/pp_not-ok")
   );
 
   const [isAmarEquipmentOpen, setIsAmarEquipmentOpen] = useState<boolean>(
-    pathname.includes("/section_production_planning/section_production_planning/production_planning") ||
-      pathname.includes("/section_production_planning/section_production_planning/po-services") ||
+    pathname.includes("/section_production_planning/production_planning") ||
+      pathname.includes("/section_production_planning/po-services") ||
       pathname.includes("/section_production_planning/pp_not-ok") ||
       (pathname.includes("/section_production/production_module") && client === "Amar Equipment") ||
       (pathname.startsWith("/review") && client === "Amar Equipment") ||
@@ -529,24 +529,24 @@ const LeftSideBar: React.FC = () => {
   );
 
   const [isAmarBioOpen, setIsAmarBioOpen] = useState<boolean>(
-    (pathname.includes("/section_production_planning/section_production_planning/production_planning") && client === "Amar Bio") ||
-      (pathname.includes("/section_production_planning/pp_not-ok") && client === "Amar Bio") ||
-      (pathname.includes("/section_production/production_module") && client === "Amar Bio") ||
-      (pathname.startsWith("/review") && client === "Amar Bio") ||
-      (pathname.startsWith("/qc") && client === "Amar Bio")
+    (pathname.includes("/section_production_planning/production_planning") && client === "Amar Biosystem") ||
+      (pathname.includes("/section_production_planning/pp_not-ok") && client === "Amar Biosystem") ||
+      (pathname.includes("/section_production/production_module") && client === "Amar Biosystem") ||
+      (pathname.startsWith("/review") && client === "Amar Biosystem") ||
+      (pathname.startsWith("/qc") && client === "Amar Biosystem")
   );
 
-  const [isPOOpen, setIsPOOpen] = useState<boolean>(pathname.includes("/section_production_planning/section_production_planning/po-services"));
+  const [isPOOpen, setIsPOOpen] = useState<boolean>(pathname.includes("/section_production_planning/po-services"));
 
   const [isNotOkAmarEquipmentOpen, setIsNotOkAmarEquipmentOpen] = useState<boolean>(
     pathname.includes("/section_production_planning/pp_not-ok") && client === "Amar Equipment"
   );
   const [isNotOkAmarBioOpen, setIsNotOkAmarBioOpen] = useState<boolean>(
-    pathname.includes("/section_production_planning/pp_not-ok") && client === "Amar Bio"
+    pathname.includes("/section_production_planning/pp_not-ok") && client === "Amar Biosystem"
   );
 
   const [isProductionDropdownOpen, setIsProductionDropdownOpen] = useState<boolean>(
-    pathname.includes("/production") && !pathname.includes("/section_production_planning/section_production_planning/production_planning")
+    pathname.includes("/production") && !pathname.includes("/section_production_planning/production_planning")
   );
 
   const [isQCOpen, setIsQCOpen] = useState<boolean>(pathname.startsWith("/qc"));
@@ -725,7 +725,7 @@ const LeftSideBar: React.FC = () => {
                                 <Link href="/section_inventory/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Equipment&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan">
                                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                                     <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Tso Service</p>
                                   </div>
                                 </Link>
                                 <Link href="/section_inventory/inventory_material_approve?filter=KANBAN&client=Amar%20Equipment&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan">
@@ -763,7 +763,7 @@ const LeftSideBar: React.FC = () => {
                                 <Link href="/section_inventory/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Biosystem&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan">
                                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                                     <MdDesignServices className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">TSO Service</p>
+                                    <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Tso Service</p>
                                   </div>
                                 </Link>
                                 <Link href="/section_inventory/inventory_material_approve?filter=KANBAN&client=Amar%20Biosystem&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan">
@@ -834,9 +834,9 @@ const LeftSideBar: React.FC = () => {
             <div
               onClick={() => setIsProductionOpen(!isProductionOpen)}
               className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
-                pathname.includes("/section_production_planning/section_production_planning/production_planning") ||
+                pathname.includes("/section_production_planning/production_planning") ||
                 pathname === "/section_production_planning/category" ||
-                pathname.includes("/section_production_planning/section_production_planning/po-services") ||
+                pathname.includes("/section_production_planning/po-services") ||
                 pathname.includes("/section_production_planning/vendors") ||
                 pathname.includes("/section_production_planning/pp_not-ok")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
@@ -909,7 +909,7 @@ const LeftSideBar: React.FC = () => {
                           <Link href="/section_production_planning/production_planning?filter=TSO_SERVICE&client=Amar%20Equipment">
                             <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
                               <MdDesignServices className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
-                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
+                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>Tso Service</p>
                             </div>
                           </Link>
                         )}
@@ -977,7 +977,7 @@ const LeftSideBar: React.FC = () => {
                             <Link href="/section_production_planning/pp_not-ok?filter=TSO_SERVICE&client=Amar%20Equipment">
                               <div className={itemCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
                                 <MdDesignServices className={iconCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
-                                <p className={textCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
+                                <p className={textCls(isMainNotOkPage && client === "Amar Equipment" && filter === "TSO_SERVICE")}>Tso Service</p>
                               </div>
                             </Link>
 
@@ -1025,9 +1025,9 @@ const LeftSideBar: React.FC = () => {
                         {/* Job Service */}
                         {hasJobServiceView && (
                           <Link href="/section_production_planning/production_planning?filter=JOB_SERVICE&client=Amar%20Biosystem">
-                            <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "JOB_SERVICE")}>
-                              <MdWorkOutline className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "JOB_SERVICE")} />
-                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "JOB_SERVICE")}>Job Service</p>
+                            <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>
+                              <MdWorkOutline className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "JOB_SERVICE")} />
+                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>Job Service</p>
                             </div>
                           </Link>
                         )}
@@ -1035,9 +1035,9 @@ const LeftSideBar: React.FC = () => {
                         {/* TSO Service */}
                         {hasTSOServiceView && (
                           <Link href="/section_production_planning/production_planning?filter=TSO_SERVICE&client=Amar%20Biosystem">
-                            <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "TSO_SERVICE")}>
-                              <MdDesignServices className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "TSO_SERVICE")} />
-                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "TSO_SERVICE")}>TSO Service</p>
+                            <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
+                              <MdDesignServices className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
+                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>Tso Service</p>
                             </div>
                           </Link>
                         )}
@@ -1045,9 +1045,9 @@ const LeftSideBar: React.FC = () => {
                         {/* Kanban */}
                         {hasKanbanView && (
                           <Link href="/section_production_planning/production_planning?filter=KANBAN&client=Amar%20Biosystem">
-                            <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "KANBAN")}>
-                              <MdViewKanban className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "KANBAN")} />
-                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Bio" && filter === "KANBAN")}>Kanban</p>
+                            <div className={itemCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "KANBAN")}>
+                              <MdViewKanban className={iconCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "KANBAN")} />
+                              <p className={textCls(pathname === "/section_production_planning/production_planning" && client === "Amar Biosystem" && filter === "KANBAN")}>Kanban</p>
                             </div>
                           </Link>
                         )}
@@ -1105,7 +1105,7 @@ const LeftSideBar: React.FC = () => {
                             <Link href="/section_production_planning/pp_not-ok?filter=TSO_SERVICE&client=Amar%20Biosystem">
                               <div className={itemCls(isMainNotOkPage && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
                                 <MdDesignServices className={iconCls(isMainNotOkPage && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
-                                <p className={textCls(isMainNotOkPage && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>TSO Service</p>
+                                <p className={textCls(isMainNotOkPage && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>Tso Service</p>
                               </div>
                             </Link>
 
@@ -1252,7 +1252,7 @@ const LeftSideBar: React.FC = () => {
                       <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Equipment">
                         <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
                           <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
-                          <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>TSO Service</p>
+                          <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>Tso Service</p>
                         </div>
                       </Link>
                     )}
@@ -1261,7 +1261,7 @@ const LeftSideBar: React.FC = () => {
                       <Link href="/qc?filter=KANBAN&client=Amar%20Equipment">
                         <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>
                           <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")} />
-                          <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>PO</p>
+                          <p className={textCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>Kanban</p>
                         </div>
                       </Link>
                     )}
@@ -1310,7 +1310,7 @@ const LeftSideBar: React.FC = () => {
                       <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Biosystem">
                         <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
                           <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
-                          <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>TSO Service</p>
+                          <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>Tso Service</p>
                         </div>
                       </Link>
                     )}
@@ -1319,7 +1319,7 @@ const LeftSideBar: React.FC = () => {
                       <Link href="/qc?filter=KANBAN&client=Amar%20Biosystem">
                         <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>
                           <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")} />
-                          <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>PO</p>
+                          <p className={textCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>Kanban</p>
                         </div>
                       </Link>
                     )}
