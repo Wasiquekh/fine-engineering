@@ -16,6 +16,8 @@ import {
   MdOutlineSecurity,
   MdOutlineAdminPanelSettings,
   MdHistory,
+  MdOutlineShoppingCart,
+  MdOutlineCancel,
 } from "react-icons/md";
 import { TbDeviceMobileDollar } from "react-icons/tb";
 import { FaChevronDown, FaHistory } from "react-icons/fa";
@@ -274,7 +276,7 @@ const ProductionUserMenu = ({
                 className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
               >
                 <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Bio</p>
+                <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Biosystem</p>
                 <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarBioOpen ? "rotate-180" : ""}`} />
               </div>
 
@@ -471,6 +473,9 @@ const LeftSideBar: React.FC = () => {
   
   // QC Module
   const hasQCView = hasPermission(permissions, "qc.view");
+
+  // Procurement Module
+  const hasProcurementView = hasPermission(permissions, "procurement.view");
   
   // User Management Module
   const hasUserManagementView = hasPermission(permissions, "user.management.view");
@@ -553,6 +558,12 @@ const LeftSideBar: React.FC = () => {
   const [isQCAmarEquipmentOpen, setIsQCAmarEquipmentOpen] = useState<boolean>(false);
   const [isQCAmarBioOpen, setIsQCAmarBioOpen] = useState<boolean>(false);
 
+  const [isProcurementOpen, setIsProcurementOpen] = useState<boolean>(pathname.startsWith("/procurement"));
+  const [isPROpen, setIsPROpen] = useState<boolean>(pathname.startsWith("/procurement/pr"));
+  const [isRejectedPOOpen, setIsRejectedPOOpen] = useState<boolean>(
+    pathname.startsWith("/procurement/rejected-po")
+  );
+
   const [isUserManagementOpen, setIsUserManagementOpen] = useState<boolean>(
     pathname.includes("/user-management") || 
     pathname.includes("/user-activity") || 
@@ -565,6 +576,12 @@ const LeftSideBar: React.FC = () => {
       setIsQCOpen(true);
       if (client === "Amar Equipment") setIsQCAmarEquipmentOpen(true);
       if (client === "Amar Biosystem") setIsQCAmarBioOpen(true);
+    }
+
+    if (pathname.startsWith("/procurement")) {
+      setIsProcurementOpen(true);
+      if (pathname.includes("/pr")) setIsPROpen(true);
+      if (pathname.includes("/rejected-po")) setIsRejectedPOOpen(true);
     }
 
     if (pathname.startsWith("/section_production_planning/pp_not-ok")) {
@@ -1016,7 +1033,7 @@ const LeftSideBar: React.FC = () => {
                       className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
                     >
                       <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                      <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Bio</p>
+                      <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Biosystem</p>
                       <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarBioOpen ? "rotate-180" : ""}`} />
                     </div>
 
@@ -1291,7 +1308,7 @@ const LeftSideBar: React.FC = () => {
                   className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
                 >
                   <MdOutlinePeopleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Bio</p>
+                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Amar Biosystem</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isQCAmarBioOpen ? "rotate-180" : ""}`} />
                 </div>
 
@@ -1341,6 +1358,106 @@ const LeftSideBar: React.FC = () => {
                         </div>
                       </Link>
                     )}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Procurement Section */}
+        {hasProcurementView && (
+          <>
+            <div
+              onClick={() => setIsProcurementOpen(!isProcurementOpen)}
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600 ${
+                pathname.startsWith("/procurement")
+                  ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
+                  : ""
+              }`}
+            >
+              <MdOutlineShoppingCart className="w-6 h-6" />
+              <p>Procurement</p>
+              <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isProcurementOpen ? "rotate-180" : ""}`} />
+            </div>
+
+            {isProcurementOpen && (
+              <div className="pl-4 mb-4 flex flex-col gap-1">
+                <Link href="/procurement/dashboard">
+                  <div className={itemCls(pathname === "/procurement/dashboard")}>
+                    <MdOutlineDashboard className={iconCls(pathname === "/procurement/dashboard")} />
+                    <p className={textCls(pathname === "/procurement/dashboard")}>Procurement Dashboard</p>
+                  </div>
+                </Link>
+                <Link href="/procurement/master">
+                  <div className={itemCls(pathname === "/procurement/master")}>
+                    <MdCategory className={iconCls(pathname === "/procurement/master")} />
+                    <p className={textCls(pathname === "/procurement/master")}>Master</p>
+                  </div>
+                </Link>
+
+                <div
+                  onClick={() => setIsPROpen(!isPROpen)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                >
+                  <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PR</p>
+                  <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isPROpen ? "rotate-180" : ""}`} />
+                </div>
+
+                {isPROpen && (
+                  <div className="pl-4 flex flex-col gap-1">
+                    <Link href="/procurement/pr/inventory2">
+                      <div className={itemCls(pathname === "/procurement/pr/inventory2")}>
+                        <MdPendingActions className={iconCls(pathname === "/procurement/pr/inventory2")} />
+                        <p className={textCls(pathname === "/procurement/pr/inventory2")}>Inventory 2 PR</p>
+                      </div>
+                    </Link>
+                    <Link href="/procurement/pr/inventory3">
+                      <div className={itemCls(pathname === "/procurement/pr/inventory3")}>
+                        <MdPendingActions className={iconCls(pathname === "/procurement/pr/inventory3")} />
+                        <p className={textCls(pathname === "/procurement/pr/inventory3")}>Inventory 3 PR</p>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+
+                <Link href="/procurement/po">
+                  <div className={itemCls(pathname === "/procurement/po")}>
+                    <MdWorkOutline className={iconCls(pathname === "/procurement/po")} />
+                    <p className={textCls(pathname === "/procurement/po")}>PO</p>
+                  </div>
+                </Link>
+                <Link href="/procurement/reports">
+                  <div className={itemCls(pathname === "/procurement/reports")}>
+                    <MdHistory className={iconCls(pathname === "/procurement/reports")} />
+                    <p className={textCls(pathname === "/procurement/reports")}>Reports</p>
+                  </div>
+                </Link>
+
+                <div
+                  onClick={() => setIsRejectedPOOpen(!isRejectedPOOpen)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                >
+                  <MdOutlineCancel className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Rejected PO</p>
+                  <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isRejectedPOOpen ? "rotate-180" : ""}`} />
+                </div>
+
+                {isRejectedPOOpen && (
+                  <div className="pl-4 flex flex-col gap-1">
+                    <Link href="/procurement/rejected-po/inventory2">
+                      <div className={itemCls(pathname === "/procurement/rejected-po/inventory2")}>
+                        <MdOutlineInventory2 className={iconCls(pathname === "/procurement/rejected-po/inventory2")} />
+                        <p className={textCls(pathname === "/procurement/rejected-po/inventory2")}>Inventory 2</p>
+                      </div>
+                    </Link>
+                    <Link href="/procurement/rejected-po/inventory3">
+                      <div className={itemCls(pathname === "/procurement/rejected-po/inventory3")}>
+                        <MdOutlineInventory2 className={iconCls(pathname === "/procurement/rejected-po/inventory3")} />
+                        <p className={textCls(pathname === "/procurement/rejected-po/inventory3")}>Inventory 3</p>
+                      </div>
+                    </Link>
                   </div>
                 )}
               </div>
