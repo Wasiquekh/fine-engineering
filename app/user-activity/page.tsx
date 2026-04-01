@@ -1,18 +1,12 @@
+// app/user-activity/page.tsx
 "use client";
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { 
-  FaEye, FaEyeSlash, FaUser, FaUserCog, FaUserTie
-} from "react-icons/fa";
-import { 
-  MdOutlineRefresh, MdOutlineWork, MdOutlineAssignment,
-  MdOutlineCategory, MdOutlineInventory, MdOutlineShoppingCart,
-  MdOutlinePerson, MdOutlineBadge, MdOutlineBusinessCenter,
-  MdOutlineQrCodeScanner, MdOutlineApproval, MdOutlineCancel
-} from "react-icons/md";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { MdOutlineRefresh } from "react-icons/md";
 import { HiChevronDoubleLeft, HiChevronDoubleRight } from "react-icons/hi";
 import { IoCloseOutline } from "react-icons/io5";
 import { FiFilter } from "react-icons/fi";
@@ -83,8 +77,10 @@ export default function UserActivityPage() {
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [workerOptions, setWorkerOptions] = useState<WorkerOption[]>([]);
   const [appliedFilters, setAppliedFilters] = useState<string[]>([]);
-  const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
-  
+  const [expandedMetadata, setExpandedMetadata] = useState<
+    Record<string, boolean>
+  >({});
+
   const [filterData, setFilterData] = useState({
     system_user_id: "",
     worker_id: "",
@@ -92,7 +88,7 @@ export default function UserActivityPage() {
     startDate: null as Date | null,
     endDate: null as Date | null,
     module: "",
-    type: ""
+    type: "",
   });
 
   const moduleOptions = [
@@ -146,12 +142,14 @@ export default function UserActivityPage() {
   // Fetch users for filter dropdown
   const fetchUserOptions = async () => {
     try {
-      const res = await axiosProvider.get("/fineengg_erp/system/getallusername");
+      const res = await axiosProvider.get(
+        "/fineengg_erp/system/getallusername"
+      );
       if (res.data.success) {
         const users = res.data.data.users || [];
         const options = users.map((user: User) => ({
           value: user.uuid,
-          label: user.name
+          label: user.name,
         }));
         setUserOptions(options);
       }
@@ -163,12 +161,14 @@ export default function UserActivityPage() {
   // Fetch workers for filter dropdown
   const fetchWorkerOptions = async () => {
     try {
-      const res = await axiosProvider.get("/fineengg_erp/system/worker/workers");
+      const res = await axiosProvider.get(
+        "/fineengg_erp/system/worker/workers"
+      );
       if (res.data.success) {
         const workers = res.data.data || [];
         const options = workers.map((worker: Worker) => ({
           value: worker.id,
-          label: worker.worker_name
+          label: worker.worker_name,
         }));
         setWorkerOptions(options);
       }
@@ -183,7 +183,7 @@ export default function UserActivityPage() {
   }, []);
 
   useEffect(() => {
-    if (Object.values(filterData).some(v => v !== "" && v !== null)) {
+    if (Object.values(filterData).some((v) => v !== "" && v !== null)) {
       fetchFilteredActivities();
     } else {
       fetchActivities();
@@ -194,7 +194,9 @@ export default function UserActivityPage() {
   const fetchActivities = async () => {
     setLoading(true);
     try {
-      const res = await axiosProvider.get(`/fineengg_erp/system/getallactivites?page=${page}&limit=${limit}`);
+      const res = await axiosProvider.get(
+        `/fineengg_erp/system/getallactivites?page=${page}&limit=${limit}`
+      );
       if (res.data.success) {
         setActivities(res.data.data.activities || []);
         setTotalPages(res.data.data.totalPages || 1);
@@ -212,12 +214,16 @@ export default function UserActivityPage() {
     setLoading(true);
     try {
       const apiFilterData: any = {};
-      
-      if (filterData.system_user_id) apiFilterData.system_user_id = filterData.system_user_id;
+
+      if (filterData.system_user_id)
+        apiFilterData.system_user_id = filterData.system_user_id;
       if (filterData.worker_id) apiFilterData.worker_id = filterData.worker_id;
-      if (filterData.userActivity) apiFilterData.userActivity = filterData.userActivity;
-      if (filterData.startDate) apiFilterData.startDate = format(filterData.startDate, "yyyy-MM-dd");
-      if (filterData.endDate) apiFilterData.endDate = format(filterData.endDate, "yyyy-MM-dd");
+      if (filterData.userActivity)
+        apiFilterData.userActivity = filterData.userActivity;
+      if (filterData.startDate)
+        apiFilterData.startDate = format(filterData.startDate, "yyyy-MM-dd");
+      if (filterData.endDate)
+        apiFilterData.endDate = format(filterData.endDate, "yyyy-MM-dd");
       if (filterData.module) apiFilterData.module = filterData.module;
       if (filterData.type) apiFilterData.type = filterData.type;
 
@@ -230,7 +236,7 @@ export default function UserActivityPage() {
         `/fineengg_erp/system/filteruseractivites?page=${page}&limit=${limit}`,
         apiFilterData
       );
-      
+
       if (res.data.success) {
         setActivities(res.data.data.filteredActivities || []);
         setTotalPages(res.data.data.totalPages || 1);
@@ -248,39 +254,42 @@ export default function UserActivityPage() {
   const updateAppliedFilters = (filters: any) => {
     const filterStrings = [];
     if (filters.system_user_id) {
-      const user = userOptions.find(u => u.value === filters.system_user_id);
+      const user = userOptions.find((u) => u.value === filters.system_user_id);
       filterStrings.push(`User: ${user?.label || filters.system_user_id}`);
     }
     if (filters.worker_id) {
-      const worker = workerOptions.find(w => w.value === parseInt(filters.worker_id));
+      const worker = workerOptions.find(
+        (w) => w.value === parseInt(filters.worker_id)
+      );
       filterStrings.push(`Worker: ${worker?.label || filters.worker_id}`);
     }
-    if (filters.userActivity) filterStrings.push(`Activity: ${filters.userActivity}`);
+    if (filters.userActivity)
+      filterStrings.push(`Activity: ${filters.userActivity}`);
     if (filters.startDate) filterStrings.push(`From: ${filters.startDate}`);
     if (filters.endDate) filterStrings.push(`To: ${filters.endDate}`);
     if (filters.module) {
-      const module = moduleOptions.find(m => m.value === filters.module);
+      const module = moduleOptions.find((m) => m.value === filters.module);
       filterStrings.push(`Module: ${module?.label || filters.module}`);
     }
     if (filters.type) {
-      const type = typeOptions.find(t => t.value === filters.type);
+      const type = typeOptions.find((t) => t.value === filters.type);
       filterStrings.push(`Type: ${type?.label || filters.type}`);
     }
     setAppliedFilters(filterStrings);
   };
 
   const handleFilterChange = (field: string, value: any) => {
-    setFilterData(prev => ({ ...prev, [field]: value }));
+    setFilterData((prev) => ({ ...prev, [field]: value }));
     setPage(1);
   };
 
   const handleStartDateChange = (date: Date | null) => {
-    setFilterData(prev => ({ ...prev, startDate: date }));
+    setFilterData((prev) => ({ ...prev, startDate: date }));
     setPage(1);
   };
 
   const handleEndDateChange = (date: Date | null) => {
-    setFilterData(prev => ({ ...prev, endDate: date }));
+    setFilterData((prev) => ({ ...prev, endDate: date }));
     setPage(1);
   };
 
@@ -292,67 +301,73 @@ export default function UserActivityPage() {
       startDate: null,
       endDate: null,
       module: "",
-      type: ""
+      type: "",
     });
     setAppliedFilters([]);
     setPage(1);
   };
 
   const removeFilter = (filterToRemove: string) => {
-    const filterKey = filterToRemove.split(':')[0].trim().toLowerCase();
-    
-    if (filterKey === 'user') setFilterData(prev => ({ ...prev, system_user_id: "" }));
-    if (filterKey === 'worker') setFilterData(prev => ({ ...prev, worker_id: "" }));
-    if (filterKey === 'activity') setFilterData(prev => ({ ...prev, userActivity: "" }));
-    if (filterKey === 'from') setFilterData(prev => ({ ...prev, startDate: null }));
-    if (filterKey === 'to') setFilterData(prev => ({ ...prev, endDate: null }));
-    if (filterKey === 'module') setFilterData(prev => ({ ...prev, module: "" }));
-    if (filterKey === 'type') setFilterData(prev => ({ ...prev, type: "" }));
-    
-    setAppliedFilters(prev => prev.filter(f => f !== filterToRemove));
+    const filterKey = filterToRemove.split(":")[0].trim().toLowerCase();
+
+    if (filterKey === "user")
+      setFilterData((prev) => ({ ...prev, system_user_id: "" }));
+    if (filterKey === "worker")
+      setFilterData((prev) => ({ ...prev, worker_id: "" }));
+    if (filterKey === "activity")
+      setFilterData((prev) => ({ ...prev, userActivity: "" }));
+    if (filterKey === "from")
+      setFilterData((prev) => ({ ...prev, startDate: null }));
+    if (filterKey === "to")
+      setFilterData((prev) => ({ ...prev, endDate: null }));
+    if (filterKey === "module")
+      setFilterData((prev) => ({ ...prev, module: "" }));
+    if (filterKey === "type") setFilterData((prev) => ({ ...prev, type: "" }));
+
+    setAppliedFilters((prev) => prev.filter((f) => f !== filterToRemove));
   };
 
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+    return new Date(timestamp).toLocaleString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
   const getActivityIcon = (type: string, module: string) => {
-    if (type?.includes('login')) return '🔑';
-    if (type?.includes('create')) return '➕';
-    if (type?.includes('update')) return '✏️';
-    if (type?.includes('delete')) return '🗑️';
-    if (type?.includes('approve')) return '✅';
-    if (type?.includes('reject')) return '❌';
-    if (type?.includes('assign')) return '📋';
-    if (type?.includes('move')) return '🔄';
-    if (type?.includes('split')) return '✂️';
-    if (type?.includes('not_ok')) return '⚠️';
-    if (type?.includes('rework')) return '🔄';
-    if (type?.includes('complete')) return '✅';
-    if (type?.includes('dispatch')) return '🚚';
-    if (type?.includes('qc_outgoing')) return '📤';
-    if (type?.includes('qc_incoming')) return '📥';
-    if (type?.includes('error')) return '❌';
-    if (type?.includes('list')) return '📋';
-    
-    if (module?.includes('worker')) return '👷';
-    if (module?.includes('job')) return '📦';
-    if (module?.includes('category')) return '📁';
-    if (module?.includes('assignment')) return '📋';
-    if (module?.includes('vendor')) return '🏢';
-    if (module?.includes('inventory')) return '📦';
-    if (module?.includes('qc')) return '🔍';
-    if (module?.includes('moveto')) return '🔄';
-    if (module?.includes('notok')) return '⚠️';
-    
-    return '📝';
+    if (type?.includes("login")) return "🔑";
+    if (type?.includes("create")) return "➕";
+    if (type?.includes("update")) return "✏️";
+    if (type?.includes("delete")) return "🗑️";
+    if (type?.includes("approve")) return "✅";
+    if (type?.includes("reject")) return "❌";
+    if (type?.includes("assign")) return "📋";
+    if (type?.includes("move")) return "🔄";
+    if (type?.includes("split")) return "✂️";
+    if (type?.includes("not_ok")) return "⚠️";
+    if (type?.includes("rework")) return "🔄";
+    if (type?.includes("complete")) return "✅";
+    if (type?.includes("dispatch")) return "🚚";
+    if (type?.includes("qc_outgoing")) return "📤";
+    if (type?.includes("qc_incoming")) return "📥";
+    if (type?.includes("error")) return "❌";
+    if (type?.includes("list")) return "📋";
+
+    if (module?.includes("worker")) return "👷";
+    if (module?.includes("job")) return "📦";
+    if (module?.includes("category")) return "📁";
+    if (module?.includes("assignment")) return "📋";
+    if (module?.includes("vendor")) return "🏢";
+    if (module?.includes("inventory")) return "📦";
+    if (module?.includes("qc")) return "🔍";
+    if (module?.includes("moveto")) return "🔄";
+    if (module?.includes("notok")) return "⚠️";
+
+    return "📝";
   };
 
   // Safely parse JSON
@@ -368,35 +383,39 @@ export default function UserActivityPage() {
   // Extract all possible job identifiers from metadata
   const extractJobIdentifier = (metadata: any): string | null => {
     if (!metadata) return null;
-    
-    // Check all possible job identifier fields
-    return metadata.job_no || 
-           metadata.tso_no || 
-           metadata.jo_number || 
-           metadata.joNo || 
-           metadata.jo_no ||
-           metadata.job_number ||
-           (metadata.job_id ? `JOB-${metadata.job_id.substring(0, 8)}` : null) ||
-           (metadata.entity_id && metadata.entity_type === 'job' ? `JOB-${metadata.entity_id.substring(0, 8)}` : null);
+
+    return (
+      metadata.job_no ||
+      metadata.tso_no ||
+      metadata.jo_number ||
+      metadata.joNo ||
+      metadata.jo_no ||
+      metadata.job_number ||
+      (metadata.job_id ? `JOB-${metadata.job_id.substring(0, 8)}` : null) ||
+      (metadata.entity_id && metadata.entity_type === "job"
+        ? `JOB-${metadata.entity_id.substring(0, 8)}`
+        : null)
+    );
   };
 
   // Extract all possible quantity fields from metadata
   const extractQuantity = (metadata: any): number | null => {
     if (!metadata) return null;
-    
-    // Check all possible quantity fields
-    return metadata.quantity || 
-           metadata.qty || 
-           metadata.quantity_no || 
-           metadata.move_quantity || 
-           metadata.moved_quantity || 
-           metadata.outgoing_qty || 
-           metadata.incoming_qty || 
-           metadata.original_quantity ||
-           metadata.assignment_quantity ||
-           metadata.qc_quantity ||
-           metadata.remaining_quantity ||
-           null;
+
+    return (
+      metadata.quantity ||
+      metadata.qty ||
+      metadata.quantity_no ||
+      metadata.move_quantity ||
+      metadata.moved_quantity ||
+      metadata.outgoing_qty ||
+      metadata.incoming_qty ||
+      metadata.original_quantity ||
+      metadata.assignment_quantity ||
+      metadata.qc_quantity ||
+      metadata.remaining_quantity ||
+      null
+    );
   };
 
   // Extract client name
@@ -412,9 +431,13 @@ export default function UserActivityPage() {
   };
 
   // Extract status changes
-  const extractStatusChange = (metadata: any, oldValues: any, newValues: any): string | null => {
+  const extractStatusChange = (
+    metadata: any,
+    oldValues: any,
+    newValues: any
+  ): string | null => {
     if (oldValues?.status || newValues?.status) {
-      return `${oldValues?.status || 'none'} → ${newValues?.status || 'none'}`;
+      return `${oldValues?.status || "none"} → ${newValues?.status || "none"}`;
     }
     if (metadata?.old_status && metadata?.new_status) {
       return `${metadata.old_status} → ${metadata.new_status}`;
@@ -426,54 +449,66 @@ export default function UserActivityPage() {
   };
 
   // Extract split operation details
-  const extractSplitDetails = (metadata: any): { original: number; moved: number; remaining: number } | null => {
+  const extractSplitDetails = (
+    metadata: any
+  ): { original: number; moved: number; remaining: number } | null => {
     if (metadata?.original_quantity && metadata?.moved_quantity) {
       return {
         original: metadata.original_quantity,
         moved: metadata.moved_quantity,
-        remaining: metadata.remaining_quantity || (metadata.original_quantity - metadata.moved_quantity)
+        remaining:
+          metadata.remaining_quantity ||
+          metadata.original_quantity - metadata.moved_quantity,
       };
     }
     return null;
   };
 
   // Extract QC details
-  const extractQCDetails = (metadata: any): { date?: string; gatepass?: string; review?: string } | null => {
+  const extractQCDetails = (
+    metadata: any
+  ): { date?: string; gatepass?: string; review?: string } | null => {
     if (metadata?.qc_date || metadata?.gatepass_no || metadata?.review_for) {
       return {
         date: metadata.qc_date,
         gatepass: metadata.gatepass_no,
-        review: metadata.review_for
+        review: metadata.review_for,
       };
     }
     return null;
   };
 
   // Extract changes from old_values and new_values
-  const extractChanges = (oldValuesStr: string | null, newValuesStr: string | null): any[] => {
+  const extractChanges = (
+    oldValuesStr: string | null,
+    newValuesStr: string | null
+  ): any[] => {
     const changes: any[] = [];
-    
+
     const oldVals = safeJsonParse(oldValuesStr);
     const newVals = safeJsonParse(newValuesStr);
-    
+
     if (!oldVals || !newVals) return changes;
-    
-    const allFields = new Set([...Object.keys(oldVals), ...Object.keys(newVals)]);
-    
-    allFields.forEach(field => {
+
+    const allFields = new Set([
+      ...Object.keys(oldVals),
+      ...Object.keys(newVals),
+    ]);
+
+    allFields.forEach((field) => {
       const oldVal = oldVals[field];
       const newVal = newVals[field];
-      
+
       if (oldVal === newVal) return;
       if (oldVal === undefined && newVal === undefined) return;
-      
+
       changes.push({
         field,
-        old: oldVal !== undefined ? oldVal : 'not set',
-        new: newVal !== undefined ? newVal : 'not set'
+        old: oldVal !== undefined ? oldVal : "not set",
+        new: newVal !== undefined ? newVal : "not set",
       });
     });
-    
+
     return changes;
   };
 
@@ -482,99 +517,88 @@ export default function UserActivityPage() {
     const metadata = safeJsonParse(activity.metadata);
     const oldVals = safeJsonParse(activity.old_values);
     const newVals = safeJsonParse(activity.new_values);
-    
+
     const parts: string[] = [];
-    
-    // Extract job identifier
+
     const jobId = extractJobIdentifier(metadata);
-    if (jobId) {
-      parts.push(`📋 Job: ${jobId}`);
-    }
-    
-    // Extract client name
+    if (jobId) parts.push(`📋 Job: ${jobId}`);
+
     const clientName = extractClientName(metadata);
-    if (clientName) {
-      parts.push(`👤 Client: ${clientName}`);
-    }
-    
-    // Extract item description
+    if (clientName) parts.push(`👤 Client: ${clientName}`);
+
     const itemDesc = extractItemDescription(metadata);
-    if (itemDesc) {
-      parts.push(`📦 Item: ${itemDesc}`);
-    }
-    
-    // Extract quantity
+    if (itemDesc) parts.push(`📦 Item: ${itemDesc}`);
+
     const quantity = extractQuantity(metadata);
-    if (quantity) {
-      parts.push(`🔢 Qty: ${quantity}`);
-    }
-    
-    // Extract split details
+    if (quantity) parts.push(`🔢 Qty: ${quantity}`);
+
     const splitDetails = extractSplitDetails(metadata);
     if (splitDetails) {
       parts.push(`📊 Moved: ${splitDetails.moved}/${splitDetails.original}`);
       parts.push(`⏳ Remaining: ${splitDetails.remaining}`);
     }
-    
-    // Extract QC details
+
     const qcDetails = extractQCDetails(metadata);
     if (qcDetails) {
-      if (qcDetails.date) parts.push(`📅 QC Date: ${new Date(qcDetails.date).toLocaleDateString()}`);
+      if (qcDetails.date)
+        parts.push(
+          `📅 QC Date: ${new Date(qcDetails.date).toLocaleDateString()}`
+        );
       if (qcDetails.gatepass) parts.push(`🎫 Gatepass: ${qcDetails.gatepass}`);
       if (qcDetails.review) parts.push(`🔍 Review: ${qcDetails.review}`);
     }
-    
-    // Extract status change
+
     const statusChange = extractStatusChange(metadata, oldVals, newVals);
-    if (statusChange) {
-      parts.push(`🔄 Status: ${statusChange}`);
-    }
-    
-    // Extract other changes
+    if (statusChange) parts.push(`🔄 Status: ${statusChange}`);
+
     const changes = extractChanges(activity.old_values, activity.new_values);
-    changes.forEach(change => {
-      if (change.field === 'assign_to') {
-        parts.push(`👤 Assigned: ${change.old || 'none'} → ${change.new || 'none'}`);
-      } else if (change.field === 'worker_name') {
-        parts.push(`👷 Worker: ${change.old || 'none'} → ${change.new || 'none'}`);
-      } else if (change.field === 'vendor_name') {
-        parts.push(`🏢 Vendor: ${change.old || 'none'} → ${change.new || 'none'}`);
-      } else if (change.field === 'urgent') {
-        parts.push(`⚠️ Urgent: ${change.old ? 'Yes' : 'No'} → ${change.new ? 'Yes' : 'No'}`);
-      } else if (change.field === 'is_approved') {
-        parts.push(`✅ Approved: ${change.old ? 'Yes' : 'No'} → ${change.new ? 'Yes' : 'No'}`);
-      } else if (change.field === 'rejected') {
-        parts.push(`❌ Rejected: ${change.old ? 'Yes' : 'No'} → ${change.new ? 'Yes' : 'No'}`);
+    changes.forEach((change) => {
+      if (change.field === "assign_to") {
+        parts.push(
+          `👤 Assigned: ${change.old || "none"} → ${change.new || "none"}`
+        );
+      } else if (change.field === "worker_name") {
+        parts.push(
+          `👷 Worker: ${change.old || "none"} → ${change.new || "none"}`
+        );
+      } else if (change.field === "vendor_name") {
+        parts.push(
+          `🏢 Vendor: ${change.old || "none"} → ${change.new || "none"}`
+        );
+      } else if (change.field === "urgent") {
+        parts.push(
+          `⚠️ Urgent: ${change.old ? "Yes" : "No"} → ${
+            change.new ? "Yes" : "No"
+          }`
+        );
+      } else if (change.field === "is_approved") {
+        parts.push(
+          `✅ Approved: ${change.old ? "Yes" : "No"} → ${
+            change.new ? "Yes" : "No"
+          }`
+        );
+      } else if (change.field === "rejected") {
+        parts.push(
+          `❌ Rejected: ${change.old ? "Yes" : "No"} → ${
+            change.new ? "Yes" : "No"
+          }`
+        );
       }
     });
-    
-    // Extract reason
-    if (metadata?.reason) {
-      parts.push(`📝 Reason: ${metadata.reason}`);
-    }
-    
-    // Extract machine category
-    if (metadata?.machine_category) {
+
+    if (metadata?.reason) parts.push(`📝 Reason: ${metadata.reason}`);
+    if (metadata?.machine_category)
       parts.push(`⚙️ Machine: ${metadata.machine_category}`);
-    }
-    
-    // Extract vendor name
-    if (metadata?.vendor_name) {
-      parts.push(`🏢 Vendor: ${metadata.vendor_name}`);
-    }
-    
-    // Extract serial number
-    if (metadata?.serial_no) {
-      parts.push(`🔢 Serial: ${metadata.serial_no}`);
-    }
-    
-    return parts.length > 0 ? parts.join(' • ') : 'No additional details';
+    if (metadata?.vendor_name) parts.push(`🏢 Vendor: ${metadata.vendor_name}`);
+    if (metadata?.serial_no) parts.push(`🔢 Serial: ${metadata.serial_no}`);
+
+    return parts.length > 0 ? parts.join(" • ") : "No additional details";
   };
 
   const toggleMetadata = (activityId: string) => {
-    setExpandedMetadata(prev => ({
+    setExpandedMetadata((prev) => ({
       ...prev,
-      [activityId]: !prev[activityId]
+      [activityId]: !prev[activityId],
     }));
   };
 
@@ -619,7 +643,9 @@ export default function UserActivityPage() {
           <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative mt-4">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-              <h1 className="text-2xl font-bold text-[#0A0A0A]">User & Worker Activity Logs</h1>
+              <h1 className="text-2xl font-bold text-[#0A0A0A]">
+                User & Worker Activity Logs
+              </h1>
               <div className="flex gap-3">
                 <button
                   onClick={clearFilters}
@@ -663,11 +689,21 @@ export default function UserActivityPage() {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    <th className="p-3 border border-tableBorder">Activity & Details</th>
-                    <th className="p-3 border border-tableBorder hidden md:table-cell">Actor</th>
-                    <th className="p-3 border border-tableBorder hidden lg:table-cell">Timestamp</th>
-                    <th className="p-3 border border-tableBorder hidden sm:table-cell">Module</th>
-                    <th className="p-3 border border-tableBorder hidden sm:table-cell">Type</th>
+                    <th className="p-3 border border-tableBorder">
+                      Activity & Details
+                    </th>
+                    <th className="p-3 border border-tableBorder hidden md:table-cell">
+                      Actor
+                    </th>
+                    <th className="p-3 border border-tableBorder hidden lg:table-cell">
+                      Timestamp
+                    </th>
+                    <th className="p-3 border border-tableBorder hidden sm:table-cell">
+                      Module
+                    </th>
+                    <th className="p-3 border border-tableBorder hidden sm:table-cell">
+                      Type
+                    </th>
                     <th className="p-3 border border-tableBorder">Actions</th>
                   </tr>
                 </thead>
@@ -682,25 +718,43 @@ export default function UserActivityPage() {
                     </tr>
                   ) : activities.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-8 text-gray-500">
+                      <td
+                        colSpan={6}
+                        className="text-center py-8 text-gray-500"
+                      >
                         No activities found
                       </td>
                     </tr>
                   ) : (
                     activities.map((activity) => {
-                      const actorName = activity.user_name || activity.worker_name || 'System';
-                      const actorType = activity.worker_name ? 'Worker' : activity.user_name ? 'User' : 'System';
+                      const actorName =
+                        activity.user_name || activity.worker_name || "System";
+                      const actorType = activity.worker_name
+                        ? "Worker"
+                        : activity.user_name
+                        ? "User"
+                        : "System";
                       const details = formatActivityDetails(activity);
                       const isExpanded = expandedMetadata[activity.id];
-                      
+
                       return (
-                        <tr key={activity.id} className="border border-tableBorder hover:bg-primary-50">
+                        <tr
+                          key={activity.id}
+                          className="border border-tableBorder hover:bg-primary-50"
+                        >
                           <td className="p-3 border border-tableBorder">
                             <div className="flex flex-col gap-2">
                               <div className="flex items-start gap-3">
-                                <span className="text-xl">{getActivityIcon(activity.type, activity.module)}</span>
+                                <span className="text-xl">
+                                  {getActivityIcon(
+                                    activity.type,
+                                    activity.module
+                                  )}
+                                </span>
                                 <div>
-                                  <p className="font-medium text-[#232323]">{activity.user_activity}</p>
+                                  <p className="font-medium text-[#232323]">
+                                    {activity.user_activity}
+                                  </p>
                                   {details && (
                                     <div className="mt-2">
                                       <p className="text-sm text-primary-600 bg-primary-50 p-2 rounded-lg break-words">
@@ -711,65 +765,106 @@ export default function UserActivityPage() {
                                 </div>
                               </div>
                               <div className="md:hidden text-xs text-gray-500 mt-1">
-                                <p>{actorType}: {actorName}</p>
-                                <p>Time: {formatTimestamp(activity.activity_timestamp)}</p>
-                                {activity.ip_address && <p>IP: {activity.ip_address}</p>}
+                                <p>
+                                  {actorType}: {actorName}
+                                </p>
+                                <p>
+                                  Time:{" "}
+                                  {formatTimestamp(activity.activity_timestamp)}
+                                </p>
+                                {activity.ip_address && (
+                                  <p>IP: {activity.ip_address}</p>
+                                )}
                               </div>
                             </div>
                           </td>
                           <td className="p-3 border border-tableBorder hidden md:table-cell">
                             <div className="flex items-center gap-2">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                activity.worker_name ? 'bg-orange-100' : 
-                                activity.user_name ? 'bg-primary-100' : 'bg-gray-100'
-                              }`}>
-                                <span className={`font-medium ${
-                                  activity.worker_name ? 'text-orange-700' : 
-                                  activity.user_name ? 'text-primary-700' : 'text-gray-700'
-                                }`}>
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                  activity.worker_name
+                                    ? "bg-orange-100"
+                                    : activity.user_name
+                                    ? "bg-primary-100"
+                                    : "bg-gray-100"
+                                }`}
+                              >
+                                <span
+                                  className={`font-medium ${
+                                    activity.worker_name
+                                      ? "text-orange-700"
+                                      : activity.user_name
+                                      ? "text-primary-700"
+                                      : "text-gray-700"
+                                  }`}
+                                >
                                   {actorName.charAt(0)}
                                 </span>
                               </div>
                               <div>
                                 <p className="text-[#232323]">{actorName}</p>
-                                <p className="text-xs text-gray-500">{actorType}</p>
+                                <p className="text-xs text-gray-500">
+                                  {actorType}
+                                </p>
                                 {activity.ip_address && (
-                                  <p className="text-xs text-gray-500">IP: {activity.ip_address}</p>
+                                  <p className="text-xs text-gray-500">
+                                    IP: {activity.ip_address}
+                                  </p>
                                 )}
                               </div>
                             </div>
                           </td>
                           <td className="p-3 border border-tableBorder hidden lg:table-cell">
-                            <p className="text-[#232323]">{formatTimestamp(activity.activity_timestamp)}</p>
+                            <p className="text-[#232323]">
+                              {formatTimestamp(activity.activity_timestamp)}
+                            </p>
                           </td>
                           <td className="p-3 border border-tableBorder hidden sm:table-cell">
                             <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                              {activity.module || '-'}
+                              {activity.module || "-"}
                             </span>
                           </td>
                           <td className="p-3 border border-tableBorder hidden sm:table-cell">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              activity.type?.includes('success') ? 'bg-green-100 text-green-700' :
-                              activity.type?.includes('failed') || activity.type?.includes('error') ? 'bg-red-100 text-red-700' :
-                              activity.type?.includes('not_ok') ? 'bg-orange-100 text-orange-700' :
-                              activity.type?.includes('approve') ? 'bg-green-100 text-green-700' :
-                              activity.type?.includes('reject') ? 'bg-red-100 text-red-700' :
-                              activity.type?.includes('split') ? 'bg-purple-100 text-purple-700' :
-                              activity.type?.includes('qc_outgoing') ? 'bg-blue-100 text-blue-700' :
-                              activity.type?.includes('qc_incoming') ? 'bg-indigo-100 text-indigo-700' :
-                              activity.type?.includes('move') ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {activity.type || '-'}
+                            <span
+                              className={`px-2 py-1 rounded text-xs ${
+                                activity.type?.includes("success")
+                                  ? "bg-green-100 text-green-700"
+                                  : activity.type?.includes("failed") ||
+                                    activity.type?.includes("error")
+                                  ? "bg-red-100 text-red-700"
+                                  : activity.type?.includes("not_ok")
+                                  ? "bg-orange-100 text-orange-700"
+                                  : activity.type?.includes("approve")
+                                  ? "bg-green-100 text-green-700"
+                                  : activity.type?.includes("reject")
+                                  ? "bg-red-100 text-red-700"
+                                  : activity.type?.includes("split")
+                                  ? "bg-purple-100 text-purple-700"
+                                  : activity.type?.includes("qc_outgoing")
+                                  ? "bg-blue-100 text-blue-700"
+                                  : activity.type?.includes("qc_incoming")
+                                  ? "bg-indigo-100 text-indigo-700"
+                                  : activity.type?.includes("move")
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-blue-100 text-blue-700"
+                              }`}
+                            >
+                              {activity.type || "-"}
                             </span>
                           </td>
                           <td className="p-3 border border-tableBorder">
                             <button
                               onClick={() => toggleMetadata(activity.id)}
                               className="p-2 bg-primary-600 rounded hover:bg-primary-700 text-white transition"
-                              title={isExpanded ? "Hide Details" : "View Details"}
+                              title={
+                                isExpanded ? "Hide Details" : "View Details"
+                              }
                             >
-                              {isExpanded ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
+                              {isExpanded ? (
+                                <FaEyeSlash size={14} />
+                              ) : (
+                                <FaEye size={14} />
+                              )}
                             </button>
                           </td>
                         </tr>
@@ -783,7 +878,7 @@ export default function UserActivityPage() {
             {/* Pagination */}
             <div className="flex justify-center items-center gap-4 mt-6">
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="p-2 bg-primary-600 rounded disabled:opacity-50 disabled:cursor-not-allowed text-white hover:bg-primary-700 transition"
               >
@@ -793,7 +888,7 @@ export default function UserActivityPage() {
                 Page {page} of {totalPages}
               </span>
               <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="p-2 bg-primary-600 rounded disabled:opacity-50 disabled:cursor-not-allowed text-white hover:bg-primary-700 transition"
               >
@@ -809,8 +904,13 @@ export default function UserActivityPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b border-[#E7E7E7]">
-              <h2 className="text-xl font-bold text-[#0A0A0A]">Filter Activities</h2>
-              <button onClick={() => setIsFilterOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <h2 className="text-xl font-bold text-[#0A0A0A]">
+                Filter Activities
+              </h2>
+              <button
+                onClick={() => setIsFilterOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <IoCloseOutline size={24} />
               </button>
             </div>
@@ -819,10 +919,16 @@ export default function UserActivityPage() {
               <div className="space-y-4">
                 {/* User Select */}
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">User</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">
+                    User
+                  </label>
                   <Select
-                    value={userOptions.find(o => o.value === filterData.system_user_id)}
-                    onChange={(option) => handleFilterChange('system_user_id', option?.value || '')}
+                    value={userOptions.find(
+                      (o) => o.value === filterData.system_user_id
+                    )}
+                    onChange={(option) =>
+                      handleFilterChange("system_user_id", option?.value || "")
+                    }
                     options={userOptions}
                     placeholder="Select User"
                     isClearable
@@ -833,10 +939,19 @@ export default function UserActivityPage() {
 
                 {/* Worker Select */}
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Worker</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">
+                    Worker
+                  </label>
                   <Select
-                    value={workerOptions.find(o => o.value === parseInt(filterData.worker_id))}
-                    onChange={(option) => handleFilterChange('worker_id', option?.value?.toString() || '')}
+                    value={workerOptions.find(
+                      (o) => o.value === parseInt(filterData.worker_id)
+                    )}
+                    onChange={(option) =>
+                      handleFilterChange(
+                        "worker_id",
+                        option?.value?.toString() || ""
+                      )
+                    }
                     options={workerOptions}
                     placeholder="Select Worker"
                     isClearable
@@ -847,48 +962,65 @@ export default function UserActivityPage() {
 
                 {/* Activity Search */}
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Activity Text</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">
+                    Activity Text
+                  </label>
                   <input
                     type="text"
                     value={filterData.userActivity}
-                    onChange={(e) => handleFilterChange('userActivity', e.target.value)}
+                    onChange={(e) =>
+                      handleFilterChange("userActivity", e.target.value)
+                    }
                     placeholder="Search in activity text..."
                     className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
                   />
                 </div>
 
-                {/* Date Range */}
+                {/* Date Range - Fixed Version */}
+                {/* Date Range - Fixed Version */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[#0A0A0A] font-medium mb-2">Start Date</label>
+                    <label className="block text-[#0A0A0A] font-medium mb-2">
+                      Start Date
+                    </label>
                     <DatePicker
                       selected={filterData.startDate}
                       onChange={handleStartDateChange}
                       dateFormat="yyyy-MM-dd"
                       placeholderText="Select start date"
                       className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
-                      isClearable
+                      minDate={null as any}
+                      maxDate={null as any}
                     />
                   </div>
                   <div>
-                    <label className="block text-[#0A0A0A] font-medium mb-2">End Date</label>
+                    <label className="block text-[#0A0A0A] font-medium mb-2">
+                      End Date
+                    </label>
                     <DatePicker
                       selected={filterData.endDate}
                       onChange={handleEndDateChange}
                       dateFormat="yyyy-MM-dd"
                       placeholderText="Select end date"
                       className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
-                      isClearable
+                      minDate={null as any}
+                      maxDate={null as any}
                     />
                   </div>
                 </div>
 
                 {/* Module Select */}
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Module</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">
+                    Module
+                  </label>
                   <Select
-                    value={moduleOptions.find(o => o.value === filterData.module)}
-                    onChange={(option) => handleFilterChange('module', option?.value || '')}
+                    value={moduleOptions.find(
+                      (o) => o.value === filterData.module
+                    )}
+                    onChange={(option) =>
+                      handleFilterChange("module", option?.value || "")
+                    }
                     options={moduleOptions}
                     placeholder="Select Module"
                     isClearable
@@ -899,10 +1031,14 @@ export default function UserActivityPage() {
 
                 {/* Type Select */}
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Type</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">
+                    Type
+                  </label>
                   <Select
-                    value={typeOptions.find(o => o.value === filterData.type)}
-                    onChange={(option) => handleFilterChange('type', option?.value || '')}
+                    value={typeOptions.find((o) => o.value === filterData.type)}
+                    onChange={(option) =>
+                      handleFilterChange("type", option?.value || "")
+                    }
                     options={typeOptions}
                     placeholder="Select Type"
                     isClearable

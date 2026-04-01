@@ -28,7 +28,7 @@ export default function Home() {
 
   return (
     <>
-    <PageGuard requiredPermission="dashboard.view">
+
       <div className=" flex justify-end">
         {/* Left sidebar */}
         <LeftSideBar />
@@ -529,7 +529,7 @@ export default function Home() {
           className=" w-full h-full -z-10 hidden"
         />
       </div>
-      </PageGuard>
+  
     </>
   );
 }

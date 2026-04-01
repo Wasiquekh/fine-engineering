@@ -1,3 +1,4 @@
+// app/qrcode/page.tsx
 "use client";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -30,9 +31,10 @@ export default function OtpHome() {
     
     console.log("========== QR PAGE CHECKING USER STATUS ==========");
     
-    // Check if already have access token
+    // Check if already have access token (already logged in)
     const accessToken = storage.getAccessToken();
     if (accessToken && accessToken !== "null" && accessToken !== "") {
+      console.log("User already has access token, redirecting to dashboard");
       router.replace("/dashboard");
       return;
     }
@@ -44,13 +46,27 @@ export default function OtpHome() {
     const storedUserId = storage.getUserId();
     const storedSecretKey = storage.getDecryptedUserSecretKey();
     
-    console.log("Temp data:", { tempToken: !!tempToken, tempUserId, totpSetupRequired });
-    console.log("Stored data:", { storedUserId, hasSecretKey: !!storedSecretKey });
+    console.log("Storage data:", {
+      hasTempToken: !!tempToken,
+      tempUserId,
+      totpSetupRequired,
+      storedUserId,
+      hasStoredSecretKey: !!storedSecretKey
+    });
+
+    // If no temp data and no stored user ID, redirect to login
+    if (!tempUserId && !storedUserId) {
+      console.log("No user data found, redirecting to login");
+      toast.error("Session expired. Please login again.");
+      router.push("/login");
+      return;
+    }
 
     // Use tempUserId if available, otherwise regular userId
     const finalUserId = tempUserId || storedUserId;
     
     if (!finalUserId) {
+      console.log("No user ID available, redirecting to login");
       toast.error("Session expired. Please login again.");
       router.push("/login");
       return;
@@ -61,15 +77,15 @@ export default function OtpHome() {
     // Check if user has secret key
     const hasValidSecret = storedSecretKey && storedSecretKey.length > 10;
 
-    if (hasValidSecret) {
-      // User has secret key - VERIFICATION MODE
-      console.log("✅ VERIFICATION MODE");
+    if (hasValidSecret && totpSetupRequired === "false") {
+      // User has secret key and is in verification mode
+      console.log("✅ VERIFICATION MODE - User has existing secret key");
       setIsSetup(false);
       setSecretKey(storedSecretKey);
       setLoading(false);
     } else {
-      // No secret key - SETUP MODE
-      console.log("🆕 SETUP MODE");
+      // No secret key or setup required - SETUP MODE
+      console.log("🆕 SETUP MODE - Generating new QR code");
       setIsSetup(true);
       await generateQRCode(finalUserId);
     }
@@ -84,7 +100,20 @@ export default function OtpHome() {
     try {
       console.log("Generating QR code for userId:", userId);
       
-      const res = await axiosProvider.post(`/fineengg_erp/system/generateqrcode?userId=${userId}`, {});
+      // Get temp token for authorization
+      const tempToken = storage.getTempToken();
+      
+      // Create config object with headers if token exists
+      let config = undefined;
+      if (tempToken && tempToken !== "null" && tempToken !== "") {
+        config = {
+          headers: {
+            Authorization: `Bearer ${tempToken}`
+          }
+        };
+      }
+      
+      const res = await axiosProvider.post(`/fineengg_erp/system/generateqrcode?userId=${userId}`, {}, config);
       
       console.log("QR Code response:", res.data);
       
@@ -135,6 +164,7 @@ export default function OtpHome() {
     try {
       console.log("========== SUBMITTING TOTP ==========");
       console.log("Mode:", isSetup ? "SETUP" : "VERIFICATION");
+      console.log("UserId:", userId);
       
       // Create payload
       const payload: any = {
@@ -153,7 +183,20 @@ export default function OtpHome() {
         payload.secretKey = secretKey;
       }
       
-      const res = await axiosProvider.post("/fineengg_erp/system/verifytotp", payload);
+      // Get temp token for authorization if available
+      const tempToken = storage.getTempToken();
+      
+      // Create config object with headers if token exists
+      let config = undefined;
+      if (tempToken && tempToken !== "null" && tempToken !== "") {
+        config = {
+          headers: {
+            Authorization: `Bearer ${tempToken}`
+          }
+        };
+      }
+      
+      const res = await axiosProvider.post("/fineengg_erp/system/verifytotp", payload, config);
 
       console.log("Verify TOTP response:", res.data);
 
@@ -175,6 +218,10 @@ export default function OtpHome() {
           if (res.data.data.user.permissions) {
             await storage.saveUserPermissions(res.data.data.user.permissions);
           }
+          
+          if (res.data.data.user.role?.name) {
+            await storage.saveUserRole(res.data.data.user.role.name);
+          }
         }
         
         // Clear temp data
@@ -193,7 +240,8 @@ export default function OtpHome() {
       }
     } catch (error: any) {
       console.error("Network error:", error);
-      toast.error(error.response?.data?.msg || "Failed to verify code");
+      const errorMsg = error.response?.data?.msg || error.response?.data?.message || "Failed to verify code";
+      toast.error(errorMsg);
       setOtp("");
     } finally {
       setLoading(false);
@@ -218,7 +266,6 @@ export default function OtpHome() {
   }
 
   return (
-    
     <div className="fixed inset-0 overflow-hidden">
       <div className="bg-[#F5F5F5] hidden md:block fixed inset-0">
         <Image

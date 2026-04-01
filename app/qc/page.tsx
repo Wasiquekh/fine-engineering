@@ -67,10 +67,13 @@ export default function QcMainPage() {
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
 
-  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
+  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] =
+    useState("ALL");
   const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
-  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [categories, setCategories] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
@@ -78,11 +81,14 @@ export default function QcMainPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
-        params: {
-          ...(client ? { client_name: client } : {}),
-        },
-      } as any);
+      const response = await axiosProvider.get(
+        "/fineengg_erp/system/categories",
+        {
+          params: {
+            ...(client ? { client_name: client } : {}),
+          },
+        } as any
+      );
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -110,19 +116,25 @@ export default function QcMainPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
-        params: {
-          job_type: filterParam,
-          status: "ready-for-qc",
-          ...(client ? { client_name: client } : {}),
-        },
-      } as any);
+      const response = await axiosProvider.get(
+        "/fineengg_erp/system/assign-to-worker",
+        {
+          params: {
+            job_type: filterParam,
+            status: "ready-for-qc",
+            ...(client ? { client_name: client } : {}),
+          },
+        } as any
+      );
 
-      let fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
+      let fetchedData = Array.isArray(response?.data?.data)
+        ? response.data.data
+        : [];
 
       if (filterParam === "JOB_SERVICE") {
         fetchedData = fetchedData.filter(
-          (item: any) => item?.review_for !== "vendor" && item?.review_for !== "welding"
+          (item: any) =>
+            item?.review_for !== "vendor" && item?.review_for !== "welding"
         );
       }
 
@@ -172,7 +184,13 @@ export default function QcMainPage() {
     }
 
     return currentData;
-  }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
+  }, [
+    data,
+    filterParam,
+    jobServiceCategoryFilter,
+    tsoSubFilter,
+    kanbanSubFilter,
+  ]);
 
   // Get unique identifiers based on filter type
   const jobIdentifiers = useMemo(() => {
@@ -243,14 +261,16 @@ export default function QcMainPage() {
         0
       );
 
-      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
+      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown"))
+        .size;
 
       const jobCategory =
         items.length > 0
           ? items[0].job_category || items[0].job?.job_category || "N/A"
           : "N/A";
 
-      const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
+      const assigningDate =
+        items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
 
       summary[identifier] = {
         totalQty,
@@ -285,8 +305,12 @@ export default function QcMainPage() {
       `,
       focusConfirm: false,
       preConfirm: () => {
-        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
-        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+        const chalan_no = (
+          document.getElementById("chalan_no") as HTMLInputElement
+        )?.value;
+        const dispatch_date = (
+          document.getElementById("dispatch_date") as HTMLInputElement
+        )?.value;
 
         if (!chalan_no || !dispatch_date) {
           Swal.showValidationMessage("Please fill out both fields");
@@ -341,23 +365,23 @@ export default function QcMainPage() {
         return null;
       },
     });
-  
+
     if (!reason) return;
-  
+
     const job_id = items[0]?.job_id || items[0]?.job?.id;
     const updated_by = storage.getUserId();
-  
+
     if (!job_id || !updated_by) {
       toast.error("Job or User not found");
       return;
     }
-  
+
     try {
       await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
         reason,
         updated_by,
       });
-  
+
       toast.success(`${items.length} item(s) marked as Not OK`);
       fetchData();
     } catch (error: any) {
@@ -404,11 +428,14 @@ export default function QcMainPage() {
     // Process each item individually using the reject endpoint
     for (const item of items) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
-          updated_by,
-          // Note: The current backend doesn't accept reason, but we'll keep it for future
-          // reason: reason 
-        });
+        await axiosProvider.post(
+          `/fineengg_erp/system/assign-to-worker/${item.id}/reject`,
+          {
+            updated_by,
+            // Note: The current backend doesn't accept reason, but we'll keep it for future
+            // reason: reason
+          }
+        );
         successCount++;
       } catch (error: any) {
         console.error(`Failed to reject item ${item.serial_no}:`, error);
@@ -419,11 +446,11 @@ export default function QcMainPage() {
     if (successCount > 0) {
       toast.success(`${successCount} item(s) sent for rework successfully`);
     }
-    
+
     if (failCount > 0) {
       toast.error(`Failed to process ${failCount} item(s)`);
     }
-    
+
     fetchData();
   };
 
@@ -434,7 +461,7 @@ export default function QcMainPage() {
     const { value: reason } = await Swal.fire({
       title: "Send for Rework",
       html: `
-        <p>Serial: <strong>${item.serial_no || 'N/A'}</strong></p>
+        <p>Serial: <strong>${item.serial_no || "N/A"}</strong></p>
         <p class="text-sm text-gray-600 mt-2">This item will be sent back to production with status "machine"</p>
       `,
       input: "textarea",
@@ -458,11 +485,14 @@ export default function QcMainPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
-        updated_by,
-        // Note: The current backend doesn't accept reason, but we'll keep it for future
-        // reason: reason
-      });
+      await axiosProvider.post(
+        `/fineengg_erp/system/assign-to-worker/${item.id}/reject`,
+        {
+          updated_by,
+          // Note: The current backend doesn't accept reason, but we'll keep it for future
+          // reason: reason
+        }
+      );
 
       toast.success(`Item ${item.serial_no} sent for rework`);
       fetchData();
@@ -471,151 +501,186 @@ export default function QcMainPage() {
     }
   };
 
-  return (
-    <div className="flex justify-end min-h-screen">
-      <LeftSideBar />
-      <PageGuard requiredPermission="qc.view">
-      <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
-        <div className="absolute bottom-0 right-0">
-          <Image
-            src="/images/sideDesign.svg"
-            alt="side design"
-            width={100}
-            height={100}
-            className="w-full h-full"
-          />
+  // Main content component
+  const QcContent = () => (
+    <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
+      <div className="absolute bottom-0 right-0">
+        <Image
+          src="/images/sideDesign.svg"
+          alt="side design"
+          width={100}
+          height={100}
+          className="w-full h-full"
+        />
+      </div>
+
+      <DesktopHeader />
+
+      <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
+        <div className="mb-4 px-2">
+          <h1 className="text-xl font-semibold text-firstBlack">
+            QC • {filterParam.replace("_", " ")}
+            {client && ` • ${client}`}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Status: <span className="font-semibold">ready-for-qc</span>
+          </p>
         </div>
 
-        <DesktopHeader />
+        {uniqueCategories.length > 0 && (
+          <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
+            <button
+              onClick={() => {
+                if (filterParam === "JOB_SERVICE")
+                  setJobServiceCategoryFilter("ALL");
+                if (filterParam === "TSO_SERVICE") setTsoSubFilter("ALL");
+                if (filterParam === "KANBAN") setKanbanSubFilter("ALL");
+              }}
+              className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                filterParam === "JOB_SERVICE"
+                  ? jobServiceCategoryFilter === "ALL"
+                    ? "bg-primary-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                  : filterParam === "TSO_SERVICE"
+                  ? tsoSubFilter === "ALL"
+                    ? "bg-primary-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                  : filterParam === "KANBAN"
+                  ? kanbanSubFilter === "ALL"
+                    ? "bg-primary-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              All
+            </button>
 
-        <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
-          <div className="mb-4 px-2">
-            <h1 className="text-xl font-semibold text-firstBlack">
-              QC • {filterParam.replace("_", " ")}
-              {client && ` • ${client}`}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Status: <span className="font-semibold">ready-for-qc</span>
-            </p>
-          </div>
-
-          {uniqueCategories.length > 0 && (
-            <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
+            {uniqueCategories.map((cat) => (
               <button
+                key={cat.value}
                 onClick={() => {
-                  if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter("ALL");
-                  if (filterParam === "TSO_SERVICE") setTsoSubFilter("ALL");
-                  if (filterParam === "KANBAN") setKanbanSubFilter("ALL");
+                  if (filterParam === "JOB_SERVICE")
+                    setJobServiceCategoryFilter(cat.value);
+                  if (filterParam === "TSO_SERVICE") setTsoSubFilter(cat.value);
+                  if (filterParam === "KANBAN") setKanbanSubFilter(cat.value);
                 }}
                 className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   filterParam === "JOB_SERVICE"
-                    ? jobServiceCategoryFilter === "ALL"
+                    ? jobServiceCategoryFilter === cat.value
                       ? "bg-primary-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
                     : filterParam === "TSO_SERVICE"
-                    ? tsoSubFilter === "ALL"
+                    ? tsoSubFilter === cat.value
                       ? "bg-primary-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
                     : filterParam === "KANBAN"
-                    ? kanbanSubFilter === "ALL"
+                    ? kanbanSubFilter === cat.value
                       ? "bg-primary-600 text-white"
                       : "text-gray-600 hover:bg-gray-100"
                     : "text-gray-600 hover:bg-gray-100"
                 }`}
               >
-                All
+                {cat.label}
               </button>
+            ))}
+          </div>
+        )}
 
-              {uniqueCategories.map((cat) => (
+        <div className="relative overflow-x-auto sm:rounded-lg">
+          {selectedJobNo ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
                 <button
-                  key={cat.value}
                   onClick={() => {
-                    if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter(cat.value);
-                    if (filterParam === "TSO_SERVICE") setTsoSubFilter(cat.value);
-                    if (filterParam === "KANBAN") setKanbanSubFilter(cat.value);
+                    setSelectedJobNo(null);
                   }}
-                  className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                    filterParam === "JOB_SERVICE"
-                      ? jobServiceCategoryFilter === cat.value
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                      : filterParam === "TSO_SERVICE"
-                      ? tsoSubFilter === cat.value
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                      : filterParam === "KANBAN"
-                      ? kanbanSubFilter === cat.value
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
                 >
-                  {cat.label}
+                  <FaArrowLeft />
+                  Back to Jobs
                 </button>
-              ))}
-            </div>
-          )}
+              </div>
 
-          <div className="relative overflow-x-auto sm:rounded-lg">
-            {selectedJobNo ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={() => {
-                      setSelectedJobNo(null);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                  >
-                    <FaArrowLeft />
-                    Back to Jobs
-                  </button>
-                </div>
+              <h2 className="text-xl font-bold mb-4">
+                {filterParam === "TSO_SERVICE"
+                  ? "TSO"
+                  : filterParam === "KANBAN"
+                  ? "J/O Number"
+                  : "Job"}
+                : {selectedJobNo}
+              </h2>
 
-                <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE"
-                    ? "TSO"
-                    : filterParam === "KANBAN"
-                    ? "J/O Number"
-                    : "Job"}: {selectedJobNo}
-                </h2>
+              <table className="w-full text-sm text-left text-gray-500">
+                <thead className="text-xs text-[#999999]">
+                  <tr className="border border-tableBorder">
+                    <th className="p-3 border border-tableBorder">JO No</th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Serial No
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Item No
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Machine Category
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Machine Size
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Machine Code
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Worker Name
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Quantity
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Assigning Date
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">JO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
+                <tbody>
+                  {Object.entries(getJoGroupsForIdentifier(selectedJobNo))
+                    .length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={10}
+                        className="px-4 py-6 text-center border border-tableBorder"
+                      >
+                        <p className="text-[#666666] text-base">
+                          No JO data found
+                        </p>
+                      </td>
                     </tr>
-                  </thead>
-
-                  <tbody>
-                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No JO data found</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
+                  ) : (
+                    Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(
+                      ([jo, items]) => (
                         <Fragment key={jo}>
                           {/* JO Group Header with Batch Actions */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={2}>
+                            <td
+                              className="px-2 py-2 border border-tableBorder font-semibold"
+                              colSpan={2}
+                            >
                               JO: {jo}
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                            <td
+                              className="px-2 py-2 border border-tableBorder"
+                              colSpan={4}
+                            >
                               <span className="text-xs text-gray-600">
                                 {items.length} item(s)
                               </span>
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                            <td
+                              className="px-2 py-2 border border-tableBorder"
+                              colSpan={4}
+                            >
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleJoOK(items)}
@@ -638,26 +703,45 @@ export default function QcMainPage() {
                               </div>
                             </td>
                           </tr>
-                          
+
                           {/* Individual Items */}
                           {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                            <tr
+                              key={item.id}
+                              className="border border-tableBorder bg-white hover:bg-gray-50"
+                            >
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {" "}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">
                                 {item.serial_no || "-"}
                               </td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.item_no ?? "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.machine_category || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.machine_size || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.machine_code || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.worker_name || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">
+                                {item.quantity_no ?? "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.assigning_date || "-"}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 <button
                                   onClick={() => handleSingleItemRework(item)}
                                   className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                  title={`Rework: ${item.serial_no || 'N/A'}`}
+                                  title={`Rework: ${item.serial_no || "N/A"}`}
                                 >
                                   Rework
                                 </button>
@@ -665,88 +749,131 @@ export default function QcMainPage() {
                             </tr>
                           ))}
                         </Fragment>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </>
-            ) : (
-              <>
-                <h2 className="text-xl font-bold mb-4">
-                  {filterParam === "TSO_SERVICE"
-                    ? "TSOs Ready for QC"
-                    : filterParam === "KANBAN"
-                    ? "Kanban Ready for QC"
-                    : "Jobs Ready for QC"}
-                </h2>
+                      )
+                    )
+                  )}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold mb-4">
+                {filterParam === "TSO_SERVICE"
+                  ? "TSOs Ready for QC"
+                  : filterParam === "KANBAN"
+                  ? "Kanban Ready for QC"
+                  : "Jobs Ready for QC"}
+              </h2>
 
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">
-                        {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
-                      </th>
-                      <th className="px-2 py-0 border border-tableBorder">Job Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total JO</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+              <table className="w-full text-sm text-left text-gray-500">
+                <thead className="text-xs text-[#999999]">
+                  <tr className="border border-tableBorder">
+                    <th className="p-3 border border-tableBorder">
+                      {filterParam === "TSO_SERVICE"
+                        ? "TSO No"
+                        : filterParam === "KANBAN"
+                        ? "J/O Number"
+                        : "Job No"}
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Job Category
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Total JO
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Total Quantity
+                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">
+                      Assigning Date
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center border border-tableBorder"
+                      >
+                        <p className="text-[#666666] text-base">Loading...</p>
+                      </td>
                     </tr>
-                  </thead>
+                  ) : jobIdentifiers.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-6 text-center border border-tableBorder"
+                      >
+                        <p className="text-[#666666] text-base">
+                          No data found
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    jobIdentifiers.map((identifier) => {
+                      const summary = jobSummary[identifier];
 
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">Loading...</p>
-                        </td>
-                      </tr>
-                    ) : jobIdentifiers.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No data found</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      jobIdentifiers.map((identifier) => {
-                        const summary = jobSummary[identifier];
+                      return (
+                        <tr
+                          key={identifier}
+                          className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
+                          onClick={() => setSelectedJobNo(identifier)}
+                        >
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-blue-600 text-base leading-normal">
+                              {identifier}
+                            </p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">
+                              {summary.jobCategory}
+                            </p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">
+                              {summary.uniqueJoCount}
+                            </p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">
+                              {summary.totalQty}
+                            </p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">
+                              {summary.assigningDate || "-"}
+                            </p>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
 
-                        return (
-                          <tr
-                            key={identifier}
-                            className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
-                            onClick={() => setSelectedJobNo(identifier)}
-                          >
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </>
-            )}
-          </div>
-
-          <div className="text-xs text-gray-500 mt-3 px-2">
-            Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: {jobIdentifiers.length} | 
-            Total Items: {filteredData.length}
-          </div>
+        <div className="text-xs text-gray-500 mt-3 px-2">
+          Total{" "}
+          {filterParam === "TSO_SERVICE"
+            ? "TSOs"
+            : filterParam === "KANBAN"
+            ? "J/O Numbers"
+            : "Jobs"}
+          : {jobIdentifiers.length} | Total Items: {filteredData.length}
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex justify-end min-h-screen">
+      <LeftSideBar />
+      <PageGuard requiredPermission="qc.view">
+        <QcContent />
       </PageGuard>
     </div>
   );

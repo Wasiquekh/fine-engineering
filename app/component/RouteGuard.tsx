@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { ReadonlyURLSearchParams } from "next/navigation";
 import StorageManager from "../../provider/StorageManager";
 import { hasPermission, hasAnyPermission } from "./utils/permissionUtils";
 
@@ -35,7 +36,7 @@ const routePermissions: Record<string, string | string[]> = {
   "/section_production/machine_category": "machine.view",
 };
 
-// Public routes
+// Public routes - authentication related routes that don't require login
 const publicRoutes = ["/login", "/", "/unauthorized", "/qrcode", "/generateqrcode"];
 
 const isPublicRoute = (pathname: string): boolean => {
@@ -43,7 +44,8 @@ const isPublicRoute = (pathname: string): boolean => {
 };
 
 // Get required permission based on route and assign_to
-const getRequiredPermission = (pathname: string, searchParams: URLSearchParams): string | string[] | null => {
+// Accept ReadonlyURLSearchParams type directly
+const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearchParams): string | string[] | null => {
   // ============================================
   // PRODUCTION ROUTES - assign_to ke hisaab se
   // ============================================
@@ -151,6 +153,23 @@ const RouteGuard = ({ children }: RouteGuardProps) => {
 
   useEffect(() => {
     const checkAccess = () => {
+      // SPECIAL HANDLING FOR QR AND AUTH ROUTES
+      // These routes are part of the authentication flow and should always be accessible
+      if (pathname === "/qrcode" || pathname === "/generateqrcode") {
+        console.log("✅ QR/Auth route, allowing access without checks");
+        setIsAuthorized(true);
+        setIsChecking(false);
+        return;
+      }
+
+      // Check if it's a public route
+      if (isPublicRoute(pathname)) {
+        console.log("✅ Public route, allowing access");
+        setIsAuthorized(true);
+        setIsChecking(false);
+        return;
+      }
+
       const user = storage.getUser();
       const permissions = storage.getUserPermissions();
       const assignTo = searchParams.get("assign_to");
@@ -164,26 +183,21 @@ const RouteGuard = ({ children }: RouteGuardProps) => {
         permissions: permissions?.map(p => p.name)
       });
 
-      // Public route
-      if (isPublicRoute(pathname)) {
-        setIsAuthorized(true);
-        setIsChecking(false);
-        return;
-      }
-
       // Check login
       if (!user || !user.id) {
+        console.log("❌ No user found, redirecting to login");
         router.push("/login");
         return;
       }
 
-      // Get required permission
+      // Get required permission - pass searchParams directly
       const requiredPermission = getRequiredPermission(pathname, searchParams);
       
       console.log("  - Required Permission:", requiredPermission);
 
       // No permission required
       if (!requiredPermission) {
+        console.log("✅ No permission required, granting access");
         setIsAuthorized(true);
         setIsChecking(false);
         return;
