@@ -81,14 +81,11 @@ export default function QcMainPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get(
-        "/fineengg_erp/system/categories",
-        {
-          params: {
-            ...(client ? { client_name: client } : {}),
-          },
-        } as any
-      );
+      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
+        params: {
+          ...(client ? { "job.client_name": client } : {}),
+        },
+      } as any);
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -116,16 +113,13 @@ export default function QcMainPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axiosProvider.get(
-        "/fineengg_erp/system/assign-to-worker",
-        {
-          params: {
-            job_type: filterParam,
-            status: "ready-for-qc",
-            ...(client ? { client_name: client } : {}),
-          },
-        } as any
-      );
+      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+        params: {
+          job_type: filterParam,
+          status: "ready-for-qc",
+          ...(client ? { "job.client_name": client } : {}),
+        },
+      } as any);
 
       let fetchedData = Array.isArray(response?.data?.data)
         ? response.data.data

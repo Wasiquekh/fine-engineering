@@ -637,7 +637,7 @@ export default function Home() {
                         <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.product_qty || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.item_description || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.item_no || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.qty || "N/A"}</td>
+                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.qty_history || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.moc || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.job_order_date || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.mtl_rcd_date || "N/A"}</td>
