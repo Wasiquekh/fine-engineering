@@ -1,3 +1,4 @@
+// app/component/DatePickerInput.tsx
 "use client";
 
 import React from "react";
@@ -5,7 +6,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
 type DatePickerInputProps = {
-  name: string;y
+  name: string;  // Removed the stray 'y' character
   value: Date | null;
   setFieldValue: (field: string, value: any, shouldValidate?: boolean) => void;
   placeholderText?: string;

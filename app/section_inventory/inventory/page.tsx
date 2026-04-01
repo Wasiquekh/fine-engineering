@@ -20,7 +20,7 @@ const axiosProvider = new AxiosProvider();
 
 const clientOptions = [
   { value: "Amar Equipment", label: "Amar Equipment" },
-  { value: "Amar Biosystem", label: "Amar Biosystem" }
+  { value: "Amar Biosystem", label: "Amar Biosystem" },
 ];
 
 // Options for TSO Service Category
@@ -68,8 +68,7 @@ const validationSchema = Yup.object().shape({
   }),
   job_no: Yup.string().when("job_type", {
     is: "JOB_SERVICE",
-    then: (schema) =>
-      schema.required("Job No is required"),
+    then: (schema) => schema.required("Job No is required"),
     otherwise: (schema) => schema,
   }),
   tso_no: Yup.string().when("job_type", {
@@ -84,59 +83,86 @@ const validationSchema = Yup.object().shape({
     .typeError("Material Challan No must be a number")
     .positive("Material Challan No must be positive")
     .integer("Material Challan No must be an integer"),
-  item_description: Yup.string().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.notRequired(),
-    otherwise: schema => schema.required("Item Description is required"),
+  item_description: Yup.string().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.required("Item Description is required"),
   }),
-  item_no: Yup.number().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.notRequired().nullable(),
-    otherwise: schema => schema.when('job_type', {
-      is: (job_type) => job_type !== 'KANBAN',
-      then: (schema) => schema.required("Item No is required").typeError("Item No must be a number").positive("Item No must be positive").integer("Item No must be an integer"),
-      otherwise: (schema) => schema.notRequired().nullable(),
-    })
+  item_no: Yup.number().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.notRequired().nullable(),
+    otherwise: (schema) =>
+      schema.when("job_type", {
+        is: (job_type) => job_type !== "KANBAN",
+        then: (schema) =>
+          schema
+            .required("Item No is required")
+            .typeError("Item No must be a number")
+            .positive("Item No must be positive")
+            .integer("Item No must be an integer"),
+        otherwise: (schema) => schema.notRequired().nullable(),
+      }),
   }),
-  qty: Yup.number().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.notRequired(),
-    otherwise: schema => schema.required("Quantity is required").typeError("Quantity must be a number").positive("Quantity must be positive"),
+  qty: Yup.number().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) =>
+      schema
+        .required("Quantity is required")
+        .typeError("Quantity must be a number")
+        .positive("Quantity must be positive"),
   }),
-  moc: Yup.string().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.notRequired(),
-    otherwise: schema => schema.required("MOC is required"),
+  moc: Yup.string().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.required("MOC is required"),
   }),
-  product_desc: Yup.string().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.required("Product Description is required"),
-    otherwise: schema => schema.notRequired(),
+  product_desc: Yup.string().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.required("Product Description is required"),
+    otherwise: (schema) => schema.notRequired(),
   }),
-  product_qty: Yup.number().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.required("Product Quantity is required").typeError("Product Quantity must be a number").positive("Product Quantity must be positive").integer("Product Quantity must be an integer"),
-    otherwise: schema => schema.notRequired().nullable(),
+  product_qty: Yup.number().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) =>
+      schema
+        .required("Product Quantity is required")
+        .typeError("Product Quantity must be a number")
+        .positive("Product Quantity must be positive")
+        .integer("Product Quantity must be an integer"),
+    otherwise: (schema) => schema.notRequired().nullable(),
   }),
-  bin_location: Yup.string().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.notRequired(),
-    otherwise: schema => schema.required("Bin Location is required"),
+  bin_location: Yup.string().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.notRequired(),
+    otherwise: (schema) => schema.required("Bin Location is required"),
   }),
   material_remark: Yup.string(),
-  assembly_items: Yup.array().when('sub_type', {
-    is: 'ASSEMBLY',
-    then: schema => schema.of(
-      Yup.object().shape({
-        item_description: Yup.string().required("Item Description is required"),
-        item_no: Yup.number().required("Item No is required").typeError("Item No must be a number").positive("Item No must be positive").integer("Item No must be an integer"),
-        qty: Yup.number().required("Quantity is required").typeError("Quantity must be a number").positive("Quantity must be positive"),
-        moc: Yup.string().required("MOC is required"),
-        bin_location: Yup.string().required("Bin Location is required"),
-        material_remark: Yup.string().notRequired(),
-      })
-    ).min(1, "At least one assembly item is required."),
-    otherwise: schema => schema.notRequired(),
+  assembly_items: Yup.array().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) =>
+      schema
+        .of(
+          Yup.object().shape({
+            item_description: Yup.string().required(
+              "Item Description is required"
+            ),
+            item_no: Yup.number()
+              .required("Item No is required")
+              .typeError("Item No must be a number")
+              .positive("Item No must be positive")
+              .integer("Item No must be an integer"),
+            qty: Yup.number()
+              .required("Quantity is required")
+              .typeError("Quantity must be a number")
+              .positive("Quantity must be positive"),
+            moc: Yup.string().required("MOC is required"),
+            bin_location: Yup.string().required("Bin Location is required"),
+            material_remark: Yup.string().notRequired(),
+          })
+        )
+        .min(1, "At least one assembly item is required."),
+    otherwise: (schema) => schema.notRequired(),
   }),
 });
 
@@ -148,7 +174,7 @@ const initialValues = {
   job_category: "",
   job_no: "",
   tso_no: "",
-  kanban_job_cat:"",
+  kanban_job_cat: "",
   job_order_date: "",
   mtl_rcd_date: "",
   mtl_challan_no: "",
@@ -179,9 +205,12 @@ export default function Home() {
   const [flyoutType, setFlyoutType] = useState<
     "JOB_SERVICE" | "TSO_SERVICE" | "KANBAN"
   >("JOB_SERVICE");
-  const [isJobServiceDropdownOpen, setJobServiceDropdownOpen] = useState<boolean>(false);
-  const [isTsoServiceDropdownOpen, setTsoServiceDropdownOpen] = useState<boolean>(false);
-  const [isKanbanDropdownOpen, setKanbanDropdownOpen] = useState<boolean>(false);
+  const [isJobServiceDropdownOpen, setJobServiceDropdownOpen] =
+    useState<boolean>(false);
+  const [isTsoServiceDropdownOpen, setTsoServiceDropdownOpen] =
+    useState<boolean>(false);
+  const [isKanbanDropdownOpen, setKanbanDropdownOpen] =
+    useState<boolean>(false);
   const [selectedSubType, setSelectedSubType] = useState<string>("PARTIAL");
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
@@ -199,14 +228,14 @@ export default function Home() {
   const handleSubmit = async (values: any) => {
     if (values.sub_type === "ASSEMBLY") {
       const commonData: any = {
-          job_type: values.job_type,
-          jo_number: values.jo_number,
-          job_order_date: formatDate(values.job_order_date),
-          mtl_rcd_date: formatDate(values.mtl_rcd_date),
-          mtl_challan_no: Number(values.mtl_challan_no),
-          product_desc: values.product_desc,
-          product_qty: Number(values.product_qty),
-          client_name: values.client_name,
+        job_type: values.job_type,
+        jo_number: values.jo_number,
+        job_order_date: formatDate(values.job_order_date),
+        mtl_rcd_date: formatDate(values.mtl_rcd_date),
+        mtl_challan_no: Number(values.mtl_challan_no),
+        product_desc: values.product_desc,
+        product_qty: Number(values.product_qty),
+        client_name: values.client_name,
       };
 
       if (values.job_type === "JOB_SERVICE") {
@@ -316,7 +345,9 @@ export default function Home() {
 
     if (result.isConfirmed) {
       try {
-        const response = await axiosProvider.delete(`/fineengg_erp/system/jobs/${id}`);
+        const response = await axiosProvider.delete(
+          `/fineengg_erp/system/jobs/${id}`
+        );
 
         if (response.data.success) {
           toast.success("Job deleted successfully");
@@ -366,22 +397,35 @@ export default function Home() {
 
   // Get initial values based on flyout type
   const initialFormValues = useMemo(() => {
-    const values: any = { ...initialValues, job_type: flyoutType, sub_type: selectedSubType };
-    
+    const values: any = {
+      ...initialValues,
+      job_type: flyoutType,
+      sub_type: selectedSubType,
+    };
+
     if (flyoutType === "KANBAN") {
       values.client_name = "Amar Equipment";
     }
 
-    if (selectedSubType === 'ASSEMBLY') {
-        values.assembly_items = [{ item_description: '', item_no: '', qty: '', moc: '', bin_location: '', material_remark: '' }];
-        values.item_description = '';
-        values.item_no = '';
-        values.qty = '';
-        values.moc = '';
-        values.bin_location = '';
-        values.material_remark = '';
-        values.product_desc = '';
-        values.product_qty = '';
+    if (selectedSubType === "ASSEMBLY") {
+      values.assembly_items = [
+        {
+          item_description: "",
+          item_no: "",
+          qty: "",
+          moc: "",
+          bin_location: "",
+          material_remark: "",
+        },
+      ];
+      values.item_description = "";
+      values.item_no = "";
+      values.qty = "";
+      values.moc = "";
+      values.bin_location = "";
+      values.material_remark = "";
+      values.product_desc = "";
+      values.product_qty = "";
     }
     return values;
   }, [flyoutType, selectedSubType]);
@@ -399,8 +443,10 @@ export default function Home() {
   // Get flyout title
   const getFlyoutTitle = () => {
     const subTypeLabel = selectedSubType === "PARTIAL" ? "Partial" : "Assembly";
-    if (flyoutType === "JOB_SERVICE") return `Add Job Service (${subTypeLabel})`;
-    if (flyoutType === "TSO_SERVICE") return `Add TSO Service (${subTypeLabel})`;
+    if (flyoutType === "JOB_SERVICE")
+      return `Add Job Service (${subTypeLabel})`;
+    if (flyoutType === "TSO_SERVICE")
+      return `Add TSO Service (${subTypeLabel})`;
     if (flyoutType === "KANBAN") return `Add Kanban (${subTypeLabel})`;
     return "Add Job";
   };
@@ -430,26 +476,26 @@ export default function Home() {
         }
       `}</style>
       <PageGuard requiredPermission="inventory.view">
-      <div className="flex justify-end min-h-screen">
-        <LeftSideBar />
-        {/* Main content right section */}
-        <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
-          <div className="absolute bottom-0 right-0">
-            <Image
-              src="/images/sideDesign.svg"
-              alt="side desgin"
-              width={100}
-              height={100}
-              className="w-full h-full"
-            />
-          </div>
-          {/* left section top row */}
-          <DesktopHeader />
+        <div className="flex justify-end min-h-screen">
+          <LeftSideBar />
+          {/* Main content right section */}
+          <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
+            <div className="absolute bottom-0 right-0">
+              <Image
+                src="/images/sideDesign.svg"
+                alt="side desgin"
+                width={100}
+                height={100}
+                className="w-full h-full"
+              />
+            </div>
+            {/* left section top row */}
+            <DesktopHeader />
 
-          {/* Main content middle section */}
-          <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
-            {/* Search and filter table row */}
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
+            {/* Main content middle section */}
+            <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
+              {/* Search and filter table row */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                   <button
                     onClick={() => setActiveFilter("ALL")}
@@ -506,7 +552,9 @@ export default function Home() {
                   <div className="relative">
                     <div
                       className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
-                      onClick={() => setJobServiceDropdownOpen(!isJobServiceDropdownOpen)}
+                      onClick={() =>
+                        setJobServiceDropdownOpen(!isJobServiceDropdownOpen)
+                      }
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
                       <p className="text-white text-base font-medium group-hover:text-white">
@@ -534,7 +582,9 @@ export default function Home() {
                   <div className="relative">
                     <div
                       className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
-                      onClick={() => setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)}
+                      onClick={() =>
+                        setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)
+                      }
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
                       <p className="text-white text-base font-medium group-hover:text-white">
@@ -562,7 +612,9 @@ export default function Home() {
                   <div className="relative">
                     <div
                       className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
-                      onClick={() => setKanbanDropdownOpen(!isKanbanDropdownOpen)}
+                      onClick={() =>
+                        setKanbanDropdownOpen(!isKanbanDropdownOpen)
+                      }
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
                       <p className="text-white text-base font-medium group-hover:text-white">
@@ -590,589 +642,848 @@ export default function Home() {
                 </div>
               </div>
 
-            {/* ----------------Table----------------------- */}
-            <div className="relative overflow-x-auto sm:rounded-lg">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Client Name</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Job No</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">J/O Number</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Product Desc</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Product Qty</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Item Desc</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Item No</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Qty</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">MOC</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Job Order Date</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Mtl Rcd Date</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Mtl Challan No</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Bin Location</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Mtl Remark</th>
-                    <th scope="col" className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={15}
-                        className="px-4 py-6 text-center border border-tableBorder"
+              {/* ----------------Table----------------------- */}
+              <div className="relative overflow-x-auto sm:rounded-lg">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                  <thead className="text-xs text-[#999999]">
+                    <tr className="border border-tableBorder">
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
                       >
-                        <p className="text-[#666666] text-base">
-                          No data found
-                        </p>
-                      </td>
+                        Client Name
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Job No
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        J/O Number
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Product Desc
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Product Qty
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Item Desc
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Item No
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Qty
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        MOC
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Job Order Date
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Mtl Rcd Date
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Mtl Challan No
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Bin Location
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Mtl Remark
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                      >
+                        Actions
+                      </th>
                     </tr>
-                  ) : (
-                    filteredData.map((item: any) => (
-                      <tr
-                        className="border border-tableBorder bg-white hover:bg-primary-100"
-                        key={item.id}
-                      >
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.client_name || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.job_no || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.jo_number || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.product_desc || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.product_qty || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.item_description || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.item_no || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.qty_history || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.moc || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.job_order_date || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.mtl_rcd_date || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.mtl_challan_no || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.bin_location || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">{item.material_remark || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                              title="Delete"
-                            >
-                              <HiTrash className="w-4 h-4" />
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody>
+                    {filteredData.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={15}
+                          className="px-4 py-6 text-center border border-tableBorder"
+                        >
+                          <p className="text-[#666666] text-base">
+                            No data found
+                          </p>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* FITLER FLYOUT */}
-      <>
-     
-        {/* DARK BG SCREEN */}
-        {isFlyoutOpen && (
-          <div
-            className="min-h-screen w-full bg-[#1f1d1d80] fixed top-0 left-0 right-0 z-[999]"
-            onClick={() => {
-              setFlyoutOpen(false);
-              resetFormState();
-            }}
-          ></div>
-        )}
-
-        {/* NOW MY FLYOUT */}
-        <div className={`flyout ${isFlyoutOpen ? "open" : ""}`}>
-          <div className="w-full min-h-auto">
-            {/* Header */}
-            <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
-              <p className="text-primary-600 text-[22px] sm:text-[24px] md:text-[26px] font-bold leading-8 sm:leading-9">
-                {getFlyoutTitle()}
-              </p>
-              <IoCloseOutline
-                onClick={() => {
-                  setFlyoutOpen(false);
-                  resetFormState();
-                }}
-                className="h-7 sm:h-8 w-7 sm:w-8 border border-[#E7E7E7] text-[#0A0A0A] rounded cursor-pointer"
-              />
-            </div>
-            <div className="w-full border-b border-[#E7E7E7] mb-4 sm:mb-6"></div>
-
-            {/* FORM */}
-            <Formik
-              initialValues={initialFormValues}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              enableReinitialize={true}
-            >
-              {({ values, setFieldValue, handleSubmit, isSubmitting, errors }) => (
-                <Form onSubmit={handleSubmit}>
-                  <div className="w-full">
-                    {/* Grid container for form fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                      {/* Job Type - Hidden but required for form */}
-                      <input
-                        type="hidden"
-                        name="job_type"
-                        value={values.job_type}
-                      />
-
-                      {/* Client Name */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Client Name
-                        </p>
-                        <SelectInput
-                          name="client_name"
-                          value={values.client_name}
-                          setFieldValue={setFieldValue}
-                          options={
-                            values.job_type === "KANBAN"
-                              ? [{ value: "Amar Equipment", label: "Amar Equipment" }]
-                              : clientOptions
-                          }
-                          placeholder="Select Client Name"
-                        />
-                        <ErrorMessage
-                          name="client_name"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Job No - Only for JOB_SERVICE */}
-                      {values.job_type === "JOB_SERVICE" && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Job No
-                          </p>
-                          <input
-                            type="text"
-                            name="job_no"
-                            value={values.job_no}
-                            onChange={(e) =>
-                              setFieldValue("job_no", e.target.value)
-                            }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                            placeholder="Enter Job No"
-                          />
-                          <ErrorMessage
-                            name="job_no"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )}
-
-                      {/* TSO No - Only for TSO_SERVICE */}
-                      {values.job_type === "TSO_SERVICE" && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            TSO No
-                          </p>
-                          <input
-                            type="text"
-                            name="tso_no"
-                            value={values.tso_no}
-                            onChange={(e) =>
-                              setFieldValue("tso_no", e.target.value)
-                            }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                            placeholder="Enter TSO No"
-                          />
-                          <ErrorMessage
-                            name="tso_no"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )}
-
-                      {/* J/O Number */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          J/O Number
-                        </p>
-                        <input
-                          type="text"
-                          name="jo_number"
-                          value={values.jo_number}
-                          onChange={(e) =>
-                            setFieldValue("jo_number", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter J/O Number"
-                        />
-                        <ErrorMessage
-                          name="jo_number"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Job Category - Only for TSO_SERVICE and KANBAN */}
-                      { (values.job_type === "TSO_SERVICE" ||
-                        values.job_type === "KANBAN") && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            {values.job_type === "KANBAN" ? "Product Category" : "Job Category"}
-                          </p>
-                          <SelectInput
-                            name="job_category"
-                            value={values.job_category}
-                            setFieldValue={setFieldValue}
-                            options={getCategoryOptions(values.job_type)}
-                            placeholder={values.job_type === "KANBAN" ? "Select Product Category" : "Select TSO Service Category"}
-                          />
-                          <ErrorMessage
-                            name="job_category"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )}
-
-                      {/* Kanban Job Category - Only for KANBAN */}
-                      {values.job_type === "KANBAN" && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Kanban Job Category
-                          </p>
-                          <SelectInput
-                            name="kanban_job_cat"
-                            value={values.kanban_job_cat}
-                            setFieldValue={setFieldValue}
-                            options={kanbanJobCatOptions}
-                            placeholder="Select Kanban Job Category"
-                          />
-                          <ErrorMessage
-                            name="kanban_job_cat"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )}
-
-                      {/* Job Order Date */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Job Order Date
-                        </p>
-                        <DatePickerInput
-                          name="job_order_date"
-                          value={values.job_order_date}
-                          setFieldValue={setFieldValue}
-                          placeholderText="Select Job Order Date"
-                        />
-                        <ErrorMessage
-                          name="job_order_date"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Material Received Date */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Material Received Date
-                        </p>
-                        <DatePickerInput
-                          name="mtl_rcd_date"
-                          value={values.mtl_rcd_date}
-                          setFieldValue={setFieldValue}
-                          placeholderText="Select Material Received Date"
-                        />
-                        <ErrorMessage
-                          name="mtl_rcd_date"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* Material Challan No */}
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Material Challan No
-                        </p>
-                        <input
-                          type="number"
-                          name="mtl_challan_no"
-                          value={values.mtl_challan_no}
-                          onChange={(e) =>
-                            setFieldValue("mtl_challan_no", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Material Challan No"
-                        />
-                        <ErrorMessage
-                          name="mtl_challan_no"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-
-                      {/* ====== CONDITIONAL FIELDS FOR PARTIAL VS ASSEMBLY ====== */}
-
-                      {/* Fields for PARTIAL or other job types */}
-                      {values.sub_type !== "ASSEMBLY" && (
-                        <>
-                          {/* Item Description */}
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              Item Description
-                            </p>
-                            <input
-                              type="text"
-                              name="item_description"
-                              value={values.item_description}
-                              onChange={(e) =>
-                                setFieldValue("item_description", e.target.value)
-                              }
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter Item Description"
-                            />
-                            <ErrorMessage
-                              name="item_description"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-
-                          {/* Item No */}
-                          {values.job_type !== "KANBAN" && (
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              Item No
-                            </p>
-                            <input
-                              type="number"
-                              name="item_no"
-                              value={values.item_no}
-                              onChange={(e) =>
-                                setFieldValue("item_no", e.target.value)
-                              }
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter Item No"
-                            />
-                            <ErrorMessage
-                              name="item_no"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-                          )}
-
-                          {/* Quantity */}
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              Quantity
-                            </p>
-                            <input
-                              type="number"
-                              name="qty"
-                              value={values.qty}
-                              onChange={(e) => setFieldValue("qty", e.target.value)}
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter Quantity"
-                            />
-                            <ErrorMessage
-                              name="qty"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-
-                          {/* MOC */}
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              MOC
-                            </p>
-                            <input
-                              type="text"
-                              name="moc"
-                              value={values.moc}
-                              onChange={(e) => setFieldValue("moc", e.target.value)}
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter MOC (Material of Construction)"
-                            />
-                            <ErrorMessage
-                              name="moc"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-
-                          {/* Bin Location */}
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              Bin Location
-                            </p>
-                            <input
-                              type="text"
-                              name="bin_location"
-                              value={values.bin_location}
-                              onChange={(e) =>
-                                setFieldValue("bin_location", e.target.value)
-                              }
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter Bin Location"
-                            />
-                            <ErrorMessage
-                              name="bin_location"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-                        </>
-                      )}
-
-                      {/* Assembly Items - Only for JOB_SERVICE - ASSEMBLY */}
-                      {values.sub_type === "ASSEMBLY" && (
-                        <>
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              Product Description
-                            </p>
-                            <input
-                              type="text"
-                              name="product_desc"
-                              value={values.product_desc}
-                              onChange={(e) => setFieldValue("product_desc", e.target.value)}
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter Product Description"
-                            />
-                            <ErrorMessage
-                              name="product_desc"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-                          <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                              Product Quantity
-                            </p>
-                            <input
-                              type="number"
-                              name="product_qty"
-                              value={values.product_qty}
-                              onChange={(e) => setFieldValue("product_qty", e.target.value)}
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                              placeholder="Enter Product Quantity"
-                            />
-                            <ErrorMessage
-                              name="product_qty"
-                              component="div"
-                              className="text-red-500 text-sm mt-1"
-                            />
-                          </div>
-                        <FieldArray name="assembly_items">
-                          {({ remove, push }) => (
-                            <div className="col-span-1 md:col-span-2 space-y-6">
-                              {values.assembly_items && values.assembly_items.length > 0 &&
-                                values.assembly_items.map((item, index) => (
-                                  <div key={index} className="border border-gray-200 p-4 rounded-lg">
-                                    <div className="flex justify-between items-center mb-4">
-                                      <p className="font-semibold text-gray-700">Item #{index + 1}</p>
-                                      {values.assembly_items.length > 1 && (
-                                        <button
-                                          type="button"
-                                          className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                                          onClick={() => remove(index)}
-                                        >
-                                          <HiTrash className="w-4 h-4" />
-                                        </button>
-                                      )}
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                      <div className="w-full md:col-span-2">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Item Description</p>
-                                        <input type="text" name={`assembly_items.${index}.item_description`} value={item.item_description} onChange={(e) => setFieldValue(`assembly_items.${index}.item_description`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Item Description" />
-                                        <ErrorMessage name={`assembly_items.${index}.item_description`} component="div" className="text-red-500 text-sm mt-1" />
-                                      </div>
-                                      <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Item No</p>
-                                        <input type="number" name={`assembly_items.${index}.item_no`} value={item.item_no} onChange={(e) => setFieldValue(`assembly_items.${index}.item_no`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Item No" />
-                                        <ErrorMessage name={`assembly_items.${index}.item_no`} component="div" className="text-red-500 text-sm mt-1" />
-                                      </div>
-                                      <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Quantity</p>
-                                        <input type="number" name={`assembly_items.${index}.qty`} value={item.qty} onChange={(e) => setFieldValue(`assembly_items.${index}.qty`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Quantity" />
-                                        <ErrorMessage name={`assembly_items.${index}.qty`} component="div" className="text-red-500 text-sm mt-1" />
-                                      </div>
-                                      <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">MOC</p>
-                                        <input type="text" name={`assembly_items.${index}.moc`} value={item.moc} onChange={(e) => setFieldValue(`assembly_items.${index}.moc`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter MOC" />
-                                        <ErrorMessage name={`assembly_items.${index}.moc`} component="div" className="text-red-500 text-sm mt-1" />
-                                      </div>
-                                      <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Bin Location</p>
-                                        <input type="text" name={`assembly_items.${index}.bin_location`} value={item.bin_location} onChange={(e) => setFieldValue(`assembly_items.${index}.bin_location`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]" placeholder="Enter Bin Location" />
-                                        <ErrorMessage name={`assembly_items.${index}.bin_location`} component="div" className="text-red-500 text-sm mt-1" />
-                                      </div>
-                                      <div className="w-full md:col-span-2">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">Material Remark</p>
-                                        <textarea name={`assembly_items.${index}.material_remark`} value={item.material_remark} onChange={(e) => setFieldValue(`assembly_items.${index}.material_remark`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]" placeholder="Enter Material Remark (Optional)" />
-                                        <ErrorMessage name={`assembly_items.${index}.material_remark`} component="div" className="text-red-500 text-sm mt-1" />
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))
-                              }
+                    ) : (
+                      filteredData.map((item: any) => (
+                        <tr
+                          className="border border-tableBorder bg-white hover:bg-primary-100"
+                          key={item.id}
+                        >
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.client_name || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.job_no || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.jo_number || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.product_desc || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.product_qty || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.item_description || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.item_no || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.qty_history || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.moc || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.job_order_date || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.mtl_rcd_date || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.mtl_challan_no || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.bin_location || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                            {item.material_remark || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <div className="flex items-center gap-2">
                               <button
-                                type="button"
-                                className="flex items-center gap-2 text-primary-600 font-medium py-2 px-4 border-2 border-dashed border-primary-600 rounded-lg hover:bg-primary-50"
-                                onClick={() => push({ item_description: '', item_no: '', qty: '', moc: '', bin_location: '', material_remark: '' })}
+                                onClick={() => handleDelete(item.id)}
+                                className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                                title="Delete"
                               >
-                                <FaPlus /> Add Another Item
+                                <HiTrash className="w-4 h-4" />
                               </button>
-                               <ErrorMessage name="assembly_items" component="div" className="text-red-500 text-sm mt-1" />
                             </div>
-                          )}
-                        </FieldArray>
-                        </>
-                      )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                      {/* Material Remark */}
-                      {values.sub_type !== "ASSEMBLY" && (
+        {/* FITLER FLYOUT */}
+        <>
+          {/* DARK BG SCREEN */}
+          {isFlyoutOpen && (
+            <div
+              className="min-h-screen w-full bg-[#1f1d1d80] fixed top-0 left-0 right-0 z-[999]"
+              onClick={() => {
+                setFlyoutOpen(false);
+                resetFormState();
+              }}
+            ></div>
+          )}
+
+          {/* NOW MY FLYOUT */}
+          <div className={`flyout ${isFlyoutOpen ? "open" : ""}`}>
+            <div className="w-full min-h-auto">
+              {/* Header */}
+              <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
+                <p className="text-primary-600 text-[22px] sm:text-[24px] md:text-[26px] font-bold leading-8 sm:leading-9">
+                  {getFlyoutTitle()}
+                </p>
+                <IoCloseOutline
+                  onClick={() => {
+                    setFlyoutOpen(false);
+                    resetFormState();
+                  }}
+                  className="h-7 sm:h-8 w-7 sm:w-8 border border-[#E7E7E7] text-[#0A0A0A] rounded cursor-pointer"
+                />
+              </div>
+              <div className="w-full border-b border-[#E7E7E7] mb-4 sm:mb-6"></div>
+
+              {/* FORM */}
+              <Formik
+                initialValues={initialFormValues}
+                validationSchema={validationSchema}
+                onSubmit={handleSubmit}
+                enableReinitialize={true}
+              >
+                {({
+                  values,
+                  setFieldValue,
+                  handleSubmit,
+                  isSubmitting,
+                  errors,
+                }) => (
+                  <Form onSubmit={handleSubmit}>
+                    <div className="w-full">
+                      {/* Grid container for form fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        {/* Job Type - Hidden but required for form */}
+                        <input
+                          type="hidden"
+                          name="job_type"
+                          value={values.job_type}
+                        />
+
+                        {/* Client Name */}
                         <div className="w-full">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Material Remark
+                            Client Name
                           </p>
-                          <textarea
-                            name="material_remark"
-                            value={values.material_remark}
-                            onChange={(e) =>
-                              setFieldValue("material_remark", e.target.value)
+                          <SelectInput
+                            name="client_name"
+                            value={values.client_name}
+                            setFieldValue={setFieldValue}
+                            options={
+                              values.job_type === "KANBAN"
+                                ? [
+                                    {
+                                      value: "Amar Equipment",
+                                      label: "Amar Equipment",
+                                    },
+                                  ]
+                                : clientOptions
                             }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
-                            placeholder="Enter Material Remark (Optional)"
+                            placeholder="Select Client Name"
                           />
                           <ErrorMessage
-                            name="material_remark"
+                            name="client_name"
                             component="div"
                             className="text-red-500 text-sm mt-1"
                           />
                         </div>
-                      )}
-                    </div>
 
-                    {/* BUTTONS */}
-                    <div className="mt-8 md:mt-10 w-full flex flex-col md:flex-row md:justify-between items-center gap-y-4 md:gap-y-0 gap-x-4">
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isSubmitting ? "Submitting..." : getSubmitButtonText()}
-                      </button>
+                        {/* Job No - Only for JOB_SERVICE */}
+                        {values.job_type === "JOB_SERVICE" && (
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Job No
+                            </p>
+                            <input
+                              type="text"
+                              name="job_no"
+                              value={values.job_no}
+                              onChange={(e) =>
+                                setFieldValue("job_no", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter Job No"
+                            />
+                            <ErrorMessage
+                              name="job_no"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {/* TSO No - Only for TSO_SERVICE */}
+                        {values.job_type === "TSO_SERVICE" && (
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              TSO No
+                            </p>
+                            <input
+                              type="text"
+                              name="tso_no"
+                              value={values.tso_no}
+                              onChange={(e) =>
+                                setFieldValue("tso_no", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              placeholder="Enter TSO No"
+                            />
+                            <ErrorMessage
+                              name="tso_no"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {/* J/O Number */}
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            J/O Number
+                          </p>
+                          <input
+                            type="text"
+                            name="jo_number"
+                            value={values.jo_number}
+                            onChange={(e) =>
+                              setFieldValue("jo_number", e.target.value)
+                            }
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            placeholder="Enter J/O Number"
+                          />
+                          <ErrorMessage
+                            name="jo_number"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+
+                        {/* Job Category - Only for TSO_SERVICE and KANBAN */}
+                        {(values.job_type === "TSO_SERVICE" ||
+                          values.job_type === "KANBAN") && (
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              {values.job_type === "KANBAN"
+                                ? "Product Category"
+                                : "Job Category"}
+                            </p>
+                            <SelectInput
+                              name="job_category"
+                              value={values.job_category}
+                              setFieldValue={setFieldValue}
+                              options={getCategoryOptions(values.job_type)}
+                              placeholder={
+                                values.job_type === "KANBAN"
+                                  ? "Select Product Category"
+                                  : "Select TSO Service Category"
+                              }
+                            />
+                            <ErrorMessage
+                              name="job_category"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {/* Kanban Job Category - Only for KANBAN */}
+                        {values.job_type === "KANBAN" && (
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Kanban Job Category
+                            </p>
+                            <SelectInput
+                              name="kanban_job_cat"
+                              value={values.kanban_job_cat}
+                              setFieldValue={setFieldValue}
+                              options={kanbanJobCatOptions}
+                              placeholder="Select Kanban Job Category"
+                            />
+                            <ErrorMessage
+                              name="kanban_job_cat"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        )}
+
+                        {/* Job Order Date */}
+                        {/* Job Order Date */}
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Job Order Date
+                          </p>
+                          <DatePickerInput
+                            name="job_order_date"
+                            value={values.job_order_date}
+                            setFieldValue={setFieldValue}
+                            placeholderText="Select Job Order Date"
+                            dateFormat="yyyy-MM-dd"
+                          />
+                          <ErrorMessage
+                            name="job_order_date"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+
+                        {/* Material Received Date */}
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Material Received Date
+                          </p>
+                          <DatePickerInput
+                            name="mtl_rcd_date"
+                            value={values.mtl_rcd_date}
+                            setFieldValue={setFieldValue}
+                            placeholderText="Select Material Received Date"
+                            dateFormat="yyyy-MM-dd"
+                          />
+                          <ErrorMessage
+                            name="mtl_rcd_date"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+
+                        {/* Material Challan No */}
+                        <div className="w-full">
+                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            Material Challan No
+                          </p>
+                          <input
+                            type="number"
+                            name="mtl_challan_no"
+                            value={values.mtl_challan_no}
+                            onChange={(e) =>
+                              setFieldValue("mtl_challan_no", e.target.value)
+                            }
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            placeholder="Enter Material Challan No"
+                          />
+                          <ErrorMessage
+                            name="mtl_challan_no"
+                            component="div"
+                            className="text-red-500 text-sm mt-1"
+                          />
+                        </div>
+
+                        {/* ====== CONDITIONAL FIELDS FOR PARTIAL VS ASSEMBLY ====== */}
+
+                        {/* Fields for PARTIAL or other job types */}
+                        {values.sub_type !== "ASSEMBLY" && (
+                          <>
+                            {/* Item Description */}
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                Item Description
+                              </p>
+                              <input
+                                type="text"
+                                name="item_description"
+                                value={values.item_description}
+                                onChange={(e) =>
+                                  setFieldValue(
+                                    "item_description",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Item Description"
+                              />
+                              <ErrorMessage
+                                name="item_description"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+
+                            {/* Item No */}
+                            {values.job_type !== "KANBAN" && (
+                              <div className="w-full">
+                                <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                  Item No
+                                </p>
+                                <input
+                                  type="number"
+                                  name="item_no"
+                                  value={values.item_no}
+                                  onChange={(e) =>
+                                    setFieldValue("item_no", e.target.value)
+                                  }
+                                  className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                  placeholder="Enter Item No"
+                                />
+                                <ErrorMessage
+                                  name="item_no"
+                                  component="div"
+                                  className="text-red-500 text-sm mt-1"
+                                />
+                              </div>
+                            )}
+
+                            {/* Quantity */}
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                Quantity
+                              </p>
+                              <input
+                                type="number"
+                                name="qty"
+                                value={values.qty}
+                                onChange={(e) =>
+                                  setFieldValue("qty", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Quantity"
+                              />
+                              <ErrorMessage
+                                name="qty"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+
+                            {/* MOC */}
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                MOC
+                              </p>
+                              <input
+                                type="text"
+                                name="moc"
+                                value={values.moc}
+                                onChange={(e) =>
+                                  setFieldValue("moc", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter MOC (Material of Construction)"
+                              />
+                              <ErrorMessage
+                                name="moc"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+
+                            {/* Bin Location */}
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                Bin Location
+                              </p>
+                              <input
+                                type="text"
+                                name="bin_location"
+                                value={values.bin_location}
+                                onChange={(e) =>
+                                  setFieldValue("bin_location", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Bin Location"
+                              />
+                              <ErrorMessage
+                                name="bin_location"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Assembly Items - Only for JOB_SERVICE - ASSEMBLY */}
+                        {values.sub_type === "ASSEMBLY" && (
+                          <>
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                Product Description
+                              </p>
+                              <input
+                                type="text"
+                                name="product_desc"
+                                value={values.product_desc}
+                                onChange={(e) =>
+                                  setFieldValue("product_desc", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Product Description"
+                              />
+                              <ErrorMessage
+                                name="product_desc"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                Product Quantity
+                              </p>
+                              <input
+                                type="number"
+                                name="product_qty"
+                                value={values.product_qty}
+                                onChange={(e) =>
+                                  setFieldValue("product_qty", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Product Quantity"
+                              />
+                              <ErrorMessage
+                                name="product_qty"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+                            <FieldArray name="assembly_items">
+                              {({ remove, push }) => (
+                                <div className="col-span-1 md:col-span-2 space-y-6">
+                                  {values.assembly_items &&
+                                    values.assembly_items.length > 0 &&
+                                    values.assembly_items.map((item, index) => (
+                                      <div
+                                        key={index}
+                                        className="border border-gray-200 p-4 rounded-lg"
+                                      >
+                                        <div className="flex justify-between items-center mb-4">
+                                          <p className="font-semibold text-gray-700">
+                                            Item #{index + 1}
+                                          </p>
+                                          {values.assembly_items.length > 1 && (
+                                            <button
+                                              type="button"
+                                              className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                                              onClick={() => remove(index)}
+                                            >
+                                              <HiTrash className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                          <div className="w-full md:col-span-2">
+                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                              Item Description
+                                            </p>
+                                            <input
+                                              type="text"
+                                              name={`assembly_items.${index}.item_description`}
+                                              value={item.item_description}
+                                              onChange={(e) =>
+                                                setFieldValue(
+                                                  `assembly_items.${index}.item_description`,
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              placeholder="Enter Item Description"
+                                            />
+                                            <ErrorMessage
+                                              name={`assembly_items.${index}.item_description`}
+                                              component="div"
+                                              className="text-red-500 text-sm mt-1"
+                                            />
+                                          </div>
+                                          <div className="w-full">
+                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                              Item No
+                                            </p>
+                                            <input
+                                              type="number"
+                                              name={`assembly_items.${index}.item_no`}
+                                              value={item.item_no}
+                                              onChange={(e) =>
+                                                setFieldValue(
+                                                  `assembly_items.${index}.item_no`,
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              placeholder="Enter Item No"
+                                            />
+                                            <ErrorMessage
+                                              name={`assembly_items.${index}.item_no`}
+                                              component="div"
+                                              className="text-red-500 text-sm mt-1"
+                                            />
+                                          </div>
+                                          <div className="w-full">
+                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                              Quantity
+                                            </p>
+                                            <input
+                                              type="number"
+                                              name={`assembly_items.${index}.qty`}
+                                              value={item.qty}
+                                              onChange={(e) =>
+                                                setFieldValue(
+                                                  `assembly_items.${index}.qty`,
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              placeholder="Enter Quantity"
+                                            />
+                                            <ErrorMessage
+                                              name={`assembly_items.${index}.qty`}
+                                              component="div"
+                                              className="text-red-500 text-sm mt-1"
+                                            />
+                                          </div>
+                                          <div className="w-full">
+                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                              MOC
+                                            </p>
+                                            <input
+                                              type="text"
+                                              name={`assembly_items.${index}.moc`}
+                                              value={item.moc}
+                                              onChange={(e) =>
+                                                setFieldValue(
+                                                  `assembly_items.${index}.moc`,
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              placeholder="Enter MOC"
+                                            />
+                                            <ErrorMessage
+                                              name={`assembly_items.${index}.moc`}
+                                              component="div"
+                                              className="text-red-500 text-sm mt-1"
+                                            />
+                                          </div>
+                                          <div className="w-full">
+                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                              Bin Location
+                                            </p>
+                                            <input
+                                              type="text"
+                                              name={`assembly_items.${index}.bin_location`}
+                                              value={item.bin_location}
+                                              onChange={(e) =>
+                                                setFieldValue(
+                                                  `assembly_items.${index}.bin_location`,
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              placeholder="Enter Bin Location"
+                                            />
+                                            <ErrorMessage
+                                              name={`assembly_items.${index}.bin_location`}
+                                              component="div"
+                                              className="text-red-500 text-sm mt-1"
+                                            />
+                                          </div>
+                                          <div className="w-full md:col-span-2">
+                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                              Material Remark
+                                            </p>
+                                            <textarea
+                                              name={`assembly_items.${index}.material_remark`}
+                                              value={item.material_remark}
+                                              onChange={(e) =>
+                                                setFieldValue(
+                                                  `assembly_items.${index}.material_remark`,
+                                                  e.target.value
+                                                )
+                                              }
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                                              placeholder="Enter Material Remark (Optional)"
+                                            />
+                                            <ErrorMessage
+                                              name={`assembly_items.${index}.material_remark`}
+                                              component="div"
+                                              className="text-red-500 text-sm mt-1"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-2 text-primary-600 font-medium py-2 px-4 border-2 border-dashed border-primary-600 rounded-lg hover:bg-primary-50"
+                                    onClick={() =>
+                                      push({
+                                        item_description: "",
+                                        item_no: "",
+                                        qty: "",
+                                        moc: "",
+                                        bin_location: "",
+                                        material_remark: "",
+                                      })
+                                    }
+                                  >
+                                    <FaPlus /> Add Another Item
+                                  </button>
+                                  <ErrorMessage
+                                    name="assembly_items"
+                                    component="div"
+                                    className="text-red-500 text-sm mt-1"
+                                  />
+                                </div>
+                              )}
+                            </FieldArray>
+                          </>
+                        )}
+
+                        {/* Material Remark */}
+                        {values.sub_type !== "ASSEMBLY" && (
+                          <div className="w-full">
+                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              Material Remark
+                            </p>
+                            <textarea
+                              name="material_remark"
+                              value={values.material_remark}
+                              onChange={(e) =>
+                                setFieldValue("material_remark", e.target.value)
+                              }
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                              placeholder="Enter Material Remark (Optional)"
+                            />
+                            <ErrorMessage
+                              name="material_remark"
+                              component="div"
+                              className="text-red-500 text-sm mt-1"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* BUTTONS */}
+                      <div className="mt-8 md:mt-10 w-full flex flex-col md:flex-row md:justify-between items-center gap-y-4 md:gap-y-0 gap-x-4">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSubmitting
+                            ? "Submitting..."
+                            : getSubmitButtonText()}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </Form>
-              )}
-            </Formik>
+                  </Form>
+                )}
+              </Formik>
+            </div>
           </div>
-        </div>
-      </>
-  
+        </>
       </PageGuard>
     </>
   );
