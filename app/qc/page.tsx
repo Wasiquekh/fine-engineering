@@ -53,12 +53,14 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
+  status?: string | null;
   job?: {
     id?: string | null;
     job_no?: string | null;
     tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
+    assign_to?: string | null;
   } | null;
 };
 
@@ -67,13 +69,10 @@ export default function QcMainPage() {
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
 
-  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] =
-    useState("ALL");
+  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
-  const [categories, setCategories] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
 
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
@@ -110,28 +109,30 @@ export default function QcMainPage() {
     }
   };
 
+  // Fetch ready-for-qc items only
   const fetchData = async () => {
     setLoading(true);
     try {
+      const params: any = {
+        status: "ready-for-qc",
+        ...(client ? { "job.client_name": client } : {}),
+      };
+
+      if (filterParam) {
+        params.job_type = filterParam;
+      }
+
+      console.log("Fetching ready-for-qc data with params:", params);
+
       const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
-        params: {
-          job_type: filterParam,
-          status: "ready-for-qc",
-          ...(client ? { "job.client_name": client } : {}),
-        },
+        params: params,
       } as any);
 
       let fetchedData = Array.isArray(response?.data?.data)
         ? response.data.data
         : [];
 
-      if (filterParam === "JOB_SERVICE") {
-        fetchedData = fetchedData.filter(
-          (item: any) =>
-            item?.review_for !== "vendor" && item?.review_for !== "welding"
-        );
-      }
-
+      console.log(`Fetched ${fetchedData.length} ready-for-qc items`);
       setData(fetchedData);
     } catch (error) {
       console.error("Error fetching QC data:", error);
@@ -151,6 +152,7 @@ export default function QcMainPage() {
     fetchData();
   }, [filterParam, client]);
 
+  // Apply category filter
   const filteredData = useMemo(() => {
     let currentData = [...data];
 
@@ -178,13 +180,7 @@ export default function QcMainPage() {
     }
 
     return currentData;
-  }, [
-    data,
-    filterParam,
-    jobServiceCategoryFilter,
-    tsoSubFilter,
-    kanbanSubFilter,
-  ]);
+  }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
   // Get unique identifiers based on filter type
   const jobIdentifiers = useMemo(() => {
@@ -234,6 +230,8 @@ export default function QcMainPage() {
         uniqueJoCount: number;
         jobCategory: string;
         assigningDate: string;
+        hasWelding: boolean;
+        hasVendor: boolean;
       }
     > = {};
 
@@ -255,8 +253,7 @@ export default function QcMainPage() {
         0
       );
 
-      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown"))
-        .size;
+      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
 
       const jobCategory =
         items.length > 0
@@ -266,11 +263,16 @@ export default function QcMainPage() {
       const assigningDate =
         items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
 
+      const hasWelding = items.some((item) => item.review_for === "welding");
+      const hasVendor = items.some((item) => item.review_for === "vendor");
+
       summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
+        hasWelding,
+        hasVendor,
       };
     });
 
@@ -284,27 +286,27 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
+  // ========== JO-WISE DISPATCH (OK) ==========
   const handleJoOK = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to dispatch.");
       return;
     }
 
+    const joNo = items[0]?.jo_no || "Unknown";
+    
     const { value: formValues } = await Swal.fire({
       title: "Dispatch JO",
       html: `
-        <p>Processing ${items.length} item(s) for dispatch</p>
-        <input id="chalan_no" class="swal2-input" placeholder="Chalan No">
-        <input id="dispatch_date" class="swal2-input" type="date">
+        <p>Dispatching JO: <strong>${joNo}</strong></p>
+        <p class="text-sm text-gray-600 mt-2">Items in this JO: ${items.length}</p>
+        <input id="chalan_no" class="swal2-input" placeholder="Chalan No" required>
+        <input id="dispatch_date" class="swal2-input" type="date" required>
       `,
       focusConfirm: false,
       preConfirm: () => {
-        const chalan_no = (
-          document.getElementById("chalan_no") as HTMLInputElement
-        )?.value;
-        const dispatch_date = (
-          document.getElementById("dispatch_date") as HTMLInputElement
-        )?.value;
+        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
+        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
 
         if (!chalan_no || !dispatch_date) {
           Swal.showValidationMessage("Please fill out both fields");
@@ -314,7 +316,7 @@ export default function QcMainPage() {
         return { chalan_no, dispatch_date };
       },
       showCancelButton: true,
-      confirmButtonText: "Dispatch",
+      confirmButtonText: "Dispatch JO",
     });
 
     if (!formValues) return;
@@ -327,7 +329,6 @@ export default function QcMainPage() {
     }
 
     try {
-      // Process all items in the JO
       for (const item of items) {
         await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
           job_id,
@@ -336,65 +337,28 @@ export default function QcMainPage() {
         });
       }
 
-      toast.success(`${items.length} item(s) dispatched successfully`);
+      toast.success(`${items.length} item(s) from JO ${joNo} dispatched successfully`);
       fetchData();
     } catch (error: any) {
       toast.error(error?.response?.data?.error || "Dispatch failed");
     }
   };
 
-  const handleJoNotOk = async (items: QcRow[]) => {
-    const { value: reason } = await Swal.fire({
-      title: "Reason for Not OK",
-      html: `
-        <p>Marking ${items.length} item(s) as Not OK</p>
-      `,
-      input: "textarea",
-      inputPlaceholder: "Enter the reason...",
-      showCancelButton: true,
-      confirmButtonText: "Submit",
-      confirmButtonColor: "#d33",
-      inputValidator: (value) => {
-        if (!value) return "Reason is required!";
-        return null;
-      },
-    });
-
-    if (!reason) return;
-
-    const job_id = items[0]?.job_id || items[0]?.job?.id;
-    const updated_by = storage.getUserId();
-
-    if (!job_id || !updated_by) {
-      toast.error("Job or User not found");
-      return;
-    }
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
-        reason,
-        updated_by,
-      });
-
-      toast.success(`${items.length} item(s) marked as Not OK`);
-      fetchData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed");
-    }
-  };
-
-  // Rework function using /assign-to-worker/:id/reject endpoint
-  const handleRework = async (items: QcRow[]) => {
+  // ========== JO-WISE REWORK ==========
+  const handleJoRework = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to process.");
       return;
     }
 
+    const joNo = items[0]?.jo_no || "Unknown";
+
     const { value: reason } = await Swal.fire({
-      title: "Send for Rework",
+      title: "Send JO for Rework",
       html: `
-        <p>Sending <strong>${items.length}</strong> item(s) for rework</p>
-        <p class="text-sm text-gray-600 mt-2">These items will be sent back to production with status "machine"</p>
+        <p>Sending JO for rework</p>
+        <p class="text-sm text-gray-600 mt-2">JO: <strong>${joNo}</strong></p>
+        <p class="text-sm text-gray-600">Items: ${items.length}</p>
       `,
       input: "textarea",
       inputPlaceholder: "Enter reason for rework...",
@@ -419,17 +383,11 @@ export default function QcMainPage() {
     let successCount = 0;
     let failCount = 0;
 
-    // Process each item individually using the reject endpoint
     for (const item of items) {
       try {
-        await axiosProvider.post(
-          `/fineengg_erp/system/assign-to-worker/${item.id}/reject`,
-          {
-            updated_by,
-            // Note: The current backend doesn't accept reason, but we'll keep it for future
-            // reason: reason
-          }
-        );
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+          updated_by,
+        });
         successCount++;
       } catch (error: any) {
         console.error(`Failed to reject item ${item.serial_no}:`, error);
@@ -438,9 +396,8 @@ export default function QcMainPage() {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} item(s) sent for rework successfully`);
+      toast.success(`${successCount} item(s) from JO ${joNo} sent for rework`);
     }
-
     if (failCount > 0) {
       toast.error(`Failed to process ${failCount} item(s)`);
     }
@@ -448,15 +405,15 @@ export default function QcMainPage() {
     fetchData();
   };
 
-  // Single item rework (keep this for the individual button)
+  // Single item rework
   const handleSingleItemRework = async (item: QcRow) => {
     if (!item) return;
 
     const { value: reason } = await Swal.fire({
-      title: "Send for Rework",
+      title: "Send Item for Rework",
       html: `
         <p>Serial: <strong>${item.serial_no || "N/A"}</strong></p>
-        <p class="text-sm text-gray-600 mt-2">This item will be sent back to production with status "machine"</p>
+        <p class="text-sm text-gray-600 mt-2">JO: ${item.jo_no || "Unknown"}</p>
       `,
       input: "textarea",
       inputPlaceholder: "Enter reason for rework...",
@@ -479,14 +436,9 @@ export default function QcMainPage() {
     }
 
     try {
-      await axiosProvider.post(
-        `/fineengg_erp/system/assign-to-worker/${item.id}/reject`,
-        {
-          updated_by,
-          // Note: The current backend doesn't accept reason, but we'll keep it for future
-          // reason: reason
-        }
-      );
+      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+        updated_by,
+      });
 
       toast.success(`Item ${item.serial_no} sent for rework`);
       fetchData();
@@ -521,12 +473,12 @@ export default function QcMainPage() {
           </p>
         </div>
 
+        {/* Category Filter */}
         {uniqueCategories.length > 0 && (
           <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
             <button
               onClick={() => {
-                if (filterParam === "JOB_SERVICE")
-                  setJobServiceCategoryFilter("ALL");
+                if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter("ALL");
                 if (filterParam === "TSO_SERVICE") setTsoSubFilter("ALL");
                 if (filterParam === "KANBAN") setKanbanSubFilter("ALL");
               }}
@@ -546,15 +498,14 @@ export default function QcMainPage() {
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              All
+              All Categories
             </button>
 
             {uniqueCategories.map((cat) => (
               <button
                 key={cat.value}
                 onClick={() => {
-                  if (filterParam === "JOB_SERVICE")
-                    setJobServiceCategoryFilter(cat.value);
+                  if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter(cat.value);
                   if (filterParam === "TSO_SERVICE") setTsoSubFilter(cat.value);
                   if (filterParam === "KANBAN") setKanbanSubFilter(cat.value);
                 }}
@@ -585,9 +536,7 @@ export default function QcMainPage() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <button
-                  onClick={() => {
-                    setSelectedJobNo(null);
-                  }}
+                  onClick={() => setSelectedJobNo(null)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
                 >
                   <FaArrowLeft />
@@ -608,143 +557,93 @@ export default function QcMainPage() {
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
                     <th className="p-3 border border-tableBorder">JO No</th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Serial No
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Item No
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Machine Category
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Machine Size
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Machine Code
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Worker Name
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Quantity
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Assigning Date
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Actions
-                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">Serial No</th>
+                    <th className="px-2 py-0 border border-tableBorder">Item No</th>
+                    <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
+                    <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
+                    <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
+                    <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
+                    <th className="px-2 py-0 border border-tableBorder">Quantity</th>
+                    <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                    <th className="px-2 py-0 border border-tableBorder">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {Object.entries(getJoGroupsForIdentifier(selectedJobNo))
-                    .length === 0 ? (
+                  {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={10}
-                        className="px-4 py-6 text-center border border-tableBorder"
-                      >
-                        <p className="text-[#666666] text-base">
-                          No JO data found
-                        </p>
+                      <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
+                        <p className="text-[#666666] text-base">No JO data found</p>
                       </td>
                     </tr>
                   ) : (
-                    Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(
-                      ([jo, items]) => (
-                        <Fragment key={jo}>
-                          {/* JO Group Header with Batch Actions */}
-                          <tr className="border border-tableBorder bg-gray-100">
-                            <td
-                              className="px-2 py-2 border border-tableBorder font-semibold"
-                              colSpan={2}
-                            >
-                              JO: {jo}
+                    Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
+                      <Fragment key={jo}>
+                        <tr className="border border-tableBorder bg-gray-100">
+                          <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={2}>
+                            JO: {jo}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                            <span className="text-xs text-gray-600">{items.length} item(s)</span>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleJoOK(items)}
+                                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                              >
+                                ✅ Dispatch JO
+                              </button>
+                              <button
+                                onClick={() => handleJoRework(items)}
+                                className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                              >
+                                🔄 Rework JO
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {items.map((item) => (
+                          <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
+                            <td className="px-2 py-2 border border-tableBorder"> </td>
+                            <td className="px-2 py-2 border border-tableBorder font-mono">
+                              {item.serial_no || "-"}
                             </td>
-                            <td
-                              className="px-2 py-2 border border-tableBorder"
-                              colSpan={4}
-                            >
-                              <span className="text-xs text-gray-600">
-                                {items.length} item(s)
-                              </span>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {item.item_no ?? "-"}
                             </td>
-                            <td
-                              className="px-2 py-2 border border-tableBorder"
-                              colSpan={4}
-                            >
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleJoOK(items)}
-                                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                                >
-                                  OK All
-                                </button>
-                                <button
-                                  onClick={() => handleJoNotOk(items)}
-                                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
-                                >
-                                  Not OK All
-                                </button>
-                                <button
-                                  onClick={() => handleRework(items)}
-                                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                                >
-                                  Rework All
-                                </button>
-                              </div>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {item.machine_category || "-"}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {item.machine_size || "-"}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {item.machine_code || "-"}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {item.worker_name || "-"}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder font-semibold">
+                              {item.quantity_no ?? "-"}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              {item.assigning_date || "-"}
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <button
+                                onClick={() => handleSingleItemRework(item)}
+                                className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                title={`Rework: ${item.serial_no || "N/A"}`}
+                              >
+                                Rework Item
+                              </button>
                             </td>
                           </tr>
-
-                          {/* Individual Items */}
-                          {items.map((item) => (
-                            <tr
-                              key={item.id}
-                              className="border border-tableBorder bg-white hover:bg-gray-50"
-                            >
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {" "}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder font-mono">
-                                {item.serial_no || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {item.item_no ?? "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {item.machine_category || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {item.machine_size || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {item.machine_code || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {item.worker_name || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">
-                                {item.quantity_no ?? "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {item.assigning_date || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <button
-                                  onClick={() => handleSingleItemRework(item)}
-                                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                  title={`Rework: ${item.serial_no || "N/A"}`}
-                                >
-                                  Rework
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </Fragment>
-                      )
-                    )
+                        ))}
+                      </Fragment>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -769,40 +668,25 @@ export default function QcMainPage() {
                         ? "J/O Number"
                         : "Job No"}
                     </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Job Category
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Total JO
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Total Quantity
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">
-                      Assigning Date
-                    </th>
+                    <th className="px-2 py-0 border border-tableBorder">Job Category</th>
+                    <th className="px-2 py-0 border border-tableBorder">Total JO</th>
+                    <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
+                    <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                    <th className="px-2 py-0 border border-tableBorder">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-6 text-center border border-tableBorder"
-                      >
+                      <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
                         <p className="text-[#666666] text-base">Loading...</p>
                       </td>
                     </tr>
                   ) : jobIdentifiers.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-6 text-center border border-tableBorder"
-                      >
-                        <p className="text-[#666666] text-base">
-                          No data found
-                        </p>
+                      <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <p className="text-[#666666] text-base">No data found</p>
                       </td>
                     </tr>
                   ) : (
@@ -816,29 +700,30 @@ export default function QcMainPage() {
                           onClick={() => setSelectedJobNo(identifier)}
                         >
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-blue-600 text-base leading-normal">
-                              {identifier}
-                            </p>
+                            <p className="text-blue-600 text-base leading-normal">{identifier}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">
-                              {summary.jobCategory}
-                            </p>
+                            <p className="text-[#232323] text-base">{summary.jobCategory}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">
-                              {summary.uniqueJoCount}
-                            </p>
+                            <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">
-                              {summary.totalQty}
-                            </p>
+                            <p className="text-[#232323] text-base">{summary.totalQty}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">
-                              {summary.assigningDate || "-"}
-                            </p>
+                            <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedJobNo(identifier);
+                              }}
+                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                            >
+                              View JOs
+                            </button>
                           </td>
                         </tr>
                       );
@@ -851,13 +736,10 @@ export default function QcMainPage() {
         </div>
 
         <div className="text-xs text-gray-500 mt-3 px-2">
-          Total{" "}
-          {filterParam === "TSO_SERVICE"
-            ? "TSOs"
-            : filterParam === "KANBAN"
-            ? "J/O Numbers"
-            : "Jobs"}
-          : {jobIdentifiers.length} | Total Items: {filteredData.length}
+          Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
+          <span className="ml-4 text-xs text-gray-400">
+            • Dispatch JO / Rework JO = JO-wise
+          </span>
         </div>
       </div>
     </div>
