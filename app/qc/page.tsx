@@ -43,6 +43,7 @@ type QcRow = {
   job_no?: string | null;
   tso_no?: string | null;
   jo_no?: string | null;
+  jo_number?: string | null;
   serial_no?: string | null;
   item_no?: number | string | null;
   machine_category?: string | null;
@@ -58,9 +59,9 @@ type QcRow = {
     id?: string | null;
     job_no?: string | null;
     tso_no?: string | null;
+    jo_number?: string | null;
     job_category?: string | null;
     client_name?: string | null;
-    assign_to?: string | null;
   } | null;
 };
 
@@ -109,30 +110,60 @@ export default function QcMainPage() {
     }
   };
 
-  // Fetch ready-for-qc items only
+  // Helper function to extract JO number from serial_no
+  const extractJoNumberFromSerial = (serialNo: string): string | null => {
+    if (!serialNo) return null;
+    const parts = serialNo.split('-');
+    if (parts.length >= 3) {
+      for (const part of parts) {
+        if (part.toUpperCase().startsWith('JO')) {
+          return part;
+        }
+      }
+      return parts[2];
+    }
+    return null;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const params: any = {
-        status: "ready-for-qc",
-        ...(client ? { "job.client_name": client } : {}),
-      };
-
-      if (filterParam) {
-        params.job_type = filterParam;
-      }
-
-      console.log("Fetching ready-for-qc data with params:", params);
-
       const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
-        params: params,
+        params: {
+          job_type: filterParam,
+          status: "ready-for-qc",
+          ...(client ? { "job.client_name": client } : {}),
+        },
       } as any);
 
       let fetchedData = Array.isArray(response?.data?.data)
         ? response.data.data
         : [];
 
-      console.log(`Fetched ${fetchedData.length} ready-for-qc items`);
+      // 🔥 FIX: Extract jo_number from job object or serial_no
+      fetchedData = fetchedData.map((item: any) => {
+        // Priority 1: Get JO number from job object
+        let joNumber = item.job?.jo_number || item.job?.jo_no;
+        
+        // Priority 2: Extract from serial_no
+        if (!joNumber && item.serial_no) {
+          joNumber = extractJoNumberFromSerial(item.serial_no);
+        }
+        
+        // Priority 3: Use jo_no as fallback
+        if (!joNumber) joNumber = item.jo_no;
+        
+        return {
+          ...item,
+          jo_number: joNumber,
+        };
+      });
+
+      console.log("Processed data:", fetchedData.map((item: any) => ({ 
+        serial: item.serial_no, 
+        jo_number: item.jo_number 
+      })));
+      
       setData(fetchedData);
     } catch (error) {
       console.error("Error fetching QC data:", error);
@@ -152,7 +183,6 @@ export default function QcMainPage() {
     fetchData();
   }, [filterParam, client]);
 
-  // Apply category filter
   const filteredData = useMemo(() => {
     let currentData = [...data];
 
@@ -182,7 +212,7 @@ export default function QcMainPage() {
     return currentData;
   }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
-  // Get unique identifiers based on filter type
+  // Get unique job numbers
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     filteredData.forEach((item) => {
@@ -199,6 +229,7 @@ export default function QcMainPage() {
     return Array.from(ids);
   }, [filteredData, filterParam]);
 
+  // Group by jo_number (actual JO number)
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
       let itemIdentifier: string | null | undefined;
@@ -211,12 +242,13 @@ export default function QcMainPage() {
       }
       return itemIdentifier === identifier;
     });
+    
     const groups: Record<string, QcRow[]> = {};
 
     items.forEach((item) => {
-      const jo = item.jo_no || "Unknown";
-      if (!groups[jo]) groups[jo] = [];
-      groups[jo].push(item);
+      const joKey = item.jo_number || item.jo_no || "Unknown";
+      if (!groups[joKey]) groups[joKey] = [];
+      groups[joKey].push(item);
     });
 
     return groups;
@@ -230,8 +262,6 @@ export default function QcMainPage() {
         uniqueJoCount: number;
         jobCategory: string;
         assigningDate: string;
-        hasWelding: boolean;
-        hasVendor: boolean;
       }
     > = {};
 
@@ -253,7 +283,7 @@ export default function QcMainPage() {
         0
       );
 
-      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
+      const uniqueJoCount = new Set(items.map((x) => x.jo_number || x.jo_no || "Unknown")).size;
 
       const jobCategory =
         items.length > 0
@@ -263,16 +293,11 @@ export default function QcMainPage() {
       const assigningDate =
         items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
 
-      const hasWelding = items.some((item) => item.review_for === "welding");
-      const hasVendor = items.some((item) => item.review_for === "vendor");
-
       summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
-        hasWelding,
-        hasVendor,
       };
     });
 
@@ -286,78 +311,152 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
-  // ========== JO-WISE DISPATCH (OK) ==========
+  // ========== JO-WISE OK (Dispatch only this JO) ==========
   const handleJoOK = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to dispatch.");
       return;
     }
-
+  
+    // Get JO number from items
     const joNo = items[0]?.jo_no || "Unknown";
     
     const { value: formValues } = await Swal.fire({
       title: "Dispatch JO",
       html: `
-        <p>Dispatching JO: <strong>${joNo}</strong></p>
-        <p class="text-sm text-gray-600 mt-2">Items in this JO: ${items.length}</p>
-        <input id="chalan_no" class="swal2-input" placeholder="Chalan No" required>
-        <input id="dispatch_date" class="swal2-input" type="date" required>
+        <div class="text-left">
+          <p class="font-semibold mb-2">Dispatching JO: <span class="text-blue-600">${joNo}</span></p>
+          <p class="text-sm text-gray-600 mb-4">Items in this JO: ${items.length}</p>
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No</label>
+            <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+          </div>
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date</label>
+            <input id="dispatch_date" class="swal2-input w-full" type="date" required>
+          </div>
+        </div>
       `,
       focusConfirm: false,
+      width: '500px',
       preConfirm: () => {
         const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
         const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
-
+  
         if (!chalan_no || !dispatch_date) {
           Swal.showValidationMessage("Please fill out both fields");
           return false;
         }
-
+  
         return { chalan_no, dispatch_date };
       },
       showCancelButton: true,
       confirmButtonText: "Dispatch JO",
+      cancelButtonText: "Cancel",
     });
-
+  
     if (!formValues) return;
-
-    const job_id = items[0]?.job_id || items[0]?.job?.id;
-
-    if (!job_id) {
-      toast.error("Job ID not found");
-      return;
-    }
-
+  
     try {
-      for (const item of items) {
-        await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
-          job_id,
-          chalan_no: formValues.chalan_no,
-          dispatch_date: formValues.dispatch_date,
-        });
+      const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+        jo_no: joNo,  // ✅ JO number se dispatch
+        chalan_no: formValues.chalan_no,
+        dispatch_date: formValues.dispatch_date,
+      });
+  
+      if (response?.data?.success) {
+        toast.success(`✅ JO ${joNo} dispatched successfully!`);
+        fetchData();  // Refresh data
+        setSelectedJobNo(null);  // Go back to jobs list
+      } else {
+        toast.error(response?.data?.error || "Dispatch failed");
       }
-
-      toast.success(`${items.length} item(s) from JO ${joNo} dispatched successfully`);
-      fetchData();
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Dispatch failed");
+      console.error("Dispatch error:", error);
+      const errorMsg = error?.response?.data?.error || error?.message || "Dispatch failed";
+      toast.error(errorMsg);
     }
   };
 
-  // ========== JO-WISE REWORK ==========
+  // ========== JO-WISE Not OK (Mark only this JO) ==========
+// In your handleJoNotOk function
+const handleJoNotOk = async (items: QcRow[]) => {
+  if (!items || items.length === 0) {
+    toast.error("No items to process.");
+    return;
+  }
+
+  const joNumber = items[0]?.jo_no || "Unknown";
+
+  const { value: reason } = await Swal.fire({
+    title: "Reason for Not OK",
+    html: `
+      <p>Marking JO as Not OK</p>
+      <p class="text-sm text-gray-600 mt-2">JO: <strong>${joNumber}</strong></p>
+      <p class="text-sm text-gray-600">Items: ${items.length}</p>
+    `,
+    input: "textarea",
+    inputPlaceholder: "Enter the reason...",
+    showCancelButton: true,
+    confirmButtonText: "Submit",
+    confirmButtonColor: "#d33",
+    inputValidator: (value) => {
+      if (!value) return "Reason is required!";
+      return null;
+    },
+  });
+
+  if (!reason) return;
+
+  const updated_by = storage.getUserId();
+
+  if (!updated_by) {
+    toast.error("User not found");
+    return;
+  }
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const item of items) {
+    try {
+      // ✅ FIX: Use correct route - JOBS route, not assign-to-worker
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/not-ok`, {
+        reason: reason,
+        updated_by: updated_by,
+        review_for: item.review_for, // Pass review_for if needed
+      });
+      successCount++;
+    } catch (error: any) {
+      console.error(`Failed to mark item ${item.serial_no}:`, error);
+      failCount++;
+    }
+  }
+
+  if (successCount > 0) {
+    toast.success(`${successCount} item(s) from JO ${joNumber} marked as Not OK`);
+  }
+  if (failCount > 0) {
+    toast.error(`Failed to mark ${failCount} item(s)`);
+  }
+
+  fetchData();
+};
+
+  // ========== JO-WISE Rework (Send only this JO for rework) ==========
   const handleJoRework = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to process.");
       return;
     }
 
-    const joNo = items[0]?.jo_no || "Unknown";
+    const joNumber = items[0]?.jo_number || items[0]?.jo_no || "Unknown";
 
     const { value: reason } = await Swal.fire({
       title: "Send JO for Rework",
       html: `
         <p>Sending JO for rework</p>
-        <p class="text-sm text-gray-600 mt-2">JO: <strong>${joNo}</strong></p>
+        <p class="text-sm text-gray-600 mt-2">JO: <strong>${joNumber}</strong></p>
         <p class="text-sm text-gray-600">Items: ${items.length}</p>
       `,
       input: "textarea",
@@ -396,7 +495,7 @@ export default function QcMainPage() {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} item(s) from JO ${joNo} sent for rework`);
+      toast.success(`${successCount} item(s) from JO ${joNumber} sent for rework`);
     }
     if (failCount > 0) {
       toast.error(`Failed to process ${failCount} item(s)`);
@@ -409,11 +508,13 @@ export default function QcMainPage() {
   const handleSingleItemRework = async (item: QcRow) => {
     if (!item) return;
 
+    const joNumber = item.jo_number || item.jo_no || "Unknown";
+
     const { value: reason } = await Swal.fire({
       title: "Send Item for Rework",
       html: `
         <p>Serial: <strong>${item.serial_no || "N/A"}</strong></p>
-        <p class="text-sm text-gray-600 mt-2">JO: ${item.jo_no || "Unknown"}</p>
+        <p class="text-sm text-gray-600 mt-2">JO: ${joNumber}</p>
       `,
       input: "textarea",
       inputPlaceholder: "Enter reason for rework...",
@@ -473,7 +574,6 @@ export default function QcMainPage() {
           </p>
         </div>
 
-        {/* Category Filter */}
         {uniqueCategories.length > 0 && (
           <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
             <button
@@ -498,7 +598,7 @@ export default function QcMainPage() {
                   : "text-gray-600 hover:bg-gray-100"
               }`}
             >
-              All Categories
+              All
             </button>
 
             {uniqueCategories.map((cat) => (
@@ -592,13 +692,19 @@ export default function QcMainPage() {
                                 onClick={() => handleJoOK(items)}
                                 className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
                               >
-                                ✅ Dispatch JO
+                                ✅ OK This JO
+                              </button>
+                              <button
+                                onClick={() => handleJoNotOk(items)}
+                                className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+                              >
+                                ⚠️ Not OK This JO
                               </button>
                               <button
                                 onClick={() => handleJoRework(items)}
                                 className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                               >
-                                🔄 Rework JO
+                                🔄 Rework This JO
                               </button>
                             </div>
                           </td>
@@ -672,20 +778,19 @@ export default function QcMainPage() {
                     <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                     <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                     <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                    <th className="px-2 py-0 border border-tableBorder">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                      <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                         <p className="text-[#666666] text-base">Loading...</p>
                       </td>
                     </tr>
                   ) : jobIdentifiers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                      <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                         <p className="text-[#666666] text-base">No data found</p>
                       </td>
                     </tr>
@@ -714,17 +819,6 @@ export default function QcMainPage() {
                           <td className="px-2 py-2 border border-tableBorder">
                             <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedJobNo(identifier);
-                              }}
-                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-                            >
-                              View JOs
-                            </button>
-                          </td>
                         </tr>
                       );
                     })
@@ -737,9 +831,6 @@ export default function QcMainPage() {
 
         <div className="text-xs text-gray-500 mt-3 px-2">
           Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
-          <span className="ml-4 text-xs text-gray-400">
-            • Dispatch JO / Rework JO = JO-wise
-          </span>
         </div>
       </div>
     </div>
