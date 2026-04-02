@@ -1546,6 +1546,6 @@ const LeftSideBar: React.FC = () => {
       />
     </div>
   );
-};
+}; 
 
 export default LeftSideBar;
