@@ -110,21 +110,6 @@ export default function QcMainPage() {
     }
   };
 
-  // Helper function to extract JO number from serial_no
-  const extractJoNumberFromSerial = (serialNo: string): string | null => {
-    if (!serialNo) return null;
-    const parts = serialNo.split('-');
-    if (parts.length >= 3) {
-      for (const part of parts) {
-        if (part.toUpperCase().startsWith('JO')) {
-          return part;
-        }
-      }
-      return parts[2];
-    }
-    return null;
-  };
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -140,30 +125,6 @@ export default function QcMainPage() {
         ? response.data.data
         : [];
 
-      // 🔥 FIX: Extract jo_number from job object or serial_no
-      fetchedData = fetchedData.map((item: any) => {
-        // Priority 1: Get JO number from job object
-        let joNumber = item.job?.jo_number || item.job?.jo_no;
-        
-        // Priority 2: Extract from serial_no
-        if (!joNumber && item.serial_no) {
-          joNumber = extractJoNumberFromSerial(item.serial_no);
-        }
-        
-        // Priority 3: Use jo_no as fallback
-        if (!joNumber) joNumber = item.jo_no;
-        
-        return {
-          ...item,
-          jo_number: joNumber,
-        };
-      });
-
-      console.log("Processed data:", fetchedData.map((item: any) => ({ 
-        serial: item.serial_no, 
-        jo_number: item.jo_number 
-      })));
-      
       setData(fetchedData);
     } catch (error) {
       console.error("Error fetching QC data:", error);
@@ -229,7 +190,7 @@ export default function QcMainPage() {
     return Array.from(ids);
   }, [filteredData, filterParam]);
 
-  // Group by jo_number (actual JO number)
+  // Group by jo_no
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
       let itemIdentifier: string | null | undefined;
@@ -246,7 +207,7 @@ export default function QcMainPage() {
     const groups: Record<string, QcRow[]> = {};
 
     items.forEach((item) => {
-      const joKey = item.jo_number || item.jo_no || "Unknown";
+      const joKey = item.jo_no || "Unknown";
       if (!groups[joKey]) groups[joKey] = [];
       groups[joKey].push(item);
     });
@@ -283,7 +244,7 @@ export default function QcMainPage() {
         0
       );
 
-      const uniqueJoCount = new Set(items.map((x) => x.jo_number || x.jo_no || "Unknown")).size;
+      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
 
       const jobCategory =
         items.length > 0
@@ -311,153 +272,199 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
-  // ========== JO-WISE OK (Dispatch only this JO) ==========
+  // ========== JO-WISE DISPATCH (Complete with success/error handling) ==========
   const handleJoOK = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to dispatch.");
       return;
     }
-  
-    // Get JO number from items
+
     const joNo = items[0]?.jo_no || "Unknown";
     
+    // Create serial numbers list for display
+    const serialsList = items.map((item, index) => 
+      `<div class="text-sm py-1 ${index % 2 === 0 ? 'bg-gray-50' : ''} px-2 rounded">
+         <span class="font-mono text-blue-600">${item.serial_no || 'N/A'}</span>
+         <span class="text-gray-500 ml-2">(Qty: ${item.quantity_no || 0})</span>
+       </div>`
+    ).join('');
+
     const { value: formValues } = await Swal.fire({
       title: "Dispatch JO",
       html: `
         <div class="text-left">
-          <p class="font-semibold mb-2">Dispatching JO: <span class="text-blue-600">${joNo}</span></p>
-          <p class="text-sm text-gray-600 mb-4">Items in this JO: ${items.length}</p>
+          <div class="bg-blue-50 p-3 rounded-lg mb-4">
+            <p class="font-semibold">JO Number: <span class="text-blue-600">${joNo}</span></p>
+            <p class="text-sm text-gray-600">Total Items: ${items.length}</p>
+          </div>
+          
+          <div class="mb-4">
+            <p class="text-sm font-semibold text-gray-700 mb-2">📦 Serial Numbers:</p>
+            <div class="max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+              ${serialsList}
+            </div>
+          </div>
+          
           <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
             <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
           </div>
+          
           <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date</label>
-            <input id="dispatch_date" class="swal2-input w-full" type="date" required>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
+            <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
           </div>
         </div>
       `,
       focusConfirm: false,
-      width: '500px',
+      width: '550px',
+      showCancelButton: true,
+      confirmButtonText: "✅ Dispatch JO",
+      cancelButtonText: "Cancel",
       preConfirm: () => {
         const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
         const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
-  
+
         if (!chalan_no || !dispatch_date) {
           Swal.showValidationMessage("Please fill out both fields");
           return false;
         }
-  
+
         return { chalan_no, dispatch_date };
       },
-      showCancelButton: true,
-      confirmButtonText: "Dispatch JO",
-      cancelButtonText: "Cancel",
     });
-  
+
     if (!formValues) return;
-  
+
+    // Show loading
+    const loadingToast = toast.loading(`Dispatching JO ${joNo}...`);
+
     try {
       const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
-        jo_no: joNo,  // ✅ JO number se dispatch
+        jo_no: joNo,
         chalan_no: formValues.chalan_no,
         dispatch_date: formValues.dispatch_date,
       });
-  
+
+      toast.dismiss(loadingToast);
+
       if (response?.data?.success) {
-        toast.success(`✅ JO ${joNo} dispatched successfully!`);
-        fetchData();  // Refresh data
-        setSelectedJobNo(null);  // Go back to jobs list
+        // Success message with details
+        const serialNumbers = response.data.data?.serial_numbers || items.map(i => i.serial_no).filter(Boolean);
+        const serialsDisplay = serialNumbers.slice(0, 3).join(', ') + (serialNumbers.length > 3 ? ` and ${serialNumbers.length - 3} more` : '');
+        
+        toast.success(
+          <div>
+            <div className="font-semibold">✅ JO ${joNo} Dispatched Successfully!</div>
+            <div className="text-xs text-gray-600 mt-1">Chalan No: ${formValues.chalan_no}</div>
+            <div className="text-xs text-gray-600">Date: ${formValues.dispatch_date}</div>
+            <div className="text-xs text-gray-600">Items: ${items.length} | Serials: ${serialsDisplay}</div>
+          </div>,
+          { autoClose: 5000 }
+        );
+        
+        fetchData();
+        setSelectedJobNo(null);
       } else {
         toast.error(response?.data?.error || "Dispatch failed");
       }
     } catch (error: any) {
+      toast.dismiss(loadingToast);
       console.error("Dispatch error:", error);
+      
       const errorMsg = error?.response?.data?.error || error?.message || "Dispatch failed";
-      toast.error(errorMsg);
+      const errorDetails = error?.response?.data?.data;
+      
+      toast.error(
+        <div>
+          <div className="font-semibold">❌ Dispatch Failed for JO ${joNo}</div>
+          <div className="text-sm text-red-600 mt-1">${errorMsg}</div>
+          {errorDetails?.already_dispatched && (
+            <div className="text-xs text-gray-600 mt-1">
+              Already dispatched: ${errorDetails.already_dispatched.map((d: any) => d.serial_no).join(', ')}
+            </div>
+          )}
+        </div>,
+        { autoClose: 5000 }
+      );
     }
   };
 
-  // ========== JO-WISE Not OK (Mark only this JO) ==========
-// In your handleJoNotOk function
-const handleJoNotOk = async (items: QcRow[]) => {
-  if (!items || items.length === 0) {
-    toast.error("No items to process.");
-    return;
-  }
+  // ========== JO-WISE Not OK ==========
+  const handleJoNotOk = async (items: QcRow[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to process.");
+      return;
+    }
 
-  const joNumber = items[0]?.jo_no || "Unknown";
+    const joNo = items[0]?.jo_no || "Unknown";
+    const jobId = items[0]?.job_id || items[0]?.job?.id;
 
-  const { value: reason } = await Swal.fire({
-    title: "Reason for Not OK",
-    html: `
-      <p>Marking JO as Not OK</p>
-      <p class="text-sm text-gray-600 mt-2">JO: <strong>${joNumber}</strong></p>
-      <p class="text-sm text-gray-600">Items: ${items.length}</p>
-    `,
-    input: "textarea",
-    inputPlaceholder: "Enter the reason...",
-    showCancelButton: true,
-    confirmButtonText: "Submit",
-    confirmButtonColor: "#d33",
-    inputValidator: (value) => {
-      if (!value) return "Reason is required!";
-      return null;
-    },
-  });
+    if (!jobId) {
+      toast.error("Job ID not found");
+      return;
+    }
 
-  if (!reason) return;
+    const { value: reason } = await Swal.fire({
+      title: "Reason for Not OK",
+      html: `
+        <p>Marking JO: <strong>${joNo}</strong> as Not OK</p>
+        <p class="text-sm text-gray-600 mt-2">Items in this JO: ${items.length}</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter the reason...",
+      showCancelButton: true,
+      confirmButtonText: "Submit",
+      confirmButtonColor: "#d33",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+    });
 
-  const updated_by = storage.getUserId();
+    if (!reason) return;
 
-  if (!updated_by) {
-    toast.error("User not found");
-    return;
-  }
+    const updated_by = storage.getUserId();
 
-  let successCount = 0;
-  let failCount = 0;
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
 
-  for (const item of items) {
     try {
-      // ✅ FIX: Use correct route - JOBS route, not assign-to-worker
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/not-ok`, {
+      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
         reason: reason,
         updated_by: updated_by,
-        review_for: item.review_for, // Pass review_for if needed
+        review_for: items[0]?.review_for || null,
       });
-      successCount++;
+
+      if (response?.data?.success) {
+        toast.success(`⚠️ JO ${joNo} marked as Not OK`);
+        fetchData();
+        setSelectedJobNo(null);
+      } else {
+        toast.error(response?.data?.error || "Failed to mark as Not OK");
+      }
     } catch (error: any) {
-      console.error(`Failed to mark item ${item.serial_no}:`, error);
-      failCount++;
+      console.error("Not OK error:", error);
+      toast.error(error?.response?.data?.error || "Failed to mark as Not OK");
     }
-  }
+  };
 
-  if (successCount > 0) {
-    toast.success(`${successCount} item(s) from JO ${joNumber} marked as Not OK`);
-  }
-  if (failCount > 0) {
-    toast.error(`Failed to mark ${failCount} item(s)`);
-  }
-
-  fetchData();
-};
-
-  // ========== JO-WISE Rework (Send only this JO for rework) ==========
+  // ========== JO-WISE Rework ==========
   const handleJoRework = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to process.");
       return;
     }
 
-    const joNumber = items[0]?.jo_number || items[0]?.jo_no || "Unknown";
+    const joNo = items[0]?.jo_no || "Unknown";
 
     const { value: reason } = await Swal.fire({
       title: "Send JO for Rework",
       html: `
-        <p>Sending JO for rework</p>
-        <p class="text-sm text-gray-600 mt-2">JO: <strong>${joNumber}</strong></p>
-        <p class="text-sm text-gray-600">Items: ${items.length}</p>
+        <p>Sending JO: <strong>${joNo}</strong> for rework</p>
+        <p class="text-sm text-gray-600 mt-2">Items in this JO: ${items.length}</p>
       `,
       input: "textarea",
       inputPlaceholder: "Enter reason for rework...",
@@ -495,7 +502,7 @@ const handleJoNotOk = async (items: QcRow[]) => {
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount} item(s) from JO ${joNumber} sent for rework`);
+      toast.success(`${successCount} item(s) from JO ${joNo} sent for rework`);
     }
     if (failCount > 0) {
       toast.error(`Failed to process ${failCount} item(s)`);
@@ -508,13 +515,11 @@ const handleJoNotOk = async (items: QcRow[]) => {
   const handleSingleItemRework = async (item: QcRow) => {
     if (!item) return;
 
-    const joNumber = item.jo_number || item.jo_no || "Unknown";
-
     const { value: reason } = await Swal.fire({
       title: "Send Item for Rework",
       html: `
         <p>Serial: <strong>${item.serial_no || "N/A"}</strong></p>
-        <p class="text-sm text-gray-600 mt-2">JO: ${joNumber}</p>
+        <p class="text-sm text-gray-600 mt-2">JO: ${item.jo_no || "Unknown"}</p>
       `,
       input: "textarea",
       inputPlaceholder: "Enter reason for rework...",
@@ -692,19 +697,19 @@ const handleJoNotOk = async (items: QcRow[]) => {
                                 onClick={() => handleJoOK(items)}
                                 className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
                               >
-                                ✅ OK This JO
+                                ✅ Dispatch JO
                               </button>
                               <button
                                 onClick={() => handleJoNotOk(items)}
                                 className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                               >
-                                ⚠️ Not OK This JO
+                                ⚠️ Not OK JO
                               </button>
                               <button
                                 onClick={() => handleJoRework(items)}
                                 className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                               >
-                                🔄 Rework This JO
+                                🔄 Rework JO
                               </button>
                             </div>
                           </td>
@@ -743,7 +748,7 @@ const handleJoNotOk = async (items: QcRow[]) => {
                                 className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
                                 title={`Rework: ${item.serial_no || "N/A"}`}
                               >
-                                Rework Item
+                                Rework
                               </button>
                             </td>
                           </tr>
