@@ -18,6 +18,17 @@ import {
   MdHistory,
   MdOutlineShoppingCart,
   MdOutlineCancel,
+  MdCompareArrows,
+} from "react-icons/md";
+import {
+  MdStorage, // For Material Data, Inventory 1/2/3 sub-sections
+  MdFactory,
+  MdCheckCircleOutline, // For Material Approved
+  MdBusiness, // For Vendors
+  MdOutlineBuild, // For Production Planning
+  MdErrorOutline, // For Not-Ok
+  MdPerson, // For Riyaaz, Ramzaan
+  MdOutlineVerified, // For QC
 } from "react-icons/md";
 import { TbDeviceMobileDollar } from "react-icons/tb";
 import { FaChevronDown, FaHistory } from "react-icons/fa";
@@ -119,7 +130,7 @@ const ProductionUserMenu = ({
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
       >
-        <MdPrecisionManufacturing className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+        <MdFactory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">{label}</p>
         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isMenuOpen ? "rotate-180" : ""}`} />
       </div>
@@ -251,7 +262,7 @@ const ProductionUserMenu = ({
                             </Link>
                           )}
                           
-                          {  (
+                          {canViewReviewVendor && (
                             <Link href={`/review/vendor?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`}>
                               <div className={itemCls(pathname === "/review/vendor" && client === "Amar Equipment" && isActive)}>
                                 <MdOutlinePeopleOutline className={iconCls(pathname === "/review/vendor" && client === "Amar Equipment" && isActive)} />
@@ -512,6 +523,7 @@ const LeftSideBar: React.FC = () => {
   const [isInventoryOpen, setIsInventoryOpen] = useState<boolean>(pathname.includes("/section_inventory/section_inventory/inventory"));
   const [isInventory1Open, setIsInventory1Open] = useState<boolean>(false);
   const [isInventory2Open, setIsInventory2Open] = useState<boolean>(false);
+  const [isInventory3Open, setIsInventory3Open] = useState<boolean>(false);
   const [isMaterialApprovedOpen, setIsMaterialApprovedOpen] = useState<boolean>(false);
   const [isMaterialApprovedAmarOpen, setIsMaterialApprovedAmarOpen] = useState<boolean>(false);
   const [isMaterialApprovedAmarBioOpen, setIsMaterialApprovedAmarBioOpen] = useState<boolean>(false);
@@ -551,7 +563,8 @@ const LeftSideBar: React.FC = () => {
   );
 
   const [isProductionDropdownOpen, setIsProductionDropdownOpen] = useState<boolean>(
-    pathname.includes("/production") && !pathname.includes("/section_production_planning/production_planning")
+    (pathname.includes("/production") && !pathname.includes("/section_production_planning/production_planning")) ||
+    pathname.startsWith("/review")
   );
 
   const [isQCOpen, setIsQCOpen] = useState<boolean>(pathname.startsWith("/qc"));
@@ -595,6 +608,15 @@ const LeftSideBar: React.FC = () => {
       if (client === "Amar Biosystem") {
         setIsAmarBioOpen(true);
         setIsNotOkAmarBioOpen(true);
+      }
+    }
+
+    if (pathname.startsWith("/review")) {
+      setIsProductionDropdownOpen(true);
+      if (client === "Amar Equipment") {
+        setIsAmarEquipmentOpen(true);
+      } else if (client === "Amar Biosystem") {
+        setIsAmarBioOpen(true);
       }
     }
 
@@ -694,8 +716,8 @@ const LeftSideBar: React.FC = () => {
                 <div
                   onClick={() => setIsInventory1Open(!isInventory1Open)}
                   className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                >
-                  <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                > 
+                  <MdStorage className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                   <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Inventory 1</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isInventory1Open ? "rotate-180" : ""}`} />
                 </div>
@@ -704,7 +726,7 @@ const LeftSideBar: React.FC = () => {
                   <div className="pl-4 flex flex-col gap-1">
                     <Link href="/section_inventory/inventory">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <MdStorage className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Data</p>
                       </div>
                     </Link>
@@ -714,8 +736,8 @@ const LeftSideBar: React.FC = () => {
                         <div
                           onClick={() => setIsMaterialApprovedOpen(!isMaterialApprovedOpen)}
                           className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                        >
-                          <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        > 
+                          <MdCheckCircleOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                           <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Approved</p>
                           <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isMaterialApprovedOpen ? "rotate-180" : ""}`} />
                         </div>
@@ -753,7 +775,7 @@ const LeftSideBar: React.FC = () => {
                                 </Link>
                                 <Link href="/section_inventory/inventory_material_approve?client=Amar%20Equipment&assign_to_not=Usmaan&assign_to_not=Riyaaz&assign_to_not=Ramzaan">
                                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                    <MdBusiness className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                                     <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendors</p>
                                   </div>
                                 </Link>
@@ -791,7 +813,7 @@ const LeftSideBar: React.FC = () => {
                                 </Link>
                                 <Link href="/section_inventory/inventory_material_approve?client=Amar%20Biosystem&assign_to_not=Usmaan&assign_to_not=Usmaan&assign_to_not=Riyaaz&assign_to_not=Ramzaan">
                                   <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                                    <MdViewKanban className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                    <MdBusiness className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                                     <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendors</p>
                                   </div>
                                 </Link>
@@ -806,8 +828,8 @@ const LeftSideBar: React.FC = () => {
                 <div
                   onClick={() => setIsInventory2Open(!isInventory2Open)}
                   className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                >
-                  <MdOutlineInventory2 className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                > 
+                  <MdStorage className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                   <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Inventory 2</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isInventory2Open ? "rotate-180" : ""}`} />
                 </div>
@@ -828,11 +850,56 @@ const LeftSideBar: React.FC = () => {
                     </Link>
                     <Link href="/inventory2/material-transfer">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                        <MdOutlineSwapHoriz className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <MdCompareArrows className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Transfer</p>
                       </div>
                     </Link>
                     <Link href="/inventory2/pr">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PR</p>
+                      </div>
+                    </Link>
+                  </div>
+                )}
+
+                <div
+                  onClick={() => setIsInventory3Open(!isInventory3Open)}
+                  className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
+                > 
+                  <MdStorage className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                  <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Inventory 3</p>
+                  <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isInventory3Open ? "rotate-180" : ""}`} />
+                </div>
+
+                {isInventory3Open && (
+                  <div className="pl-4 flex flex-col gap-1">
+                    <Link href="/section_inventory/inventory_3">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Master</p>
+                      </div>
+                    </Link>
+                    <Link href="/inventory3/in-out">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdOutlineSwapHoriz className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">In/Out</p>
+                      </div>
+                    </Link>
+
+                    <Link href="/inventory3/in-out">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdOutlineShoppingCart className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">POR</p>
+                      </div>
+                    </Link>
+                    <Link href="/inventory3/in-out">
+                      <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
+                        <MdCompareArrows className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                        <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Transfer</p>
+                      </div>
+                    </Link>
+                    <Link href="/inventory3/in-out">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PR</p>
@@ -859,8 +926,8 @@ const LeftSideBar: React.FC = () => {
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : ""
               }`}
-            >
-              <TbDeviceMobileDollar className="w-6 h-6" />
+            > 
+              <MdOutlineBuild className="w-6 h-6" />
               <p>Production Planning</p>
               <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isProductionOpen ? "rotate-180" : ""}`} />
             </div>
@@ -871,7 +938,7 @@ const LeftSideBar: React.FC = () => {
                 {hasVendorsView && (
                   <Link href="/section_production_planning/vendors">
                     <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                      <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                      <MdBusiness className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                       <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Vendors</p>
                     </div>
                   </Link>
@@ -946,8 +1013,8 @@ const LeftSideBar: React.FC = () => {
                           <div
                             onClick={() => setIsPOOpen(!isPOOpen)}
                             className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                          >
-                            <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          > 
+                            <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" /> 
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">P/O</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isPOOpen ? "rotate-180" : ""}`} />
                           </div>
@@ -957,13 +1024,13 @@ const LeftSideBar: React.FC = () => {
                           <div className="pl-4 flex flex-col gap-1">
                             <Link href="/section_production_planning/po-services?filter=Riyaaz&client=Amar%20Equipment">
                               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                                <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                <MdPerson className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Riyaaz</p>
                               </div>
                             </Link>
                             <Link href="/section_production_planning/po-services?filter=Ramzaan&client=Amar%20Equipment">
                               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                                <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                <MdPerson className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Ramzaan</p>
                               </div>
                             </Link>
@@ -975,8 +1042,8 @@ const LeftSideBar: React.FC = () => {
                           <div
                             onClick={() => setIsNotOkAmarEquipmentOpen(!isNotOkAmarEquipmentOpen)}
                             className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                          >
-                            <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          > 
+                            <MdErrorOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Not-Ok</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isNotOkAmarEquipmentOpen ? "rotate-180" : ""}`} />
                           </div>
@@ -1074,8 +1141,8 @@ const LeftSideBar: React.FC = () => {
                           <div
                             onClick={() => setIsPOOpen(!isPOOpen)}
                             className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                          >
-                            <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          > 
+                            <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" /> 
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">P/O</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isPOOpen ? "rotate-180" : ""}`} />
                           </div>
@@ -1085,13 +1152,13 @@ const LeftSideBar: React.FC = () => {
                           <div className="pl-4 flex flex-col gap-1">
                             <Link href="/section_production_planning/po-services?filter=Riyaaz&client=Amar%20Biosystem">
                               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                                <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                <MdPerson className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Riyaaz</p>
                               </div>
                             </Link>
                             <Link href="/section_production_planning/po-services?filter=Ramzaan&client=Amar%20Biosystem">
                               <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
-                                <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                <MdPerson className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                                 <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Ramzaan</p>
                               </div>
                             </Link>
@@ -1103,8 +1170,8 @@ const LeftSideBar: React.FC = () => {
                           <div
                             onClick={() => setIsNotOkAmarBioOpen(!isNotOkAmarBioOpen)}
                             className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer"
-                          >
-                            <MdCategory className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                          > 
+                            <MdErrorOutline className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                             <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Not-Ok</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isNotOkAmarBioOpen ? "rotate-180" : ""}`} />
                           </div>
@@ -1166,7 +1233,7 @@ const LeftSideBar: React.FC = () => {
                 pathname.includes("/production") && !pathname.includes("/section_production_planning/production_planning")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : ""
-              }`}
+              }`} 
             >
               <MdPrecisionManufacturing className="w-6 h-6" />
               <p>Production</p>
@@ -1180,7 +1247,7 @@ const LeftSideBar: React.FC = () => {
                   <ProductionUserMenu 
                     label="Production 1" 
                     assignTo="Usmaan" 
-                    pathname={pathname} 
+                    pathname={pathname}
                     client={client} 
                     filter={filter} 
                     currentAssignTo={assignTo} 
@@ -1196,7 +1263,7 @@ const LeftSideBar: React.FC = () => {
                   <ProductionUserMenu 
                     label="Production 2" 
                     assignTo="Riyaaz" 
-                    pathname={pathname} 
+                    pathname={pathname}
                     client={client} 
                     filter={filter} 
                     currentAssignTo={assignTo} 
@@ -1212,7 +1279,7 @@ const LeftSideBar: React.FC = () => {
                   <ProductionUserMenu 
                     label="Production 3" 
                     assignTo="Ramzaan" 
-                    pathname={pathname} 
+                    pathname={pathname}
                     client={client} 
                     filter={filter} 
                     currentAssignTo={assignTo} 
@@ -1236,7 +1303,7 @@ const LeftSideBar: React.FC = () => {
                 pathname.startsWith("/qc")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : ""
-              }`}
+              }`} 
             >
               <MdPrecisionManufacturing className="w-6 h-6" />
               <p>QC</p>
@@ -1447,14 +1514,14 @@ const LeftSideBar: React.FC = () => {
                 {isRejectedPOOpen && (
                   <div className="pl-4 flex flex-col gap-1">
                     <Link href="/procurement/rejected-po/inventory2">
-                      <div className={itemCls(pathname === "/procurement/rejected-po/inventory2")}>
+                      <div className={itemCls(pathname === "/procurement/rejected-po/inventory2")}> 
                         <MdOutlineInventory2 className={iconCls(pathname === "/procurement/rejected-po/inventory2")} />
                         <p className={textCls(pathname === "/procurement/rejected-po/inventory2")}>Inventory 2</p>
                       </div>
                     </Link>
                     <Link href="/procurement/rejected-po/inventory3">
                       <div className={itemCls(pathname === "/procurement/rejected-po/inventory3")}>
-                        <MdOutlineInventory2 className={iconCls(pathname === "/procurement/rejected-po/inventory3")} />
+                        <MdOutlineInventory2 className={iconCls(pathname === "/procurement/rejected-po/inventory3")} /> 
                         <p className={textCls(pathname === "/procurement/rejected-po/inventory3")}>Inventory 3</p>
                       </div>
                     </Link>

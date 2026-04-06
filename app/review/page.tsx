@@ -149,7 +149,7 @@ export default function QcMainPage() {
     }
 
     return currentData;
-  }, [data, jobServiceCategoryFilter, assignTo]);
+  }, [data, jobServiceCategoryFilter, assignTo, client]);
 
   // Get unique job numbers
   const jobIdentifiers = useMemo(() => {

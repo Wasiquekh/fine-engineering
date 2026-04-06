@@ -276,7 +276,7 @@ export default function JobDetailsPage() {
           </button>
 
           {/* Job Details Section */}
-          <div className="mb-12">
+          {/* <div className="mb-12">
             <h1 className="text-2xl font-bold mb-6">
               Job Details for Job No: {job_no}
             </h1>
@@ -284,9 +284,7 @@ export default function JobDetailsPage() {
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-[#999999]">
                   <tr className="border border-tableBorder">
-                    {/* <th scope="col" className="p-3 border border-tableBorder">
-                      Job No
-                    </th> */}
+                    
                     <th scope="col" className="p-3 border border-tableBorder">
                       Client Name
                     </th>
@@ -338,9 +336,7 @@ export default function JobDetailsPage() {
                         key={item.id}
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                       >
-                        {/* <td className="px-2 py-2 border border-tableBorder">
-                          {item.job_no}
-                        </td> */}
+                        
                         <td className="px-2 py-2 border border-tableBorder">
                           {item.client_name}
                         </td>
@@ -385,6 +381,132 @@ export default function JobDetailsPage() {
                 </tbody>
               </table>
             </div>
+          </div> */}
+
+          {/* Job Details Section */}
+          <div className="mb-12">
+            <h1 className="text-2xl font-bold mb-6">
+              Job Details for Job No: {job_no}
+            </h1>
+
+            {loading ? (
+              <p className="text-center py-4 text-gray-500">Loading...</p>
+            ) : categoryDetails.length === 0 ? (
+              <p className="text-center py-4 text-gray-500">
+                No job details found for this job number.
+              </p>
+            ) : (
+              <div className="space-y-8">
+                {categoryDetails.map((item) => (
+                  <div key={item.id} className="space-y-4">
+                    {/* Header */}
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xl font-semibold text-gray-800">
+                        Job Info
+                      </h3>
+
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          item.is_urgent
+                            ? "bg-red-100 text-red-600"
+                            : "bg-green-100 text-green-600"
+                        }`}
+                      >
+                        {item.is_urgent ? "Urgent" : "Normal"}
+                      </span>
+                    </div>
+
+                    {/* First Row - 4 Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Client Name
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.client_name || "-"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Job Category
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.job_category || "N/A"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Drawing Rec. Date
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.drawing_recieved_date || "-"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Material Type
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.material_type || "-"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Second Row - 4 Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Quantity
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.qty || "-"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Pressure [Bar]
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.bar || "-"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Temperature
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.tempp || "-"}
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
+                          Due Date
+                        </span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {item.urgent_due_date || "-"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Third Row - Description */}
+                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                      <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-2">
+                        Description
+                      </span>
+                      <p className="text-base text-gray-900 font-medium leading-relaxed">
+                        {item.description || "-"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Bottom Section */}
