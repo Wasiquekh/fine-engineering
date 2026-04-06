@@ -270,122 +270,157 @@ export default function QcMainPage() {
   }, [filterParam, categories]);
 
   // ========== JO-WISE DISPATCH (Using job.jo_number) ==========
-  const handleJoOK = async (items: QcRow[]) => {
-    if (!items || items.length === 0) {
-      toast.error("No items to dispatch.");
-      return;
-    }
+  // ========== JO-WISE DISPATCH ==========
+const handleJoOK = async (items: QcRow[]) => {
+  if (!items || items.length === 0) {
+    toast.error("No items to dispatch.");
+    return;
+  }
 
-    // ✅ Use job.jo_number (actual JO number from jobs table)
-    const joNo = items[0]?.job?.jo_number;
-    
-    if (!joNo) {
-      toast.error("JO Number not found. Cannot dispatch.");
-      console.error("Missing JO number:", items[0]);
-      return;
-    }
+  // ✅ Pehle identify karo ki kaunsi job type hai
+  const firstItem = items[0];
+  const jobType = filterParam; // "JOB_SERVICE", "TSO_SERVICE", or "KANBAN"
+  
+  let dispatchIdentifier = null;
+  let identifierType = null;
+  let displayIdentifier = null;
+  
+  if (jobType === "TSO_SERVICE") {
+    // TSO ke liye tso_no use karo
+    dispatchIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
+    identifierType = "tso_no";
+    displayIdentifier = dispatchIdentifier;
+  } else if (jobType === "KANBAN") {
+    // Kanban ke liye jo_no use karo
+    dispatchIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
+    identifierType = "jo_no";
+    displayIdentifier = dispatchIdentifier;
+  } else {
+    // JOB_SERVICE ke liye job_no use karo? Ya jo_no?
+    // Actually JOB_SERVICE me bhi jo_no hota hai dispatch ke liye
+    dispatchIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
+    identifierType = "jo_no";
+    displayIdentifier = dispatchIdentifier;
+  }
+  
+  if (!dispatchIdentifier) {
+    toast.error(`${jobType} identifier not found. Cannot dispatch.`);
+    console.error("Missing identifier:", { jobType, firstItem });
+    return;
+  }
 
-    const jobNo = items[0]?.job?.job_no || "Unknown";
-    
-    const serialsList = items.map((item, index) => 
-      `<div class="text-sm py-1 ${index % 2 === 0 ? 'bg-gray-50' : ''} px-2 rounded">
-         <span class="font-mono text-blue-600">${item.serial_no || 'N/A'}</span>
-         <span class="text-gray-500 ml-2">(Qty: ${item.quantity_no || 0})</span>
-       </div>`
-    ).join('');
+  const jobNo = firstItem?.job?.job_no || "Unknown";
+  
+  const serialsList = items.map((item, index) => 
+    `<div class="text-sm py-1 ${index % 2 === 0 ? 'bg-gray-50' : ''} px-2 rounded">
+       <span class="font-mono text-blue-600">${item.serial_no || 'N/A'}</span>
+       <span class="text-gray-500 ml-2">(Qty: ${item.quantity_no || 0})</span>
+     </div>`
+  ).join('');
 
-    const { value: formValues } = await Swal.fire({
-      title: "Dispatch JO",
-      html: `
-        <div class="text-left">
-          <div class="bg-blue-50 p-3 rounded-lg mb-4">
-            <p class="font-semibold">JO Number: <span class="text-blue-600">${joNo}</span></p>
-            <p class="text-sm text-gray-600">Job: ${jobNo}</p>
-            <p class="text-sm text-gray-600">Total Items: ${items.length}</p>
-          </div>
-          
-          <div class="mb-4">
-            <p class="text-sm font-semibold text-gray-700 mb-2">Serial Numbers:</p>
-            <div class="max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-              ${serialsList}
-            </div>
-          </div>
-          
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
-            <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
-          </div>
-          
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
-            <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+  const { value: formValues } = await Swal.fire({
+    title: `Dispatch ${jobType === "TSO_SERVICE" ? "TSO" : "JO"}`,
+    html: `
+      <div class="text-left">
+        <div class="bg-blue-50 p-3 rounded-lg mb-4">
+          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO Number" : "JO Number"}: <span class="text-blue-600">${displayIdentifier}</span></p>
+          <p class="text-sm text-gray-600">Job: ${jobNo}</p>
+          <p class="text-sm text-gray-600">Total Items: ${items.length}</p>
+          <p class="text-sm text-gray-600">Type: ${jobType}</p>
+        </div>
+        
+        <div class="mb-4">
+          <p class="text-sm font-semibold text-gray-700 mb-2">Serial Numbers:</p>
+          <div class="max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+            ${serialsList}
           </div>
         </div>
-      `,
-      focusConfirm: false,
-      width: '550px',
-      showCancelButton: true,
-      confirmButtonText: "Dispatch JO",
-      cancelButtonText: "Cancel",
-      preConfirm: () => {
-        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
-        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
-
-        if (!chalan_no || !dispatch_date) {
-          Swal.showValidationMessage("Please fill out both fields");
-          return false;
-        }
-
-        return { chalan_no, dispatch_date };
-      },
-    });
-
-    if (!formValues) return;
-
-    const loadingToast = toast.loading(`Dispatching JO ${joNo}...`);
-
-    try {
-      const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
-        jo_no: joNo,
-        chalan_no: formValues.chalan_no,
-        dispatch_date: formValues.dispatch_date,
-      });
-
-      toast.dismiss(loadingToast);
-
-      if (response?.data?.success) {
-        toast.success(
-          <div>
-            <div className="font-semibold text-green-600">✅ Dispatch Successful!</div>
-            <div className="text-sm mt-1">JO: <span className="font-mono font-bold">${joNo}</span></div>
-            <div className="text-sm">Job: ${jobNo}</div>
-            <div className="text-sm">Chalan: ${formValues.chalan_no}</div>
-            <div className="text-xs text-gray-600 mt-1">Items: ${items.length}</div>
-          </div>,
-          { autoClose: 5000 }
-        );
         
-        fetchData();
-        setSelectedJobNo(null);
-      } else {
-        toast.error(response?.data?.error || "Dispatch failed");
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
+          <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+        </div>
+        
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
+          <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+        </div>
+      </div>
+    `,
+    focusConfirm: false,
+    width: '550px',
+    showCancelButton: true,
+    confirmButtonText: `Dispatch ${jobType === "TSO_SERVICE" ? "TSO" : "JO"}`,
+    cancelButtonText: "Cancel",
+    preConfirm: () => {
+      const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
+      const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+
+      if (!chalan_no || !dispatch_date) {
+        Swal.showValidationMessage("Please fill out both fields");
+        return false;
       }
-    } catch (error: any) {
-      toast.dismiss(loadingToast);
-      console.error("Dispatch error:", error);
-      
-      const errorMsg = error?.response?.data?.error || error?.message || "Dispatch failed";
-      
-      toast.error(
+
+      return { chalan_no, dispatch_date };
+    },
+  });
+
+  if (!formValues) return;
+
+  const loadingToast = toast.loading(`Dispatching ${jobType === "TSO_SERVICE" ? "TSO" : "JO"} ${displayIdentifier}...`);
+
+  try {
+    // ✅ Correct parameter based on job type
+    const dispatchPayload: any = {
+      chalan_no: formValues.chalan_no,
+      dispatch_date: formValues.dispatch_date,
+    };
+    
+    if (jobType === "TSO_SERVICE") {
+      dispatchPayload.tso_no = dispatchIdentifier;  // TSO ke liye tso_no
+    } else {
+      dispatchPayload.jo_no = dispatchIdentifier;   // JOB_SERVICE / KANBAN ke liye jo_no
+    }
+    
+    console.log("Dispatching with payload:", dispatchPayload);
+    
+    const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", dispatchPayload);
+
+    toast.dismiss(loadingToast);
+
+    if (response?.data?.success) {
+      toast.success(
         <div>
-          <div className="font-semibold text-red-600">❌ Dispatch Failed!</div>
-          <div className="text-sm mt-1">JO: <span className="font-mono">${joNo}</span></div>
-          <div className="text-sm text-red-600">{errorMsg}</div>
+          <div className="font-semibold text-green-600">✅ Dispatch Successful!</div>
+          <div className="text-sm mt-1">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span className="font-mono font-bold">${displayIdentifier}</span></div>
+          <div className="text-sm">Job: ${jobNo}</div>
+          <div className="text-sm">Chalan: ${formValues.chalan_no}</div>
+          <div className="text-xs text-gray-600 mt-1">Items: ${items.length}</div>
         </div>,
         { autoClose: 5000 }
       );
+      
+      fetchData();
+      setSelectedJobNo(null);
+    } else {
+      toast.error(response?.data?.error || "Dispatch failed");
     }
-  };
+  } catch (error: any) {
+    toast.dismiss(loadingToast);
+    console.error("Dispatch error:", error);
+    
+    const errorMsg = error?.response?.data?.error || error?.message || "Dispatch failed";
+    
+    toast.error(
+      <div>
+        <div className="font-semibold text-red-600">❌ Dispatch Failed!</div>
+        <div className="text-sm mt-1">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span className="font-mono">${displayIdentifier}</span></div>
+        <div className="text-sm text-red-600">{errorMsg}</div>
+      </div>,
+      { autoClose: 5000 }
+    );
+  }
+};
 
   // ========== JO-WISE Not OK ==========
   const handleJoNotOk = async (items: QcRow[]) => {
