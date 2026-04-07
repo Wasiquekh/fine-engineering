@@ -49,7 +49,7 @@ const validationSchema = Yup.object().shape({
     otherwise: (schema) => schema,
   }),
   job_no: Yup.string().when("job_type", {
-    is: "JOB_SERVICE",
+    is: (val: string) => val === "JOB_SERVICE" || val === "PENDING_MATERIAL",
     then: (schema) => schema.required("Job No is required"),
     otherwise: (schema) => schema,
   }),
@@ -70,10 +70,7 @@ const validationSchema = Yup.object().shape({
         .positive("Material Challan No must be positive")
         .integer("Material Challan No must be an integer"),
   }),
-  item_description: Yup.string().when("job_type", {
-    is: (val: string) => val !== "PENDING_MATERIAL",
-    then: (schema) => schema.required("Item Description is required"),
-  }),
+  item_description: Yup.string().required("Item Description is required"),
   item_no: Yup.number()
     .required("Item No is required")
     .typeError("Item No must be a number")
@@ -274,15 +271,14 @@ export default function Home() {
 
     try {
       // Client-side check for duplicate job_no before submission
-      if (values.job_no) { // Only check if job_no is provided in the form
-        const isDuplicate = data.some(
-          (item) => item.job_no === values.job_no
-        );
-        if (isDuplicate) {
-          toast.error(`Job No '${values.job_no}' already exists.`);
-          return; // Prevent form submission
-        }
-      }
+      // if (values.job_no) {
+      //   const isDuplicate = data.some(
+      //     (item) => item.job_no === values.job_no
+      //   );
+      //   if (isDuplicate) {
+      //     toast.error(`Job No '${values.job_no}' already exists.`);
+      //   }
+      // }
       const endpoint = values.job_type === "PENDING_MATERIAL" ? "/fineengg_erp/system/pending-materials" : "/fineengg_erp/system/jobs";
       const response = await axiosProvider.post(endpoint, payload);
 
