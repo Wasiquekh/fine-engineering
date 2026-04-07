@@ -854,7 +854,7 @@ const LeftSideBar: React.FC = () => {
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Transfer</p>
                       </div>
                     </Link>
-                    <Link href="/inventory2/pr">
+                    <Link href="/section_inventory/inventory_2_PR">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PR</p>
@@ -899,7 +899,7 @@ const LeftSideBar: React.FC = () => {
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Material Transfer</p>
                       </div>
                     </Link>
-                    <Link href="/inventory3/in-out">
+                    <Link href="/section_inventory/inventory_3_PR">
                       <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                         <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
                         <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PR</p>
@@ -1433,7 +1433,7 @@ const LeftSideBar: React.FC = () => {
         )}
 
         {/* Procurement Section */}
-        {hasProcurementView && (
+        {/* {hasProcurementView && (
           <>
             <div
               onClick={() => setIsProcurementOpen(!isProcurementOpen)}
@@ -1530,7 +1530,7 @@ const LeftSideBar: React.FC = () => {
               </div>
             )}
           </>
-        )}
+        )} */}
 
         {/* User Management Section */}
         {hasUserManagementView && (
