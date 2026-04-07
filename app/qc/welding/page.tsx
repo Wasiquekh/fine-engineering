@@ -73,17 +73,17 @@ export default function QcWeldingPage() {
     return q.toString();
   };
 
-  const goNotOkPage = () => {
-    router.push(`/pp_not-ok/welding?${buildQS()}`);
-  };
+  // const goNotOkPage = () => {
+  //   router.push(`/pp_not-ok/welding?${buildQS()}`);
+  // };
 
-  const goReworkPage = () => {
-    router.push(`/production_module?${buildQS()}`);
-  };
+  // const goReworkPage = () => {
+  //   router.push(`/production_module?${buildQS()}`);
+  // };
 
-  const goReviewPage = () => {
-    router.push(`/review/welding?${buildQS()}`);
-  };
+  // const goReviewPage = () => {
+  //   router.push(`/review/welding?${buildQS()}`);
+  // };
 
   const fetchData = async () => {
     setLoading(true);
@@ -391,7 +391,7 @@ export default function QcWeldingPage() {
           ? `Partial incoming saved (${value.qc_quantity}). Remaining will stay in-welding.`
           : "Incoming saved → moved to Review/Welding"
       );
-      goReviewPage();
+      // goReviewPage();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Incoming submit failed");
     }

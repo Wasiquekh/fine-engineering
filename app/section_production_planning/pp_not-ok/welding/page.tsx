@@ -92,9 +92,9 @@ export default function NotOkWeldingPage() {
     return q.toString();
   };
 
-  const goQcWeldingPage = () => {
-    router.push(`/qc/welding?${buildQS()}`);
-  };
+  // const goQcWeldingPage = () => {
+  //   router.push(`/qc/welding?${buildQS()}`);
+  // };
 
   const fetchData = async () => {
     setLoading(true);

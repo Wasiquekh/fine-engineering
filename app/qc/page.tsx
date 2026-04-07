@@ -271,33 +271,25 @@ export default function QcMainPage() {
 
   // ========== JO-WISE DISPATCH (Using job.jo_number) ==========
   // ========== JO-WISE DISPATCH ==========
+// ========== JO-WISE DISPATCH with SELECTION ==========
 const handleJoOK = async (items: QcRow[]) => {
   if (!items || items.length === 0) {
     toast.error("No items to dispatch.");
     return;
   }
 
-  // ✅ Pehle identify karo ki kaunsi job type hai
   const firstItem = items[0];
-  const jobType = filterParam; // "JOB_SERVICE", "TSO_SERVICE", or "KANBAN"
+  const jobType = filterParam;
   
   let dispatchIdentifier = null;
   let identifierType = null;
   let displayIdentifier = null;
   
   if (jobType === "TSO_SERVICE") {
-    // TSO ke liye tso_no use karo
     dispatchIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
     identifierType = "tso_no";
     displayIdentifier = dispatchIdentifier;
-  } else if (jobType === "KANBAN") {
-    // Kanban ke liye jo_no use karo
-    dispatchIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
-    identifierType = "jo_no";
-    displayIdentifier = dispatchIdentifier;
   } else {
-    // JOB_SERVICE ke liye job_no use karo? Ya jo_no?
-    // Actually JOB_SERVICE me bhi jo_no hota hai dispatch ke liye
     dispatchIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
     identifierType = "jo_no";
     displayIdentifier = dispatchIdentifier;
@@ -305,34 +297,53 @@ const handleJoOK = async (items: QcRow[]) => {
   
   if (!dispatchIdentifier) {
     toast.error(`${jobType} identifier not found. Cannot dispatch.`);
-    console.error("Missing identifier:", { jobType, firstItem });
     return;
   }
 
   const jobNo = firstItem?.job?.job_no || "Unknown";
   
-  const serialsList = items.map((item, index) => 
-    `<div class="text-sm py-1 ${index % 2 === 0 ? 'bg-gray-50' : ''} px-2 rounded">
-       <span class="font-mono text-blue-600">${item.serial_no || 'N/A'}</span>
-       <span class="text-gray-500 ml-2">(Qty: ${item.quantity_no || 0})</span>
-     </div>`
-  ).join('');
-
-  const { value: formValues } = await Swal.fire({
-    title: `Dispatch ${jobType === "TSO_SERVICE" ? "TSO" : "JO"}`,
+  // Calculate total quantity and available quantity
+  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+  
+  // ✅ Show selection dialog with QUANTITY INPUT for each item
+  const { value: selectedItems } = await Swal.fire({
+    title: `Select Items & Quantity to Dispatch`,
     html: `
       <div class="text-left">
         <div class="bg-blue-50 p-3 rounded-lg mb-4">
-          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO Number" : "JO Number"}: <span class="text-blue-600">${displayIdentifier}</span></p>
+          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span class="text-blue-600">${displayIdentifier}</span></p>
           <p class="text-sm text-gray-600">Job: ${jobNo}</p>
-          <p class="text-sm text-gray-600">Total Items: ${items.length}</p>
-          <p class="text-sm text-gray-600">Type: ${jobType}</p>
+          <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
         </div>
         
-        <div class="mb-4">
-          <p class="text-sm font-semibold text-gray-700 mb-2">Serial Numbers:</p>
-          <div class="max-h-40 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-            ${serialsList}
+        <div class="mb-3">
+          <p class="text-sm font-semibold text-gray-700 mb-2">Select items and enter quantity to dispatch:</p>
+          <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+            ${items.map((item, idx) => `
+              <div class="item-row p-3 border-b border-gray-200 hover:bg-gray-100">
+                <div class="flex items-center gap-3 mb-2">
+                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" ${idx === 0 ? 'checked' : ''}>
+                  <div class="flex-1">
+                    <span class="font-mono font-medium">${item.serial_no || 'N/A'}</span>
+                    <span class="text-gray-500 ml-2">(Total Qty: ${item.quantity_no || 0})</span>
+                  </div>
+                  <span class="text-xs text-gray-400">Item: ${item.item_no || 'N/A'}</span>
+                </div>
+                <div class="ml-7">
+                  <label class="text-xs text-gray-600">Dispatch Quantity:</label>
+                  <input 
+                    type="number" 
+                    class="dispatch-qty ml-2 px-2 py-1 border rounded text-sm w-24" 
+                    data-id="${item.id}"
+                    value="${item.quantity_no}" 
+                    min="1" 
+                    max="${item.quantity_no}"
+                    ${idx === 0 ? '' : 'disabled'}
+                  >
+                  <span class="text-xs text-gray-400 ml-2">Max: ${item.quantity_no}</span>
+                </div>
+              </div>
+            `).join('')}
           </div>
         </div>
         
@@ -347,12 +358,37 @@ const handleJoOK = async (items: QcRow[]) => {
         </div>
       </div>
     `,
-    focusConfirm: false,
-    width: '550px',
+    width: '650px',
     showCancelButton: true,
-    confirmButtonText: `Dispatch ${jobType === "TSO_SERVICE" ? "TSO" : "JO"}`,
+    confirmButtonText: `Dispatch Selected`,
     cancelButtonText: "Cancel",
+    didOpen: () => {
+      // Enable/disable quantity input based on checkbox
+      const checkboxes = document.querySelectorAll('.item-checkbox');
+      const qtyInputs = document.querySelectorAll('.dispatch-qty');
+      
+      checkboxes.forEach((cb, index) => {
+        cb.addEventListener('change', (e) => {
+          const isChecked = (e.target as HTMLInputElement).checked;
+          const qtyInput = qtyInputs[index] as HTMLInputElement;
+          if (qtyInput) {
+            qtyInput.disabled = !isChecked;
+            if (!isChecked) {
+              qtyInput.value = '0';
+            } else {
+              qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+            }
+          }
+        });
+      });
+    },
     preConfirm: () => {
+      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+      if (checkboxes.length === 0) {
+        Swal.showValidationMessage("Please select at least one item to dispatch");
+        return false;
+      }
+      
       const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
       const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
 
@@ -360,42 +396,76 @@ const handleJoOK = async (items: QcRow[]) => {
         Swal.showValidationMessage("Please fill out both fields");
         return false;
       }
-
-      return { chalan_no, dispatch_date };
+      
+      // Collect selected items with quantities
+      const selectedItemsData: any[] = [];
+      let hasValidQuantity = false;
+      
+      checkboxes.forEach((cb) => {
+        const itemId = (cb as HTMLInputElement).getAttribute('data-id');
+        const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
+        const serialNo = (cb as HTMLInputElement).getAttribute('data-serial');
+        
+        // Find the corresponding quantity input
+        const qtyInput = document.querySelector(`.dispatch-qty[data-id="${itemId}"]`) as HTMLInputElement;
+        let dispatchQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
+        
+        if (isNaN(dispatchQty)) dispatchQty = 0;
+        if (dispatchQty > maxQty) dispatchQty = maxQty;
+        if (dispatchQty < 0) dispatchQty = 0;
+        
+        if (dispatchQty > 0) {
+          hasValidQuantity = true;
+          selectedItemsData.push({
+            assignment_id: itemId,
+            quantity: dispatchQty,
+            serial_no: serialNo,
+            max_quantity: maxQty
+          });
+        }
+      });
+      
+      if (!hasValidQuantity) {
+        Swal.showValidationMessage("Please enter valid quantity for at least one item");
+        return false;
+      }
+      
+      return { 
+        items: selectedItemsData,
+        chalan_no, 
+        dispatch_date 
+      };
     },
   });
 
-  if (!formValues) return;
+  if (!selectedItems) return;
 
-  const loadingToast = toast.loading(`Dispatching ${jobType === "TSO_SERVICE" ? "TSO" : "JO"} ${displayIdentifier}...`);
+  const loadingToast = toast.loading(`Dispatching ${selectedItems.items.length} item(s)...`);
 
   try {
-    // ✅ Correct parameter based on job type
-    const dispatchPayload: any = {
-      chalan_no: formValues.chalan_no,
-      dispatch_date: formValues.dispatch_date,
-    };
-    
-    if (jobType === "TSO_SERVICE") {
-      dispatchPayload.tso_no = dispatchIdentifier;  // TSO ke liye tso_no
-    } else {
-      dispatchPayload.jo_no = dispatchIdentifier;   // JOB_SERVICE / KANBAN ke liye jo_no
-    }
-    
-    console.log("Dispatching with payload:", dispatchPayload);
-    
-    const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", dispatchPayload);
+    // Send items with quantities to backend
+    const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+      items: selectedItems.items,  // Array of { assignment_id, quantity }
+      chalan_no: selectedItems.chalan_no,
+      dispatch_date: selectedItems.dispatch_date,
+    });
 
     toast.dismiss(loadingToast);
 
     if (response?.data?.success) {
+      const dispatchedCount = response.data.data?.dispatched_count || selectedItems.items.length;
+      const totalDispatchedQty = response.data.data?.dispatched_quantity || 0;
+      const remainingQty = response.data.data?.remaining_quantity || 0;
+      
       toast.success(
         <div>
           <div className="font-semibold text-green-600">✅ Dispatch Successful!</div>
-          <div className="text-sm mt-1">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span className="font-mono font-bold">${displayIdentifier}</span></div>
-          <div className="text-sm">Job: ${jobNo}</div>
-          <div className="text-sm">Chalan: ${formValues.chalan_no}</div>
-          <div className="text-xs text-gray-600 mt-1">Items: ${items.length}</div>
+          <div className="text-sm mt-1">Dispatched: <span className="font-bold">{dispatchedCount}</span> item(s)</div>
+          <div className="text-sm">Total Qty: <span className="font-bold">{totalDispatchedQty}</span></div>
+          {remainingQty > 0 && (
+            <div className="text-sm text-orange-600">Remaining: {remainingQty} quantity pending</div>
+          )}
+          <div className="text-sm">Chalan: {selectedItems.chalan_no}</div>
         </div>,
         { autoClose: 5000 }
       );
@@ -414,8 +484,7 @@ const handleJoOK = async (items: QcRow[]) => {
     toast.error(
       <div>
         <div className="font-semibold text-red-600">❌ Dispatch Failed!</div>
-        <div className="text-sm mt-1">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span className="font-mono">${displayIdentifier}</span></div>
-        <div className="text-sm text-red-600">{errorMsg}</div>
+        <div className="text-sm text-red-600 mt-1">{errorMsg}</div>
       </div>,
       { autoClose: 5000 }
     );
@@ -468,7 +537,7 @@ const handleJoOK = async (items: QcRow[]) => {
 
     for (const item of items) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/not-ok`, {
+        await axiosProvider.post(`/fineengg_erp/system//jobs/${item.id}/not-ok`, {
           reason: reason,
           updated_by: updated_by,
         });

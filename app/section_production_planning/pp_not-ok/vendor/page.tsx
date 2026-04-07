@@ -94,9 +94,9 @@ export default function NotOkVendorPage() {
     return q.toString();
   };
 
-  const goQcVendorPage = () => {
-    router.push(`/qc/vendor?${buildQS()}`);
-  };
+  // const goQcVendorPage = () => {
+  //   router.push(`/qc/vendor?${buildQS()}`);
+  // };
 
   const fetchData = async () => {
     setLoading(true);

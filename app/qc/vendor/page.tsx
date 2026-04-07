@@ -71,17 +71,17 @@ export default function QcVendorPage() {
     return q.toString();
   };
 
-  const goNotOkPage = () => {
-    router.push(`/pp_not-ok/vendor?${buildQS()}`);
-  };
+  // const goNotOkPage = () => {
+  //   router.push(`/pp_not-ok/vendor?${buildQS()}`);
+  // };
 
-  const goReworkPage = () => {
-    router.push(`/production_module?${buildQS()}`);
-  };
+  // const goReworkPage = () => {
+  //   router.push(`/production_module?${buildQS()}`);
+  // };
 
-  const goReviewPage = () => {
-    router.push(`/review/vendor?${buildQS()}`);
-  };
+  // const goReviewPage = () => {
+  //   router.push(`/review/vendor?${buildQS()}`);
+  // };
 
   const fetchCategories = async () => {
     try {
@@ -489,7 +489,7 @@ export default function QcVendorPage() {
           ? `Partial incoming saved (${value.qc_quantity}). Remaining will stay in-vendor.`
           : "Incoming saved → moved to Review/Vendor"
       );
-      goReviewPage();
+      // goReviewPage();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Incoming submit failed");
     }
