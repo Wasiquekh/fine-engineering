@@ -245,7 +245,7 @@ const ProductionUserMenu = ({
                             </Link>
                           )}
                           
-                          {canViewReviewKanban && (
+                          {canViewReviewKanban && ( 
                             <Link href={`/review?filter=KANBAN&client=Amar%20Equipment&assign_to=${assignTo}`}>
                               <div className={itemCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)}>
                                 <MdViewKanban className={iconCls(pathname === "/review" && client === "Amar Equipment" && filter === "KANBAN" && isActive)} />

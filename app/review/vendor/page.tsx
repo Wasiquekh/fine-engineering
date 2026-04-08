@@ -101,6 +101,7 @@ export default function ReviewVendorPage() {
             status: "in-review",
             review_for: "vendor",
             ...(client ? { client_name: client } : {}),
+            ...(assignTo ? { assign_to: assignTo } : {}),
           },
         } as any);
 
