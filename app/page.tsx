@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import StorageManager from "../provider/StorageManager";
 import { FaRegEye } from "react-icons/fa";
 import { FaRegEyeSlash } from "react-icons/fa";
+import { getFirstAvailableModulePath } from "./component/utils/permissionUtils";
 
 const storage = new StorageManager();
 const axiosProvider = new AxiosProvider();
@@ -23,11 +24,20 @@ export default function LoginHome() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  // Check if already logged in
+  // Check if already logged in - Redirect to first available module, not dashboard
   useEffect(() => {
     const accessToken = storage.getAccessToken();
     if (accessToken && accessToken !== "null" && accessToken !== "") {
-      router.replace("/dashboard");
+      const permissions = storage.getUserPermissions();
+      // User ko uske first available module pe bhejo
+      const redirectPath = getFirstAvailableModulePath(permissions);
+      if (redirectPath) {
+        console.log("User already logged in, redirecting to:", redirectPath);
+        router.replace(redirectPath);
+      } else {
+        // Agar koi permission nahi hai toh unauthorized
+        router.replace("/unauthorized");
+      }
     }
   }, [router]);
 
@@ -59,7 +69,7 @@ export default function LoginHome() {
         await storage.saveUserId(data.id);
         await storage.saveUserName(data.name);
         await storage.saveUserEmail(values.email);
-        await storage.saveUserPermissions(data.permissions);
+        await storage.saveUserPermissions(data.permissions || []);
         
         // Save secret key if present
         if (data.secretKey) {
@@ -74,7 +84,18 @@ export default function LoginHome() {
           await storage.saveTotpSetupRequired(data.requiresTotpSetup ? "true" : "false");
         }
         
+        // Check if user has any permissions
+        if (!data.permissions || data.permissions.length === 0) {
+          console.warn("User has no permissions!");
+          toast.warning("You don't have any permissions assigned. Please contact administrator.");
+          router.push("/unauthorized");
+          return;
+        }
+        
+        // TOTP page pe jao, waha se first available module pe redirect hoga
         router.push("/qrcode");
+      } else {
+        toast.error(responseData.msg || "Login failed");
       }
     } catch (error: any) {
       console.error("Login error:", error);
