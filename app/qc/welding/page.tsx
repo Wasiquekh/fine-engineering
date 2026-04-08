@@ -243,6 +243,7 @@ export default function QcWeldingPage() {
     return summary;
   }, [filteredData, jobIdentifiers]);
 
+  // ========== SERIAL-WISE REWORK ==========
   const handleSerialRework = async (item: Row) => {
     if (!item) return;
 
@@ -288,201 +289,57 @@ export default function QcWeldingPage() {
       toast.error(error?.response?.data?.error || "Rework failed");
     }
   };
-// ========== JO-WISE Not OK with QUANTITY SELECTION ==========
-const handleJoNotOk = async (items: Row[]) => {
-  if (!items || items.length === 0) {
-    toast.error("No items to process.");
-    return;
-  }
 
-  const firstItem = items[0];
-  const jobId = getJobId(firstItem);
-  const jobType = firstItem.job_type || firstItem.job?.job_type || "JOB_SERVICE";
-  
-  let displayIdentifier = null;
-  if (jobType === "TSO_SERVICE") {
-    displayIdentifier = firstItem.tso_no || firstItem.job?.tso_no;
-  } else if (jobType === "KANBAN") {
-    displayIdentifier = firstItem.jo_no;
-  } else {
-    displayIdentifier = firstItem.job_no || firstItem.job?.job_no;
-  }
-  
-  if (!jobId) {
-    toast.error("Job ID not found");
-    return;
-  }
-  
-  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
-  
-  const { value: selectedData } = await Swal.fire({
-    title: `Select Items & Quantity to Mark as NOT OK (Welding)`,
-    html: `
-      <div class="text-left">
-        <div class="bg-red-50 p-3 rounded-lg mb-4">
-          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO" : jobType === "KANBAN" ? "J/O" : "Job"}: <span class="text-red-600">${displayIdentifier}</span></p>
-          <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
+  // ========== SERIAL-WISE NOT OK ==========
+  const handleSerialNotOk = async (item: Row) => {
+    if (!item) return;
+
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: "Mark as Not OK",
+      html: `
+        <div class="text-left">
+          <p class="mb-2"><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
+          <p class="mb-2"><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
+          <p class="mb-2"><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
+          <p class="mb-4"><strong>Quantity:</strong> ${item.quantity_no || 'N/A'}</p>
         </div>
-        
-        <div class="mb-3">
-          <p class="text-sm font-semibold text-gray-700 mb-2">Select items and quantity to mark as NOT OK:</p>
-          <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-            ${items.map((item, idx) => `
-              <div class="item-row p-3 border-b border-gray-200 hover:bg-gray-100">
-                <div class="flex items-center gap-3 mb-2">
-                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" ${idx === 0 ? 'checked' : ''}>
-                  <div class="flex-1">
-                    <span class="font-mono font-medium">${item.serial_no || 'N/A'}</span>
-                    <span class="text-gray-500 ml-2">(Total Qty: ${item.quantity_no || 0})</span>
-                  </div>
-                  <span class="text-xs text-gray-400">JO: ${item.jo_no || 'N/A'}</span>
-                </div>
-                <div class="ml-7">
-                  <label class="text-xs text-gray-600">Not OK Quantity:</label>
-                  <input 
-                    type="number" 
-                    class="notok-qty ml-2 px-2 py-1 border rounded text-sm w-24" 
-                    data-id="${item.id}"
-                    value="${item.quantity_no}" 
-                    min="1" 
-                    max="${item.quantity_no}"
-                    ${idx === 0 ? '' : 'disabled'}
-                  >
-                  <span class="text-xs text-gray-400 ml-2">Max: ${item.quantity_no}</span>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Reason <span class="text-red-500">*</span></label>
-          <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason for marking as NOT OK..." required></textarea>
-        </div>
-      </div>
-    `,
-    width: '650px',
-    showCancelButton: true,
-    confirmButtonText: `Mark as NOT OK`,
-    cancelButtonText: "Cancel",
-    confirmButtonColor: "#d33",
-    didOpen: () => {
-      const checkboxes = document.querySelectorAll('.item-checkbox');
-      const qtyInputs = document.querySelectorAll('.notok-qty');
-      
-      checkboxes.forEach((cb, index) => {
-        cb.addEventListener('change', (e) => {
-          const isChecked = (e.target as HTMLInputElement).checked;
-          const qtyInput = qtyInputs[index] as HTMLInputElement;
-          if (qtyInput) {
-            qtyInput.disabled = !isChecked;
-            if (!isChecked) {
-              qtyInput.value = '0';
-            } else {
-              qtyInput.value = qtyInput.getAttribute('data-max') || '1';
-            }
-          }
-        });
-      });
-    },
-    preConfirm: () => {
-      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-      if (checkboxes.length === 0) {
-        Swal.showValidationMessage("Please select at least one item to mark as NOT OK");
-        return false;
-      }
-      
-      const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
-      
-      if (!reason || reason.trim() === "") {
-        Swal.showValidationMessage("Reason is required!");
-        return false;
-      }
-      
-      const selectedItemsData: any[] = [];
-      let hasValidQuantity = false;
-      
-      checkboxes.forEach((cb) => {
-        const itemId = (cb as HTMLInputElement).getAttribute('data-id');
-        const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
-        
-        const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
-        let notOkQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
-        
-        if (isNaN(notOkQty)) notOkQty = 0;
-        if (notOkQty > maxQty) notOkQty = maxQty;
-        if (notOkQty < 0) notOkQty = 0;
-        
-        if (notOkQty > 0) {
-          hasValidQuantity = true;
-          selectedItemsData.push({
-            assignment_id: itemId,
-            quantity: notOkQty
-          });
-        }
-      });
-      
-      if (!hasValidQuantity) {
-        Swal.showValidationMessage("Please enter valid quantity for at least one item");
-        return false;
-      }
-      
-      return { 
-        items: selectedItemsData,
-        reason: reason.trim()
-      };
-    },
-  });
-
-  if (!selectedData) return;
-
-  const loadingToast = toast.loading(`Marking ${selectedData.items.length} item(s) as NOT OK...`);
-  const updated_by = storage.getUserId();
-
-  if (!updated_by) {
-    toast.dismiss(loadingToast);
-    toast.error("User not found");
-    return;
-  }
-
-  try {
-    const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
-      items: selectedData.items,
-      reason: selectedData.reason,
-      updated_by: updated_by,
-      review_for: "welding",
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for Not OK...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Mark Not OK",
+      confirmButtonColor: "#f59e0b",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
     });
 
-    toast.dismiss(loadingToast);
+    if (!isConfirmed || !reason) return;
 
-    if (response?.data?.success) {
-      const notOkCount = response.data.data?.processed_count || selectedData.items.length;
-      const totalNotOkQty = response.data.data?.not_ok_quantity || 0;
-      const remainingQty = response.data.data?.remaining_quantity || 0;
-      
-      toast.warning(
-        <div>
-          <div className="font-semibold text-red-600">⚠️ Marked as NOT OK!</div>
-          <div className="text-sm mt-1">Marked: <span className="font-bold">{notOkCount}</span> item(s)</div>
-          <div className="text-sm">Total Qty: <span className="font-bold">{totalNotOkQty}</span></div>
-          {remainingQty > 0 && (
-            <div className="text-sm text-orange-600">Remaining: {remainingQty} quantity sent back to in-welding for rework</div>
-          )}
-        </div>,
-        { autoClose: 5000 }
-      );
-      
-      fetchData();
-      setSelectedJobNo(null);
-    } else {
-      toast.error(response?.data?.error || "Failed to mark as NOT OK");
+    const job_id = getJobId(item);
+    const updated_by = storage.getUserId();
+
+    if (!job_id || !updated_by) {
+      toast.error("Job or User not found");
+      return;
     }
-  } catch (error: any) {
-    toast.dismiss(loadingToast);
-    toast.error(error?.response?.data?.error || "Failed to mark as NOT OK");
-  }
-};
 
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
+        reason,
+        updated_by,
+        review_for: REVIEW_FOR,
+      });
+
+      toast.success(`Item ${item.serial_no} marked as Not OK`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to mark as Not OK");
+    }
+  };
+
+  // ========== SERIAL-WISE OK ==========
   const handleSerialOk = async (item: Row) => {
     if (tab === "outgoing") {
       await openOutgoingForm(item);
@@ -589,6 +446,212 @@ const handleJoNotOk = async (items: Row[]) => {
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Incoming submit failed");
     }
+  };
+
+  // ========== JO-WISE BATCH OPERATIONS ==========
+  const handleJoOk = async (items: Row[]) => {
+    if (!items || items.length === 0) return;
+    
+    if (tab === "outgoing") {
+      toast.info("Please process outgoing items individually");
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of items) {
+      try {
+        const maxQty = Number(item.quantity_no ?? 0);
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
+          qc_date: new Date().toISOString().split('T')[0],
+          qc_quantity: maxQty,
+          review_for: REVIEW_FOR,
+        });
+        successCount++;
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} item(s) processed successfully`);
+      fetchData();
+    }
+    if (failCount > 0) {
+      toast.error(`Failed to process ${failCount} item(s)`);
+    }
+  };
+
+  const handleJoNotOk = async (items: Row[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to process.");
+      return;
+    }
+
+    const firstItem = items[0];
+    const jobId = getJobId(firstItem);
+    const jobType = firstItem.job_type || "JOB_SERVICE";
+    
+    let displayIdentifier = jobType === "TSO_SERVICE" ? firstItem.tso_no : 
+                           jobType === "KANBAN" ? firstItem.jo_no : 
+                           firstItem.job_no;
+    
+    const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+    
+    const { value: selectedData } = await Swal.fire({
+      title: `Select Items & Quantity to Mark as NOT OK (Welding)`,
+      html: `
+        <div class="text-left">
+          <div class="bg-red-50 p-3 rounded-lg mb-4">
+            <p class="font-semibold">Identifier: <span class="text-red-600">${displayIdentifier}</span></p>
+            <p class="text-sm text-gray-600">Total Quantity: <span class="font-bold">${totalQuantity}</span></p>
+          </div>
+          
+          <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50 mb-3">
+            ${items.map((item, idx) => `
+              <div class="item-row p-3 border-b">
+                <div class="flex items-center gap-3 mb-2">
+                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" ${idx === 0 ? 'checked' : ''}>
+                  <span class="font-mono">${item.serial_no || 'N/A'}</span>
+                  <span>(Qty: ${item.quantity_no || 0})</span>
+                </div>
+                <div class="ml-7">
+                  <input type="number" class="notok-qty px-2 py-1 border rounded w-24" data-id="${item.id}" value="${item.quantity_no}" min="1" max="${item.quantity_no}" ${idx === 0 ? '' : 'disabled'}>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason..." required></textarea>
+        </div>
+      `,
+      width: '650px',
+      showCancelButton: true,
+      confirmButtonText: `Mark as NOT OK`,
+      confirmButtonColor: "#d33",
+      didOpen: () => {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const qtyInputs = document.querySelectorAll('.notok-qty');
+        checkboxes.forEach((cb, index) => {
+          cb.addEventListener('change', (e) => {
+            const checked = (e.target as HTMLInputElement).checked;
+            const qtyInput = qtyInputs[index] as HTMLInputElement;
+            if (qtyInput) {
+              qtyInput.disabled = !checked;
+              if (!checked) qtyInput.value = '0';
+              else qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+            }
+          });
+        });
+      },
+      preConfirm: () => {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
+        if (!reason?.trim()) {
+          Swal.showValidationMessage("Reason is required!");
+          return false;
+        }
+        
+        const selectedItems: any[] = [];
+        checkboxes.forEach((cb) => {
+          const itemId = (cb as HTMLInputElement).getAttribute('data-id');
+          const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
+          const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
+          let qty = qtyInput ? parseInt(qtyInput.value) : maxQty;
+          if (qty > 0 && qty <= maxQty) {
+            selectedItems.push({ assignment_id: itemId, quantity: qty });
+          }
+        });
+        
+        if (selectedItems.length === 0) {
+          Swal.showValidationMessage("Please select items with valid quantity");
+          return false;
+        }
+        
+        return { items: selectedItems, reason: reason.trim() };
+      },
+    });
+
+    if (!selectedData) return;
+
+    const updated_by = storage.getUserId();
+    const loadingToast = toast.loading("Processing...");
+
+    try {
+      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
+        items: selectedData.items,
+        reason: selectedData.reason,
+        updated_by: updated_by,
+        review_for: REVIEW_FOR,
+      });
+
+      toast.dismiss(loadingToast);
+      
+      if (response?.data?.success) {
+        toast.warning(response.data.message);
+        fetchData();
+        setSelectedJobNo(null);
+      } else {
+        toast.error(response?.data?.error || "Failed");
+      }
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      toast.error(error?.response?.data?.error || "Failed");
+    }
+  };
+
+  const handleJoRework = async (items: Row[]) => {
+    if (!items || items.length === 0) return;
+
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: "Send JO for Rework",
+      html: `
+        <p>Sending <strong>${items.length}</strong> item(s) for rework</p>
+        <p class="text-sm text-gray-600 mt-2">These items will be sent back to production with status "machine"</p>
+      `,
+      input: "textarea",
+      inputPlaceholder: "Enter reason for rework...",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Send to Rework",
+      confirmButtonColor: "#ef4444",
+      inputValidator: (value) => {
+        if (!value) return "Reason is required!";
+        return null;
+      },
+    });
+
+    if (!isConfirmed || !reason) return;
+
+    const updated_by = storage.getUserId();
+
+    if (!updated_by) {
+      toast.error("User not found");
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const item of items) {
+      try {
+        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
+          updated_by,
+        });
+        successCount++;
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} item(s) sent for rework successfully`);
+    }
+    if (failCount > 0) {
+      toast.error(`Failed to process ${failCount} item(s)`);
+    }
+    
+    fetchData();
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {
@@ -761,10 +824,33 @@ const handleJoNotOk = async (items: Row[]) => {
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
                         <Fragment key={jo}>
-                          {/* JO Group Header without Batch Actions */}
+                          {/* JO Group Header with Batch Actions */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={5}>
                               JO: {jo} ({items.length} item(s))
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={2}></td>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleJoOk(items)}
+                                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                                >
+                                  OK All
+                                </button>
+                                <button
+                                  onClick={() => handleJoNotOk(items)}
+                                  className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+                                >
+                                  Not OK All
+                                </button>
+                                <button
+                                  onClick={() => handleJoRework(items)}
+                                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                                >
+                                  Rework All
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           
@@ -794,7 +880,7 @@ const handleJoNotOk = async (items: Row[]) => {
                                     {tab === "outgoing" ? "Outgoing" : "Incoming"}
                                   </button>
                                   <button
-                                    onClick={() => handleJoNotOk(item)}
+                                    onClick={() => handleSerialNotOk(item)}
                                     className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
                                   >
                                     Not OK
