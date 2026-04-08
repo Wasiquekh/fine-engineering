@@ -497,15 +497,15 @@ const handleJoOK = async (items: QcRow[]) => {
       toast.error("No items to process.");
       return;
     }
-
+  
     const joNo = items[0]?.job?.jo_number || "Unknown";
     const jobId = items[0]?.job_id || items[0]?.job?.id;
-
+  
     if (!jobId) {
       toast.error("Job ID not found");
       return;
     }
-
+  
     const { value: reason } = await Swal.fire({
       title: "Reason for Not OK",
       html: `
@@ -522,22 +522,23 @@ const handleJoOK = async (items: QcRow[]) => {
         return null;
       },
     });
-
+  
     if (!reason) return;
-
+  
     const updated_by = storage.getUserId();
-
+  
     if (!updated_by) {
       toast.error("User not found");
       return;
     }
-
+  
     let successCount = 0;
     let failCount = 0;
-
+  
     for (const item of items) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system//jobs/${item.id}/not-ok`, {
+        // ✅ FIXED: Use correct endpoint
+        await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
           reason: reason,
           updated_by: updated_by,
         });
@@ -547,14 +548,14 @@ const handleJoOK = async (items: QcRow[]) => {
         failCount++;
       }
     }
-
+  
     if (successCount > 0) {
       toast.success(`${successCount} item(s) from JO ${joNo} marked as Not OK`);
     }
     if (failCount > 0) {
       toast.error(`Failed to mark ${failCount} item(s)`);
     }
-
+  
     fetchData();
   };
 

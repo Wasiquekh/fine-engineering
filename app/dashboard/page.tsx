@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+// app/dashboard/page.tsx - MAIN DASHBOARD (Full Project Data)
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -17,24 +17,21 @@ import {
   Legend,
   Filler,
 } from "chart.js";
-import { Line, Bar, Doughnut, Pie } from "react-chartjs-2";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { 
   FiRefreshCw, FiDownload, FiUsers, FiCpu, FiBriefcase, 
   FiAlertCircle, FiClock, FiTruck, FiInfo, FiCheckCircle,
   FiTrendingUp, FiTrendingDown, FiActivity,
   FiBarChart2, FiPieChart, FiCalendar, FiUserCheck,
-  FiGrid, FiLayers, FiBox, FiTool, FiSettings
+  FiGrid, FiLayers, FiBox, FiTool, FiSettings,
+  FiShoppingCart, FiFileText, FiXCircle
 } from "react-icons/fi";
-import { dashboardService, DashboardStats, RealTimeStats } from "../services/dashboard.service";
+import { MdPendingActions, MdWorkOutline, MdDesignServices, MdViewKanban } from "react-icons/md";
 import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
-// Option 1: Use MdVerified
-import { MdVerified } from "react-icons/md";
+import StorageManager from "../../provider/StorageManager";
+import AxiosProvider from "../../provider/AxiosProvider";
 
-// Option 3: Use IoCheckmarkCircle from react-icons/io5
-import { IoCheckmarkCircle } from "react-icons/io5";
-
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -48,26 +45,134 @@ ChartJS.register(
   Filler
 );
 
-export default function DashboardPage() {
+const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
+
+interface DashboardStats {
+  summary: {
+    total_jobs: number;
+    total_assignments: number;
+    total_categories: number;
+    total_pending_materials: number;
+    total_po_services: number;
+    active_workers: number;
+    active_machines: number;
+  };
+  jobs: {
+    total: number;
+    totalQuantity: number;
+    inProcess: number;
+    completed: number;
+    notOk: number;
+    rejected: number;
+    kanban: number;
+    tso: number;
+    jobService: number;
+    urgent: number;
+    approved: number;
+    tsoInProcess: number;
+    tsoCompleted: number;
+    kanbanInProcess: number;
+    kanbanCompleted: number;
+    jobs_by_assignee: Array<{ assign_to: string; count: number }>;
+  };
+  assignments: {
+    total: number;
+    totalQuantity: number;
+    inProgress: number;
+    inReview: number;
+    completed: number;
+    qcVendor: number;
+    qcWelding: number;
+    notOk: number;
+    machine: number;
+    activeWorkers: number;
+    activeVendors: number;
+    assignments_by_worker: Array<{ worker_name: string; count: number; totalQty: number }>;
+    assignments_by_machine: Array<{ machine_category: string; count: number; totalQty: number }>;
+  };
+  categories: {
+    total: number;
+    totalQuantity: number;
+    top_categories: Array<{ job_category: string; jobCount: number; totalQty: number }>;
+  };
+  pending_materials: {
+    total: number;
+    totalQuantity: number;
+    completed: number;
+    pending: number;
+    pending_by_client: Array<{ client_name: string; count: number; qty: number }>;
+  };
+  po_services: {
+    total: number;
+    urgent: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    totalAmount: number;
+  };
+  recent_activities: Array<{
+    id: string;
+    activity: string;
+    type: string;
+    module: string;
+    created_at: string;
+  }>;
+  monthly_trends: {
+    months: string[];
+    job_trends: Array<{ month: string; job_count: number; total_quantity: number }>;
+    assignment_trends: Array<{ month: string; completed_count: number; completed_quantity: number }>;
+  };
+  status_distribution: {
+    job_status: Array<{ status: string; count: number }>;
+    assignment_status: Array<{ status: string; count: number }>;
+  };
+  urgent_items: {
+    urgent_jobs: Array<any>;
+    urgent_categories: Array<any>;
+    urgent_po_services: Array<any>;
+  };
+  last_updated: string;
+}
+
+interface RealTimeStats {
+  active_jobs: number;
+  pending_reviews: number;
+  today_completed: number;
+  pending_assignments: number;
+  recent_completions: Array<{
+    id: string;
+    serial_no: string;
+    worker_name: string;
+    updated_at: string;
+  }>;
+  timestamp: string;
+}
+
+export default function MainDashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [realtime, setRealtime] = useState<RealTimeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
-  const [selectedTab, setSelectedTab] = useState<"overview" | "workers" | "machines" | "clients">("overview");
-  const [showTypeExplainer, setShowTypeExplainer] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<"overview" | "workers" | "machines" | "clients" | "pending" | "po">("overview");
   const [chartKey, setChartKey] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const [statsData, realtimeData] = await Promise.all([
-        dashboardService.getStats(),
-        dashboardService.getRealTimeStats()
+        axiosProvider.get("/fineengg_erp/dashboard/stats"),
+        axiosProvider.get("/fineengg_erp/dashboard/realtime")
       ]);
-      setStats(statsData);
-      setRealtime(realtimeData);
+      
+      if (statsData.data?.success) {
+        setStats(statsData.data.data);
+      }
+      if (realtimeData.data?.success) {
+        setRealtime(realtimeData.data.data);
+      }
       setLastRefreshed(new Date());
       setError(null);
       setChartKey(prev => prev + 1);
@@ -85,19 +190,19 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
     const interval = setInterval(() => {
-      dashboardService.getRealTimeStats().then(setRealtime).catch(console.error);
+      axiosProvider.get("/dashboard/realtime").then(res => {
+        if (res.data?.success) setRealtime(res.data.data);
+      }).catch(console.error);
     }, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const handleRefresh = () => {
-    fetchData();
-  };
+  const handleRefresh = () => fetchData();
 
   const handleExport = async () => {
     try {
-      const data = await dashboardService.exportData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const response = await axiosProvider.get("/dashboard/export");
+      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -116,7 +221,7 @@ export default function DashboardPage() {
         <div className="w-full md:w-[83%] bg-[#F5F7FA] flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading dashboard...</p>
+            <p className="text-gray-600">Loading Main Dashboard...</p>
           </div>
         </div>
       </div>
@@ -140,7 +245,7 @@ export default function DashboardPage() {
     );
   }
 
-  const StatCard = ({ title, value, icon: Icon, color, subtitle, trend, trendValue }: any) => (
+  const StatCard = ({ title, value, icon: Icon, color, subtitle }: any) => (
     <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
       <div className="flex justify-between items-start">
         <div>
@@ -149,18 +254,6 @@ export default function DashboardPage() {
             <CountUp start={0} end={value} duration={1.5} separator="," />
           </p>
           {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
-          {trend && (
-            <div className="flex items-center gap-1 mt-2">
-              {trend === 'up' ? (
-                <FiTrendingUp className="text-green-500 w-3 h-3" />
-              ) : (
-                <FiTrendingDown className="text-red-500 w-3 h-3" />
-              )}
-              <span className={`text-xs ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                {trendValue}
-              </span>
-            </div>
-          )}
         </div>
         <div className={`p-3 rounded-xl ${color}`}>
           {Icon && <Icon className="w-5 h-5 text-white" />}
@@ -169,33 +262,36 @@ export default function DashboardPage() {
     </div>
   );
 
-  // Machine Categories from your system
+  // Machine Categories from actual data
   const machineCategories = [
-    { name: "Lathe", icon: FiTool, color: "blue", subTypes: ["Small", "Medium", "Large"] },
-    { name: "CNC", icon: FiSettings, color: "purple", subTypes: ["Small", "Medium", "Large"] },
-    { name: "UMC", icon: FiCpu, color: "green", subTypes: ["FVMC01"] },
-    { name: "Milling", icon: FiGrid, color: "orange", subTypes: ["FML01"] },
-    { name: "Drilling", icon: FiActivity, color: "red", subTypes: ["FDL01"] },
+    { name: "Lathe", icon: FiTool, color: "bg-blue-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "Lathe")?.count || 0 },
+    { name: "CNC", icon: FiSettings, color: "bg-purple-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "CNC")?.count || 0 },
+    { name: "UMC", icon: FiCpu, color: "bg-green-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "UMC")?.count || 0 },
+    { name: "Milling", icon: FiGrid, color: "bg-orange-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "Milling")?.count || 0 },
+    { name: "Drilling", icon: FiActivity, color: "bg-red-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "Drilling")?.count || 0 },
   ];
 
-  // Mock machine utilization data based on your system
   const machineUtilizationData = {
     labels: machineCategories.map(m => m.name),
     datasets: [{
-      data: [35, 28, 15, 12, 10],
+      data: machineCategories.map(m => m.jobs),
       backgroundColor: ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444"],
       borderWidth: 0,
     }],
   };
 
-  // Machine load details
-  const machineLoadDetails = [
-    { name: "Lathe", totalJobs: 35, completed: 28, inProgress: 7, workers: ["Naseem", "Sanjay", "Choto bhai", "Ali bhai"] },
-    { name: "CNC", totalJobs: 28, completed: 20, inProgress: 8, workers: ["Ramjan ali", "Mustafa", "Akramuddeen", "Sufyan"] },
-    { name: "UMC", totalJobs: 15, completed: 12, inProgress: 3, workers: ["Rajnish kumar"] },
-    { name: "Milling", totalJobs: 12, completed: 9, inProgress: 3, workers: ["Ramakanat"] },
-    { name: "Drilling", totalJobs: 10, completed: 7, inProgress: 3, workers: ["Rahman"] },
-  ];
+  // Worker Performance Data
+  const workerData = stats?.assignments.assignments_by_worker || [];
+  
+  const workerPerformanceData = {
+    labels: workerData.slice(0, 10).map(w => w.worker_name || "Unknown"),
+    datasets: [{
+      label: 'Active Jobs',
+      data: workerData.slice(0, 10).map(w => w.count),
+      backgroundColor: '#8B5CF6',
+      borderRadius: 8,
+    }]
+  };
 
   // Job Type Status Data
   const jobTypeStatusData = {
@@ -203,148 +299,80 @@ export default function DashboardPage() {
     datasets: [
       {
         label: 'In Progress',
-        data: [stats?.jobs.inProcess || 45, stats?.jobs.tsoInProcess || 18, stats?.jobs.kanbanInProcess || 12],
+        data: [
+          stats?.jobs.inProcess || 0,
+          stats?.jobs.tsoInProcess || 0,
+          stats?.jobs.kanbanInProcess || 0,
+        ],
         backgroundColor: '#F59E0B',
         borderRadius: 8,
-        barPercentage: 0.6,
-        categoryPercentage: 0.8,
       },
       {
         label: 'Completed',
-        data: [stats?.jobs.completed || 38, stats?.jobs.tsoCompleted || 15, stats?.jobs.kanbanCompleted || 10],
+        data: [
+          stats?.jobs.completed || 0,
+          stats?.jobs.tsoCompleted || 0,
+          stats?.jobs.kanbanCompleted || 0,
+        ],
         backgroundColor: '#10B981',
         borderRadius: 8,
-        barPercentage: 0.6,
-        categoryPercentage: 0.8,
       }
     ]
   };
 
   // Monthly Trends Data
   const monthlyTrendsData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    labels: stats?.monthly_trends?.months || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
       { 
         label: "Jobs Created", 
-        data: [12, 19, 15, 17, 14, 18, 22, 25, 28, 30, 32, 35], 
+        data: stats?.monthly_trends?.job_trends?.map(t => t.job_count) || Array(12).fill(0),
         borderColor: "#3B82F6", 
         backgroundColor: "rgba(59,130,246,0.1)", 
         fill: true, 
         tension: 0.4,
-        pointBackgroundColor: "#3B82F6",
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
       },
       { 
         label: "Completed Assignments", 
-        data: [8, 12, 11, 14, 12, 15, 18, 20, 22, 25, 28, 30], 
+        data: stats?.monthly_trends?.assignment_trends?.map(t => t.completed_count) || Array(12).fill(0),
         borderColor: "#10B981", 
         backgroundColor: "rgba(16,185,129,0.1)", 
         fill: true, 
         tension: 0.4,
-        pointBackgroundColor: "#10B981",
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
       }
     ]
   };
 
   // Job Status Distribution
   const jobStatusChartData = {
-    labels: ['In Process', 'Completed', 'Not OK', 'Rejected'],
+    labels: (stats?.status_distribution?.job_status || []).map(s => s.status === 'in-process' ? 'In Process' : s.status === 'completed' ? 'Completed' : s.status === 'not-ok' ? 'Not OK' : s.status === 'rejected' ? 'Rejected' : s.status),
     datasets: [{
-      data: [stats?.jobs.inProcess || 75, stats?.jobs.completed || 63, stats?.jobs.notOk || 12, stats?.jobs.rejected || 8],
-      backgroundColor: ['#F59E0B', '#10B981', '#EF4444', '#6B7280'],
+      data: (stats?.status_distribution?.job_status || []).map(s => s.count),
+      backgroundColor: ['#F59E0B', '#10B981', '#EF4444', '#6B7280', '#3B82F6', '#8B5CF6'],
       borderWidth: 0,
     }],
   };
 
   // Assignment Status Data
+  const assignmentStatusLabels = ['In Progress', 'In Review', 'QC Vendor', 'QC Welding', 'Completed', 'Not OK', 'Machine'];
+  const assignmentStatusData = [
+    stats?.assignments.inProgress || 0,
+    stats?.assignments.inReview || 0,
+    stats?.assignments.qcVendor || 0,
+    stats?.assignments.qcWelding || 0,
+    stats?.assignments.completed || 0,
+    stats?.assignments.notOk || 0,
+    stats?.assignments.machine || 0,
+  ];
+
   const assignmentStatusChartData = {
-    labels: ['In Progress', 'In Review', 'QC Vendor', 'QC Welding', 'Completed', 'Not OK', 'Machine'],
+    labels: assignmentStatusLabels,
     datasets: [{
-      data: [
-        realtime?.pending_assignments || 25,
-        realtime?.pending_reviews || 12,
-        stats?.assignments.qcVendor || 8,
-        stats?.assignments.qcWelding || 5,
-        stats?.assignments.completed || 63,
-        stats?.assignments.notOk || 6,
-        stats?.assignments.machine || 10,
-      ],
+      data: assignmentStatusData,
       backgroundColor: ['#F59E0B', '#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#EF4444', '#6B7280'],
       borderWidth: 0,
     }],
   };
-
-  // Worker Performance Data
-  const workerPerformanceData = {
-    labels: ['Naseem', 'Sanjay', 'Ramjan', 'Mustafa', 'Rajnish', 'Ramakanat', 'Rahman'],
-    datasets: [{
-      label: 'Completed Jobs',
-      data: [18, 15, 22, 18, 12, 9, 7],
-      backgroundColor: '#8B5CF6',
-      borderRadius: 8,
-      barPercentage: 0.7,
-      categoryPercentage: 0.8,
-    }]
-  };
-
-  const JobTypeExplainer = () => (
-    <div className="mb-4">
-      <button
-        onClick={() => setShowTypeExplainer(!showTypeExplainer)}
-        className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-      >
-        <FiInfo className="w-4 h-4" />
-        What are Jobs, JO, TSO & Kanban?
-      </button>
-      
-      {showTypeExplainer && (
-        <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h4 className="font-semibold text-blue-800 mb-2">📊 Job Types Explained:</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-            <div className="bg-white p-3 rounded-lg shadow-sm">
-              <span className="font-bold text-blue-600 flex items-center gap-1">📋 JOB (Job Service)</span>
-              <p className="text-gray-600 mt-1 text-xs">Regular manufacturing job with unique job_no</p>
-              <div className="mt-2 flex gap-2 text-xs">
-                <span className="px-1 bg-yellow-100 text-yellow-700 rounded">In Progress: {stats?.jobs.inProcess || 45}</span>
-                <span className="px-1 bg-green-100 text-green-700 rounded">Completed: {stats?.jobs.completed || 38}</span>
-              </div>
-            </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm">
-              <span className="font-bold text-green-600 flex items-center gap-1">📦 JO (Job Order)</span>
-              <p className="text-gray-600 mt-1 text-xs">Groups multiple items together under one order</p>
-              <div className="mt-2 text-xs text-gray-500">Group orders for efficient tracking</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm">
-              <span className="font-bold text-purple-600 flex items-center gap-1">🔧 TSO (Technical Service)</span>
-              <p className="text-gray-600 mt-1 text-xs">Service/maintenance work with unique tso_no</p>
-              <div className="mt-2 flex gap-2 text-xs">
-                <span className="px-1 bg-yellow-100 text-yellow-700 rounded">Active: {stats?.jobs.tsoInProcess || 18}</span>
-                <span className="px-1 bg-green-100 text-green-700 rounded">Completed: {stats?.jobs.tsoCompleted || 15}</span>
-              </div>
-            </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm">
-              <span className="font-bold text-orange-600 flex items-center gap-1">📊 KANBAN (Pull System)</span>
-              <p className="text-gray-600 mt-1 text-xs">Just-in-time production system</p>
-              <div className="mt-2 flex gap-2 text-xs">
-                <span className="px-1 bg-yellow-100 text-yellow-700 rounded">Active: {stats?.jobs.kanbanInProcess || 12}</span>
-                <span className="px-1 bg-green-100 text-green-700 rounded">Completed: {stats?.jobs.kanbanCompleted || 10}</span>
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 p-2 bg-yellow-50 rounded text-xs">
-            <span className="font-semibold">💡 Tip:</span> A single JO (Job Order) can contain multiple items of different types! This allows grouping related work together like Jobs, TSOs, and Kanban items under one order number.
-          </div>
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div className="flex justify-end min-h-screen bg-gray-50">
@@ -358,9 +386,9 @@ export default function DashboardPage() {
           <div className="mb-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Production Dashboard</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">🏭 Main Production Dashboard</h1>
                 <p className="text-gray-500 text-sm mt-1">
-                  Last updated: {lastRefreshed.toLocaleString()}
+                  Complete project overview - Last updated: {lastRefreshed.toLocaleString()}
                 </p>
               </div>
               <div className="flex gap-3">
@@ -376,17 +404,16 @@ export default function DashboardPage() {
                   className="flex items-center gap-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                 >
                   <FiDownload className="w-4 h-4" />
-                  Export
+                  Export All Data
                 </button>
               </div>
             </div>
-            <JobTypeExplainer />
           </div>
 
           {/* Real-time Stats Cards */}
           {realtime && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-4 text-white">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs opacity-90">Today Completed</p>
@@ -396,7 +423,7 @@ export default function DashboardPage() {
                   <FiCheckCircle className="w-8 h-8 opacity-75" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs opacity-90">Active Jobs</p>
@@ -406,7 +433,7 @@ export default function DashboardPage() {
                   <FiActivity className="w-8 h-8 opacity-75" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-4 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-4 text-white">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs opacity-90">Pending Reviews</p>
@@ -416,7 +443,7 @@ export default function DashboardPage() {
                   <FiClock className="w-8 h-8 opacity-75" />
                 </div>
               </div>
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white transform hover:scale-105 transition-transform duration-200">
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-xs opacity-90">Machine Load</p>
@@ -429,38 +456,60 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Summary Cards */}
+          {/* Summary Cards - Full Project Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
             <StatCard 
               title="Total Jobs" 
-              value={stats?.jobs.total || 158} 
+              value={stats?.jobs.total || 0} 
               icon={FiBriefcase}
               color="bg-blue-500"
-              subtitle={`Total Qty: ${stats?.jobs.totalQuantity || 6840}`}
-              trend="up"
-              trendValue="+12%"
+              subtitle={`Total Qty: ${stats?.jobs.totalQuantity || 0}`}
             />
             <StatCard 
               title="Active Workers" 
-              value={stats?.summary.active_workers || 24} 
+              value={stats?.assignments.activeWorkers || 0} 
               icon={FiUserCheck}
               color="bg-green-500"
               subtitle="Currently working"
             />
             <StatCard 
               title="Pending Materials" 
-              value={stats?.pending_materials.pending || 15} 
+              value={stats?.pending_materials.pending || 0} 
               icon={FiClock}
               color="bg-yellow-500"
-              subtitle={`Qty: ${stats?.pending_materials.totalQuantity || 320}`}
+              subtitle={`Qty: ${stats?.pending_materials.totalQuantity || 0}`}
             />
             <StatCard 
               title="Urgent Items" 
-              value={stats?.jobs.urgent || 8} 
+              value={stats?.jobs.urgent || 0} 
               icon={FiAlertCircle}
               color="bg-red-500"
               subtitle="Need immediate attention"
             />
+          </div>
+
+          {/* Additional Summary Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm p-3 text-center">
+              <p className="text-xs text-gray-500">Job Service</p>
+              <p className="text-xl font-bold text-blue-600">{stats?.jobs.jobService || 0}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-3 text-center">
+              <p className="text-xs text-gray-500">TSO Service</p>
+              <p className="text-xl font-bold text-purple-600">{stats?.jobs.tso || 0}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-3 text-center">
+              <p className="text-xs text-gray-500">Kanban</p>
+              <p className="text-xl font-bold text-green-600">{stats?.jobs.kanban || 0}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-3 text-center">
+              <p className="text-xs text-gray-500">PO Services</p>
+              <p className="text-xl font-bold text-orange-600">{stats?.po_services.total || 0}</p>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm p-3 text-center">
+              <p className="text-xs text-gray-500">Categories</p>
+              <p className="text-xl font-bold text-teal-600">{stats?.categories.total || 0}</p>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -468,9 +517,11 @@ export default function DashboardPage() {
             <div className="flex gap-6 min-w-max">
               {[
                 { id: "overview", label: "Overview", icon: FiBarChart2 },
-                { id: "workers", label: "Workers", icon: FiUsers },
+                { id: "workers", label: "Workers Performance", icon: FiUsers },
                 { id: "machines", label: "Machines", icon: FiCpu },
                 { id: "clients", label: "Clients", icon: FiTruck },
+                { id: "pending", label: "Pending Materials", icon: FiBox },
+                { id: "po", label: "Purchase Orders", icon: FiShoppingCart },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -491,191 +542,53 @@ export default function DashboardPage() {
           {/* Overview Tab */}
           {selectedTab === "overview" && (
             <>
-              {/* Job Type Status Chart */}
-              <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Job Type Status (In Progress vs Completed)</h3>
-                  <div className="flex gap-3">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-yellow-500 rounded"></div>
-                      <span className="text-xs text-gray-600">In Progress</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-green-500 rounded"></div>
-                      <span className="text-xs text-gray-600">Completed</span>
-                    </div>
-                  </div>
-                </div>
-                <Bar 
-                  key={`jobtype-${chartKey}`}
-                  data={jobTypeStatusData} 
-                  options={{ 
-                    responsive: true, 
-                    maintainAspectRatio: true,
-                    plugins: { 
-                      legend: { display: false },
-                      tooltip: { 
-                        callbacks: { 
-                          label: (context) => `${context.dataset.label}: ${context.raw} jobs` 
-                        } 
-                      }
-                    },
-                    scales: {
-                      y: { 
-                        beginAtZero: true, 
-                        grid: { color: "#e5e7eb" },
-                        title: { display: true, text: "Number of Jobs", font: { size: 12 } }
-                      },
-                      x: { 
-                        title: { display: true, text: "Job Type", font: { size: 12 } }
-                      }
-                    }
-                  }} 
-                />
-              </div>
-
-              {/* Two Column Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div className="bg-white rounded-xl shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Monthly Trends</h3>
-                    <FiTrendingUp className="text-green-500 w-5 h-5" />
-                  </div>
-                  <Line 
-                    key={`trends-${chartKey}`}
-                    data={monthlyTrendsData} 
-                    options={{ 
-                      responsive: true, 
-                      maintainAspectRatio: true,
-                      plugins: { 
-                        legend: { position: "top" as const },
-                        tooltip: { mode: "index" as const, intersect: false }
-                      },
-                      scales: {
-                        y: { beginAtZero: true, grid: { color: "#e5e7eb" }, title: { display: true, text: "Count" } },
-                        x: { grid: { display: false }, title: { display: true, text: "Month" } }
-                      }
-                    }} 
-                  />
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Type Status</h3>
+                  <Bar data={jobTypeStatusData} options={{ responsive: true, maintainAspectRatio: true, plugins: { legend: { position: "top" } }, scales: { x: { stacked: true }, y: { stacked: true } } }} />
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Job Status Distribution</h3>
-                    <FiPieChart className="text-blue-500 w-5 h-5" />
-                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Trends</h3>
+                  <Line data={monthlyTrendsData} options={{ responsive: true, maintainAspectRatio: true }} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Status Distribution</h3>
                   <div className="flex justify-center">
-                    <Doughnut 
-                      key={`jobstatus-${chartKey}`}
-                      data={jobStatusChartData} 
-                      options={{ 
-                        responsive: true, 
-                        maintainAspectRatio: true,
-                        plugins: { 
-                          legend: { position: "bottom" as const },
-                          tooltip: { 
-                            callbacks: { 
-                              label: (context) => `${context.label}: ${context.raw} jobs` 
-                            } 
-                          }
-                        }
-                      }} 
-                    />
+                    <Doughnut data={jobStatusChartData} options={{ responsive: true, maintainAspectRatio: true, plugins: { legend: { position: "bottom" } } }} />
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Assignment Status</h3>
+                  <div className="flex justify-center">
+                    <Doughnut data={assignmentStatusChartData} options={{ responsive: true, maintainAspectRatio: true, plugins: { legend: { position: "bottom", labels: { font: { size: 10 } } } } }} />
                   </div>
                 </div>
               </div>
 
-              {/* Assignment Status and Recent Activities */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div className="bg-white rounded-xl shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Assignment Status</h3>
-                    <FiActivity className="text-purple-500 w-5 h-5" />
-                  </div>
-                  <div className="flex justify-center">
-                    <Doughnut 
-                      key={`assignstatus-${chartKey}`}
-                      data={assignmentStatusChartData} 
-                      options={{ 
-                        responsive: true, 
-                        maintainAspectRatio: true,
-                        plugins: { 
-                          legend: { position: "bottom" as const, labels: { font: { size: 10 } } },
-                          tooltip: { 
-                            callbacks: { 
-                              label: (context) => `${context.label}: ${context.raw} assignments` 
-                            } 
-                          }
-                        }
-                      }} 
-                    />
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Recent Activities</h3>
-                    <FiCalendar className="text-gray-500 w-5 h-5" />
-                  </div>
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {stats?.recent_activities.slice(0, 10).map((activity: any) => (
-                      <div key={activity.id} className="flex items-start gap-3 p-2 border-b border-gray-100 hover:bg-gray-50 rounded transition-colors">
+              {/* Recent Activities */}
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activities</h3>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {stats?.recent_activities && stats.recent_activities.length > 0 ? (
+                    stats.recent_activities.slice(0, 15).map((activity: any) => (
+                      <div key={activity.id} className="flex items-start gap-3 p-2 border-b border-gray-100 hover:bg-gray-50 rounded">
                         <div className={`w-2 h-2 rounded-full mt-2 ${
                           activity.type === "create" ? "bg-green-500" :
                           activity.type === "update" ? "bg-blue-500" :
-                          activity.type === "delete" ? "bg-red-500" : 
-                          activity.type === "dispatch" ? "bg-purple-500" : "bg-gray-500"
+                          activity.type === "delete" ? "bg-red-500" : "bg-gray-500"
                         }`} />
                         <div className="flex-1">
-                          <p className="text-sm text-gray-700">{activity.activity?.substring(0, 120) || "No description"}</p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            {activity.created_at ? new Date(activity.created_at).toLocaleString() : "N/A"}
-                          </p>
+                          <p className="text-sm text-gray-700">{activity.activity?.substring(0, 150)}</p>
+                          <p className="text-xs text-gray-400 mt-1">{activity.created_at ? new Date(activity.created_at).toLocaleString() : "N/A"}</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Job Type Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm opacity-90">Job Service</p>
-                      <p className="text-2xl font-bold">{stats?.jobs.jobService || 83}</p>
-                    </div>
-                    <FiBriefcase className="w-8 h-8 opacity-75" />
-                  </div>
-                  <div className="mt-2 flex gap-2 text-xs">
-                    <span className="px-2 py-1 bg-yellow-400 rounded">In Progress: {stats?.jobs.inProcess || 45}</span>
-                    <span className="px-2 py-1 bg-green-400 rounded">Completed: {stats?.jobs.completed || 38}</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-4 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm opacity-90">TSO Service</p>
-                      <p className="text-2xl font-bold">{stats?.jobs.tso || 33}</p>
-                    </div>
-                    <FiCpu className="w-8 h-8 opacity-75" />
-                  </div>
-                  <div className="mt-2 flex gap-2 text-xs">
-                    <span className="px-2 py-1 bg-yellow-400 rounded">Active: {stats?.jobs.tsoInProcess || 18}</span>
-                    <span className="px-2 py-1 bg-green-400 rounded">Completed: {stats?.jobs.tsoCompleted || 15}</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm opacity-90">Kanban</p>
-                      <p className="text-2xl font-bold">{stats?.jobs.kanban || 22}</p>
-                    </div>
-                    <FiGrid className="w-8 h-8 opacity-75" />
-                  </div>
-                  <div className="mt-2 flex gap-2 text-xs">
-                    <span className="px-2 py-1 bg-yellow-400 rounded">Active: {stats?.jobs.kanbanInProcess || 12}</span>
-                    <span className="px-2 py-1 bg-green-400 rounded">Completed: {stats?.jobs.kanbanCompleted || 10}</span>
-                  </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">No recent activities</div>
+                  )}
                 </div>
               </div>
             </>
@@ -683,139 +596,57 @@ export default function DashboardPage() {
 
           {/* Workers Tab */}
           {selectedTab === "workers" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Worker Performance</h3>
-                  <FiUsers className="text-purple-500 w-5 h-5" />
-                </div>
-                <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                  {[
-                    { name: "Naseem", completed: 18, inProgress: 3, machine: "Lathe Small" },
-                    { name: "Sanjay", completed: 15, inProgress: 2, machine: "Lathe Small" },
-                    { name: "Ramjan ali", completed: 22, inProgress: 4, machine: "CNC Small" },
-                    { name: "Mustafa", completed: 18, inProgress: 3, machine: "CNC Small" },
-                    { name: "Rajnish kumar", completed: 12, inProgress: 3, machine: "UMC" },
-                    { name: "Ramakanat", completed: 9, inProgress: 3, machine: "Milling" },
-                    { name: "Rahman", completed: 7, inProgress: 2, machine: "Drilling" },
-                    { name: "Ali bhai", completed: 12, inProgress: 2, machine: "Lathe Small" },
-                    { name: "Aqif khan", completed: 8, inProgress: 1, machine: "CNC Large" },
-                  ].map((worker, idx) => (
-                    <div key={worker.name} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          idx === 0 ? "bg-yellow-100 text-yellow-700" :
-                          idx === 1 ? "bg-gray-100 text-gray-700" :
-                          idx === 2 ? "bg-orange-100 text-orange-700" :
-                          "bg-blue-100 text-blue-700"
-                        }`}>
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-800">{worker.name}</p>
-                          <p className="text-xs text-gray-400">{worker.machine}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-green-600">{worker.completed} completed</p>
-                          <p className="text-xs text-yellow-600">{worker.inProgress} in progress</p>
-                        </div>
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-purple-500 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${(worker.completed / 25) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Worker Distribution</h3>
-                <Bar 
-                  key={`worker-${chartKey}`}
-                  data={workerPerformanceData} 
-                  options={{ 
-                    responsive: true, 
-                    maintainAspectRatio: true,
-                    plugins: { 
-                      legend: { display: false },
-                      tooltip: { callbacks: { label: (context) => `${context.raw} completed jobs` } }
-                    },
-                    scales: {
-                      y: { beginAtZero: true, grid: { color: "#e5e7eb" }, title: { display: true, text: "Completed Jobs" } },
-                      x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: true } }
-                    }
-                  }} 
-                />
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Worker Performance</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Worker</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active Jobs</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Qty</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Completion Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {stats?.assignments.assignments_by_worker.map((worker) => (
+                      <tr key={worker.worker_name} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{worker.worker_name}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{worker.count}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{worker.totalQty}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="w-24 bg-gray-200 rounded-full h-2">
+                            <div className="bg-green-500 h-2 rounded-full" style={{ width: `${Math.min(100, (worker.count / 20) * 100)}%` }} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
 
-          {/* Machines Tab - Using your actual machine categories */}
+          {/* Machines Tab */}
           {selectedTab === "machines" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl shadow-sm p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Machine Distribution</h3>
-                  <FiPieChart className="text-pink-500 w-5 h-5" />
-                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Machine Distribution</h3>
                 <div className="flex justify-center">
-                  <Pie 
-                    key={`machine-${chartKey}`}
-                    data={machineUtilizationData} 
-                    options={{ 
-                      responsive: true, 
-                      maintainAspectRatio: true,
-                      plugins: { 
-                        legend: { position: "bottom" as const },
-                        tooltip: { 
-                          callbacks: { 
-                            label: (context) => `${context.label}: ${context.raw} jobs` 
-                          } 
-                        }
-                      }
-                    }} 
-                  />
+                  <Doughnut data={machineUtilizationData} options={{ responsive: true }} />
                 </div>
               </div>
               <div className="bg-white rounded-xl shadow-sm p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Machine-wise Load Details</h3>
-                  <FiCpu className="text-blue-500 w-5 h-5" />
-                </div>
-                <div className="space-y-6 max-h-[450px] overflow-y-auto">
-                  {machineLoadDetails.map((machine) => (
-                    <div key={machine.name} className="border-b border-gray-100 pb-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            machine.name === "Lathe" ? "bg-blue-500" :
-                            machine.name === "CNC" ? "bg-purple-500" :
-                            machine.name === "UMC" ? "bg-green-500" :
-                            machine.name === "Milling" ? "bg-orange-500" : "bg-red-500"
-                          }`} />
-                          <span className="font-semibold text-gray-800">{machine.name}</span>
-                        </div>
-                        <span className="text-sm text-gray-500">{machine.totalJobs} total jobs</span>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Machine-wise Load</h3>
+                <div className="space-y-4">
+                  {machineCategories.map((machine) => (
+                    <div key={machine.name}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium">{machine.name}</span>
+                        <span>{machine.jobs} jobs</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                        <div 
-                          className={`h-3 rounded-full transition-all duration-500 ${
-                            machine.name === "Lathe" ? "bg-blue-500" :
-                            machine.name === "CNC" ? "bg-purple-500" :
-                            machine.name === "UMC" ? "bg-green-500" :
-                            machine.name === "Milling" ? "bg-orange-500" : "bg-red-500"
-                          }`}
-                          style={{ width: `${(machine.completed / machine.totalJobs) * 100}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-green-600">Completed: {machine.completed}</span>
-                        <span className="text-yellow-600">In Progress: {machine.inProgress}</span>
-                        <span className="text-gray-400">Workers: {machine.workers.join(", ")}</span>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className={`${machine.color.replace('bg-', '')} h-2 rounded-full`} style={{ width: `${(machine.jobs / (stats?.assignments.total || 1)) * 100}%` }} />
                       </div>
                     </div>
                   ))}
@@ -825,51 +656,89 @@ export default function DashboardPage() {
           )}
 
           {/* Clients Tab */}
-          {selectedTab === "clients" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Jobs by Client</h3>
-                <div className="space-y-4 max-h-[450px] overflow-y-auto">
-                  {[
-                    { name: "Amar Equipment", jobs: 95, qty: 4250 },
-                    { name: "Amar Biosystem", jobs: 63, qty: 2590 },
-                  ].map((client) => (
-                    <div key={client.name}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-gray-700">{client.name}</span>
-                        <span className="text-gray-500">{client.jobs} jobs • {client.qty} units</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${(client.jobs / 158) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+          {selectedTab === "clients" && stats && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Jobs by Client</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm font-medium text-gray-500 border-b pb-2">
+                  <span>Client</span>
+                  <span>Jobs</span>
+                  <span>Quantity</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Amar Equipment</span>
+                    <span className="text-blue-600 font-semibold">{stats.jobs.jobService || 0}</span>
+                    <span className="text-gray-600">{stats.jobs.totalQuantity || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Amar Biosystem</span>
+                    <span className="text-purple-600 font-semibold">{stats.jobs.tso || 0}</span>
+                    <span className="text-gray-600">-</span>
+                  </div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Pending Materials by Client</h3>
-                <div className="space-y-4 max-h-[450px] overflow-y-auto">
-                  {[
-                    { name: "Amar Equipment", qty: 210, items: 9 },
-                    { name: "Amar Biosystem", qty: 110, items: 6 },
-                  ].map((client) => (
-                    <div key={client.name}>
+            </div>
+          )}
+
+          {/* Pending Materials Tab */}
+          {selectedTab === "pending" && stats && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Pending Materials</h3>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-yellow-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-yellow-600">{stats.pending_materials.pending}</p>
+                  <p className="text-xs text-gray-500">Pending Items</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-green-600">{stats.pending_materials.completed}</p>
+                  <p className="text-xs text-gray-500">Completed</p>
+                </div>
+              </div>
+              {stats.pending_materials.pending_by_client.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-700 mb-3">Pending by Client</h4>
+                  {stats.pending_materials.pending_by_client.map((client) => (
+                    <div key={client.client_name} className="mb-3">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-gray-700">{client.name}</span>
-                        <span className="text-gray-500">{client.qty} units pending</span>
+                        <span>{client.client_name}</span>
+                        <span>{client.qty} units ({client.count} items)</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-orange-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${(client.qty / 320) * 100}%` }}
-                        />
+                        <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${(client.qty / (stats.pending_materials.totalQuantity || 1)) * 100}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* PO Tab */}
+          {selectedTab === "po" && stats && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Orders</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-600">{stats.po_services.total}</p>
+                  <p className="text-xs text-gray-500">Total PO</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-green-600">{stats.po_services.approved}</p>
+                  <p className="text-xs text-gray-500">Approved</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-yellow-600">{stats.po_services.pending}</p>
+                  <p className="text-xs text-gray-500">Pending</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-red-600">{stats.po_services.rejected}</p>
+                  <p className="text-xs text-gray-500">Rejected</p>
+                </div>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4 text-center">
+                <p className="text-sm text-gray-600">Total Amount</p>
+                <p className="text-2xl font-bold text-blue-600">₹{stats.po_services.totalAmount.toLocaleString()}</p>
               </div>
             </div>
           )}

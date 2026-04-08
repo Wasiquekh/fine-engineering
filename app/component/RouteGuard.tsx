@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 import StorageManager from "../../provider/StorageManager";
-import { hasPermission, hasAnyPermission } from "./utils/permissionUtils";
+import { hasPermission, hasAnyPermission, getFirstAvailableModulePath } from "./utils/permissionUtils";
 
 const storage = new StorageManager();
 
@@ -14,11 +14,12 @@ const routePermissions: Record<string, string | string[]> = {
   "/dashboard": "dashboard.view",
   "/material-movement": "material.movement.view",
   
-  // Production Planning Dashboard - NEW
+  // Production Planning Dashboard
   "/section_production_planning/dashboard": "production.planning.dashboard.view",
   
   // Inventory 1 Routes (only view now)
   "/section_inventory/inventory": "inventory1.view",
+  "/inventory_material_approve": "inventory1.view",
   
   // Inventory 2 Routes (only view now)
   "/section_inventory/inventory_2": "inventory2.view",
@@ -44,6 +45,8 @@ const routePermissions: Record<string, string | string[]> = {
   
   // QC Routes
   "/qc": "qc.view",
+  "/qc/welding": "qc.view",
+  "/qc/vendor": "qc.view",
   
   // User Management Routes
   "/user-management": "user.management.view",
@@ -54,6 +57,8 @@ const routePermissions: Record<string, string | string[]> = {
   
   // Review Routes
   "/review": "review.view",
+  "/review/welding": "review.view",
+  "/review/vendor": "review.view",
   
   // Procurement Routes
   "/procurement/dashboard": "procurement.view",
@@ -71,6 +76,7 @@ const routePermissions: Record<string, string | string[]> = {
   "/section_inventory/tso_approve": "tso-service.view",
   "/section_production_planning/tso_details": "tso-service.view",
   "/section_production/machine_category": "machine.view",
+  "/customer": null, // No permission required for customer page
 };
 
 // Public routes
@@ -107,7 +113,7 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
   }
   
   // Exact match routes
-  if (routePermissions[pathname]) {
+  if (routePermissions[pathname] !== undefined) {
     return routePermissions[pathname];
   }
   
@@ -119,10 +125,14 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
     "/section_inventory/tso_approve",
     "/section_production_planning/tso_details",
     "/review",
+    "/review/welding",
+    "/review/vendor",
     "/section_inventory/inventory_material_approve",
     "/section_production_planning/pp_not-ok",
     "/section_production_planning/vendor/outsource",
     "/section_production_planning/vendors/outsource",
+    "/qc/welding",
+    "/qc/vendor",
   ];
   
   for (const route of dynamicRoutes) {
@@ -147,12 +157,14 @@ const RouteGuard = ({ children }: RouteGuardProps) => {
 
   useEffect(() => {
     const checkAccess = () => {
+      // Allow QR and auth routes
       if (pathname === "/qrcode" || pathname === "/generateqrcode") {
         setIsAuthorized(true);
         setIsChecking(false);
         return;
       }
 
+      // Check public routes
       if (isPublicRoute(pathname)) {
         setIsAuthorized(true);
         setIsChecking(false);
@@ -162,31 +174,65 @@ const RouteGuard = ({ children }: RouteGuardProps) => {
       const user = storage.getUser();
       const permissions = storage.getUserPermissions();
 
+      // Check if user is logged in
       if (!user || !user.id) {
+        console.log("❌ No user found, redirecting to login");
         router.push("/login");
         return;
       }
 
+      // Check if user has ANY permissions
+      if (!permissions || permissions.length === 0) {
+        console.log("⚠️ User has no permissions, redirecting to /unauthorized");
+        router.push("/unauthorized");
+        return;
+      }
+
+      // Special handling for dashboard - redirect to first available module if no dashboard permission
+      if (pathname === "/dashboard" && !hasPermission(permissions, "dashboard.view")) {
+        console.log("❌ User doesn't have dashboard permission, finding alternative");
+        const alternativePath = getFirstAvailableModulePath(permissions);
+        if (alternativePath) {
+          console.log(`🔄 Redirecting from dashboard to: ${alternativePath}`);
+          router.push(alternativePath);
+          return;
+        } else {
+          console.log("❌ No alternative found, redirecting to /unauthorized");
+          router.push("/unauthorized");
+          return;
+        }
+      }
+
+      // Get required permission for the route
       const requiredPermission = getRequiredPermission(pathname, searchParams);
       
+      console.log(`🔍 Checking route: ${pathname}, Required: ${requiredPermission}`);
+
+      // If no permission required, allow access
       if (!requiredPermission) {
+        console.log("✅ No permission required, granting access");
         setIsAuthorized(true);
         setIsChecking(false);
         return;
       }
 
+      // Check if user has the required permission
       let hasAccess = false;
       if (typeof requiredPermission === 'string') {
         hasAccess = hasPermission(permissions, requiredPermission);
+        console.log(`  - Checking "${requiredPermission}": ${hasAccess}`);
       } else {
         hasAccess = hasAnyPermission(permissions, requiredPermission);
+        console.log(`  - Checking any of [${requiredPermission.join(", ")}]: ${hasAccess}`);
       }
 
       if (!hasAccess) {
+        console.log("❌ Access denied, redirecting to /unauthorized");
         router.push("/unauthorized");
         return;
       }
 
+      console.log("✅ Access granted");
       setIsAuthorized(true);
       setIsChecking(false);
     };

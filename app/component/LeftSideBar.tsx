@@ -101,7 +101,7 @@ const ProductionUserMenu = ({
   const canViewReviewTSO = canViewReview && hasAnyPermission(permissions, ["tso-service.view", "tso.view"]);
   const canViewReviewKanban = canViewReview && hasAnyPermission(permissions, ["kanban.view"]);
   const canViewReviewWelding = canViewReview && hasAnyPermission(permissions, ["welding.view"]);
-  const canViewReviewVendor = canViewReview && hasAnyPermission(permissions, ["vendor.view"]);
+  const canViewReviewVendor = canViewReview && hasAnyPermission(permissions, ["vendors.view"]);
 
   useEffect(() => {
     if (isActive && (pathname.includes("/section_production/production_module") || pathname.startsWith("/review"))) {

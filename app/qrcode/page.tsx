@@ -1,4 +1,3 @@
-// app/qrcode/page.tsx
 "use client";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -7,6 +6,7 @@ import { toast } from "react-toastify";
 import AxiosProvider from "../../provider/AxiosProvider";
 import StorageManager from "../../provider/StorageManager";
 import OtpInput from "react-otp-input";
+import { getFirstAvailableModulePath } from "../component/utils/permissionUtils";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -34,8 +34,17 @@ export default function OtpHome() {
     // Check if already have access token (already logged in)
     const accessToken = storage.getAccessToken();
     if (accessToken && accessToken !== "null" && accessToken !== "") {
-      console.log("User already has access token, redirecting to dashboard");
-      router.replace("/dashboard");
+      const permissions = storage.getUserPermissions();
+      console.log("User has access token, permissions:", permissions);
+      // User ko uske first available module pe bhejo
+      const redirectPath = getFirstAvailableModulePath(permissions);
+      if (redirectPath) {
+        console.log("Redirecting to first module:", redirectPath);
+        router.replace(redirectPath);
+      } else {
+        console.log("No permissions, redirecting to unauthorized");
+        router.replace("/unauthorized");
+      }
       return;
     }
 
@@ -54,7 +63,6 @@ export default function OtpHome() {
       hasStoredSecretKey: !!storedSecretKey
     });
 
-    // If no temp data and no stored user ID, redirect to login
     if (!tempUserId && !storedUserId) {
       console.log("No user data found, redirecting to login");
       toast.error("Session expired. Please login again.");
@@ -62,7 +70,6 @@ export default function OtpHome() {
       return;
     }
 
-    // Use tempUserId if available, otherwise regular userId
     const finalUserId = tempUserId || storedUserId;
     
     if (!finalUserId) {
@@ -74,18 +81,15 @@ export default function OtpHome() {
 
     setUserId(finalUserId);
 
-    // Check if user has secret key
     const hasValidSecret = storedSecretKey && storedSecretKey.length > 10;
 
     if (hasValidSecret && totpSetupRequired === "false") {
-      // User has secret key and is in verification mode
-      console.log("✅ VERIFICATION MODE - User has existing secret key");
+      console.log("✅ VERIFICATION MODE");
       setIsSetup(false);
       setSecretKey(storedSecretKey);
       setLoading(false);
     } else {
-      // No secret key or setup required - SETUP MODE
-      console.log("🆕 SETUP MODE - Generating new QR code");
+      console.log("🆕 SETUP MODE");
       setIsSetup(true);
       await generateQRCode(finalUserId);
     }
@@ -99,11 +103,8 @@ export default function OtpHome() {
     
     try {
       console.log("Generating QR code for userId:", userId);
-      
-      // Get temp token for authorization
       const tempToken = storage.getTempToken();
       
-      // Create config object with headers if token exists
       let config = undefined;
       if (tempToken && tempToken !== "null" && tempToken !== "") {
         config = {
@@ -120,8 +121,6 @@ export default function OtpHome() {
       if (res.status === 200 && res.data.success) {
         setQrCode(res.data.data.qrCodeDataURL);
         setSecretKey(res.data.data.secret);
-        
-        // Save the new secret key
         await storage.saveUserSecretKey(res.data.data.secret);
         toast.success("QR Code generated successfully");
       } else {
@@ -166,14 +165,12 @@ export default function OtpHome() {
       console.log("Mode:", isSetup ? "SETUP" : "VERIFICATION");
       console.log("UserId:", userId);
       
-      // Create payload
       const payload: any = {
         token: otp,
         userId: userId,
         isSetup: isSetup
       };
       
-      // Only include secretKey for setup mode
       if (isSetup) {
         if (!secretKey) {
           toast.error("Secret key not found. Please regenerate QR code.");
@@ -183,10 +180,8 @@ export default function OtpHome() {
         payload.secretKey = secretKey;
       }
       
-      // Get temp token for authorization if available
       const tempToken = storage.getTempToken();
       
-      // Create config object with headers if token exists
       let config = undefined;
       if (tempToken && tempToken !== "null" && tempToken !== "") {
         config = {
@@ -204,12 +199,10 @@ export default function OtpHome() {
         // Save the access token
         await storage.saveAccessToken(res.data.data.token);
         
-        // Save the secret key if this was setup
         if (isSetup && secretKey) {
           await storage.saveUserSecretKey(secretKey);
         }
         
-        // Save user data
         if (res.data.data.user) {
           await storage.saveUserId(res.data.data.user.id);
           await storage.saveUserName(res.data.data.user.name);
@@ -224,15 +217,39 @@ export default function OtpHome() {
           }
         }
         
-        // Clear temp data
         await storage.removeTempToken();
         await storage.removeTempUserId();
         await storage.removeTotpSetupRequired();
         
         toast.success(isSetup ? "TOTP setup successful!" : "Login successful!");
         
+        // IMPORTANT: Get permissions and redirect to first available module
+        const permissions = storage.getUserPermissions();
+        console.log("========== REDIRECT DEBUG ==========");
+        console.log("Permissions from storage:", permissions);
+        console.log("Permissions length:", permissions?.length);
+        
+        let redirectPath = "/unauthorized";
+        
+        if (permissions && permissions.length > 0) {
+          const firstModule = getFirstAvailableModulePath(permissions);
+          console.log("First module from getFirstAvailableModulePath:", firstModule);
+          if (firstModule) {
+            redirectPath = firstModule;
+            console.log("✅ Redirecting to:", redirectPath);
+          } else {
+            console.log("❌ No module found, going to unauthorized");
+            redirectPath = "/unauthorized";
+          }
+        } else {
+          console.log("❌ No permissions at all, going to unauthorized");
+          redirectPath = "/unauthorized";
+        }
+        
+        console.log("Final redirect path:", redirectPath);
+        
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push(redirectPath);
         }, 1000);
       } else {
         toast.error(res.data.msg || "Invalid code. Please try again.");

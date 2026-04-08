@@ -31,7 +31,7 @@ const initialValues = {
   re_order_qty: "",
   purchase_uom: "",
   issue_production_uom: "",
-  par_uom: "",
+  por_uom: "",
   conversion_factor: "",
   rack_no: "",
   bin_shelf_location: "",
@@ -54,7 +54,7 @@ const stepSchemas = [
   Yup.object({
     purchase_uom: Yup.string().required("Purchase UOM is required"),
     issue_production_uom: Yup.string().required("Issue Production UOM is required"),
-    par_uom: Yup.string().required("POR UOM is required"),
+    por_uom: Yup.string().required("POR UOM is required"),
     conversion_factor: Yup.number()
       .typeError("Conversion Factor must be a number")
       .required("Conversion Factor is required"),
@@ -93,7 +93,7 @@ export default function MaterialsMasterPage() {
       "unique_item_code", "pn_no", "material_desc", "grade",
       "thickness", "diameter", "length", "width", "across_flat", "center_to_face", "hsn_code"
     ],
-    ["purchase_uom", "issue_production_uom", "par_uom", "conversion_factor"],
+    ["purchase_uom", "issue_production_uom", "por_uom", "conversion_factor"],
     ["rack_no", "bin_shelf_location"],
     ["min_stock_level", "max_stock_level", "re_order_qty"],
   ], []);
@@ -165,7 +165,7 @@ export default function MaterialsMasterPage() {
         re_order_qty: values.re_order_qty ? Number(values.re_order_qty) : 0,
         purchase_uom: values.purchase_uom || "",
         issue_production_uom: values.issue_production_uom || "",
-        par_uom: values.par_uom || "",
+        por_uom: values.por_uom || "",
         conversion_factor: values.conversion_factor ? Number(values.conversion_factor) : 0,
         rack_no: values.rack_no || "",
         bin_shelf_location: values.bin_shelf_location || "",
@@ -314,17 +314,17 @@ export default function MaterialsMasterPage() {
             <div>
               <label className="block mb-2 font-medium">POR UOM</label>
               <input
-                name="par_uom"
-                value={values.par_uom}
-                onChange={(e) => setFieldValue("par_uom", e.target.value)}
+                name="por_uom"
+                value={values.por_uom}
+                onChange={(e) => setFieldValue("por_uom", e.target.value)}
                 className="w-full border rounded px-4 py-3"
                 placeholder="e.g. mtrs"
               />
-              <ErrorMessage name="par_uom" component="div" className="text-red-500 text-sm mt-1" />
+              <ErrorMessage name="por_uom" component="div" className="text-red-500 text-sm mt-1" />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block mb-2 font-medium">Conversion Factor</label>
+              <label className="block mb-2 font-medium"> 1Conversion Factor</label>
               <input
                 type="number"
                 step="0.0001"
@@ -435,7 +435,7 @@ export default function MaterialsMasterPage() {
       "re_order_qty",
       "purchase_uom",
       "issue_production_uom",
-      "par_uom",
+      "por_uom",
       "conversion_factor",
       "rack_no",
       "bin_shelf_location",
