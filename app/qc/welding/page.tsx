@@ -298,7 +298,7 @@ export default function QcWeldingPage() {
 
   const openOutgoingForm = async (item: Row) => {
     const maxQty = Number(item.quantity_no ?? 0);
-
+  
     const { value, isConfirmed } = await Swal.fire({
       title: "QC Welding • Outgoing",
       html: `
@@ -309,7 +309,6 @@ export default function QcWeldingPage() {
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
         <input id="qc_quantity" type="number" class="swal2-input" placeholder="QC Quantity (<= ${maxQty})" />
-        <input id="gatepass_no" type="text" class="swal2-input" placeholder="Gatepass No" />
       `,
       showCancelButton: true,
       confirmButtonText: "Submit Outgoing",
@@ -318,25 +317,23 @@ export default function QcWeldingPage() {
         const qc_quantity = Number(
           (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
         );
-        const gatepass_no = (document.getElementById("gatepass_no") as HTMLInputElement)?.value?.trim();
-
+  
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
         if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
         if (qc_quantity > maxQty) return Swal.showValidationMessage(`QC Quantity cannot exceed ${maxQty}`);
-        if (!gatepass_no) return Swal.showValidationMessage("Gatepass No required");
-
-        return { qc_date, qc_quantity, gatepass_no };
+  
+        return { qc_date, qc_quantity };
       },
     });
-
+  
     if (!isConfirmed || !value) return;
-
+  
     try {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-outgoing`, {
         ...value,
         review_for: REVIEW_FOR,
       });
-
+  
       toast.success(
         value.qc_quantity < maxQty
           ? `Partial outgoing saved (${value.qc_quantity}). Remaining will stay pending.`
