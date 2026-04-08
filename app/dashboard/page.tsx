@@ -379,7 +379,7 @@ export default function MainDashboardPage() {
       <LeftSideBar />
 
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-screen">
-        <DesktopHeader />
+        {/* <DesktopHeader /> */}
 
         <div className="p-4 md:p-6">
           {/* Header */}
