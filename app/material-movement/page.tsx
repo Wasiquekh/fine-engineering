@@ -11,7 +11,7 @@ import {
   STAGE_OPTIONS,
   SIZE_OPTIONS,
   MACHINE_CODES,
-  UMC_CODES,
+  vmc_CODES,
   MILLING_CODES,
   DRILLING_CODES,
   VENDOR_OPTIONS,
@@ -46,7 +46,7 @@ export default function MaterialMovementPage() {
   // Check stage types
   const isLathe = stageLower === "lathe";
   const isCnc = stageLower === "cnc";
-  const isUmc = stageLower === "umc";
+  const isvmc = stageLower === "vmc";
   const isMilling = stageLower === "milling";
   const isDrilling = stageLower === "drilling";
   const isVendor = stageLower === "vendor";
@@ -69,7 +69,7 @@ export default function MaterialMovementPage() {
     if (isLatheOrCnc && size) {
       return MACHINE_CODES[size as keyof typeof MACHINE_CODES] || [];
     }
-    if (isUmc) return UMC_CODES;
+    if (isvmc) return vmc_CODES;
     if (isMilling) return MILLING_CODES;
     if (isDrilling) return DRILLING_CODES;
     if (isVendor) return VENDOR_OPTIONS;
@@ -138,7 +138,7 @@ export default function MaterialMovementPage() {
     fetchCategories();
   }, []);
 
-  // Build API parameters - FIXED for CNC and UMC
+  // Build API parameters - FIXED for CNC and vmc
   const buildParams = (pageNumber: number) => {
     const params: any = {
       page: pageNumber,
@@ -162,9 +162,9 @@ export default function MaterialMovementPage() {
       if (size) params.machine_size = size;
       if (machineCode) params.machine_code = machineCode;
     }
-    else if (isUmc) {
+    else if (isvmc) {
       params.status = "machine";
-      params.machine_category = "umc"; // Database has lowercase "umc"
+      params.machine_category = "vmc"; // Database has lowercase "vmc"
       if (machineCode) params.machine_code = machineCode;
     }
     else if (isMilling) {
@@ -362,7 +362,7 @@ export default function MaterialMovementPage() {
                 >
                   <option value="">
                     {isLatheOrCnc ? "Select Machine Code" : 
-                     isUmc ? "Select UMC Code" :
+                     isvmc ? "Select vmc Code" :
                      isMilling ? "Select Milling Code" :
                      isDrilling ? "Select Drilling Code" :
                      isVendor ? "Select Vendor Option" :

@@ -3,7 +3,7 @@ export const STAGE_OPTIONS = [
   "All Status",
   "Lathe",
   "cnc",
-  "umc",
+  "vmc",
   "Milling",
   "Drilling",
   "Vendor",
@@ -25,7 +25,7 @@ export const MACHINE_CODES = {
   large: Array.from({ length: 4 }, (_, i) => ({ value: `LFL${i + 1}`, label: `LFL${i + 1}` })),
 };
 
-export const UMC_CODES = [{ value: "FVMC01", label: "FVMC01" }];
+export const vmc_CODES = [{ value: "FVMC01", label: "FVMC01" }];
 export const MILLING_CODES = [{ value: "FML01", label: "FML01" }];
 export const DRILLING_CODES = [{ value: "FDL01", label: "FDL01" }];
 
@@ -93,7 +93,7 @@ export const WORKER_OPTIONS = {
     medium: ["Ziyaul mustafa", "Mufeed alam"],
     large: ["Aqif khan"],
   },
-  umc: {
+  vmc: {
     default: ["Rajnish kumar"],
   },
   Milling: {

@@ -120,7 +120,7 @@ export default function JoNumberPage() {
         { value: "medium", label: "Medium" },
         { value: "large", label: "Large" },
       ];
-    } else if (selectedOption === "umc") {
+    } else if (selectedOption === "vmc") {
       return [{ value: "FVMC01", label: "FVMC01" }];
     } else if (selectedOption === "Milling") {
       return [{ value: "FML01", label: "FML01" }];
@@ -171,7 +171,7 @@ export default function JoNumberPage() {
       return ["Aqif khan"];
     }
 
-    if (selectedOption === "umc") return ["Rajnish kumar"];
+    if (selectedOption === "vmc") return ["Rajnish kumar"];
     if (selectedOption === "Milling") return ["Ramakanat"];
     if (selectedOption === "Drilling") return ["Rahman"];
 
@@ -347,7 +347,7 @@ export default function JoNumberPage() {
                   const val = e.target.value;
                   setSelectedOption(val);
 
-                  if (val === "umc") setMachineSize("FVMC01");
+                  if (val === "vmc") setMachineSize("FVMC01");
                   else if (val === "Milling") setMachineSize("FML01");
                   else if (val === "Drilling") setMachineSize("FDL01");
                   else setMachineSize("");
@@ -361,7 +361,7 @@ export default function JoNumberPage() {
                 <option value="">Select</option>
                 <option value="Lathe">Lathe</option>
                 <option value="cnc">CNC</option>
-                <option value="umc">UMC</option>
+                <option value="vmc">VMC</option>
                 <option value="Milling">Milling</option>
                 <option value="Drilling">Drilling</option>
               </select>

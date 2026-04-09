@@ -625,7 +625,7 @@ const Inventory2SubMenu = ({
             </div>
           </Link>
 
-          <Link href="/inventory2/pr">
+          <Link href="/section_inventory/inventory2/pr">
             <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
               <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
               <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">PR</p>

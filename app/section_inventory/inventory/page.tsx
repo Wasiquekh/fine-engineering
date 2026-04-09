@@ -78,17 +78,14 @@ const validationSchema = Yup.object().shape({
   }),
   job_order_date: Yup.date().required("Job Order Date is required"),
   mtl_rcd_date: Yup.date().required("Material Received Date is required"),
-  mtl_challan_no: Yup.number()
-    .required("Material Challan No is required")
-    .typeError("Material Challan No must be a number")
-    .positive("Material Challan No must be positive")
-    .integer("Material Challan No must be an integer"),
+  mtl_challan_no: Yup.string()
+    .required("Material Challan No is required"),
   item_description: Yup.string().when("sub_type", {
     is: "ASSEMBLY",
     then: (schema) => schema.notRequired(),
     otherwise: (schema) => schema.required("Item Description is required"),
   }),
-  item_no: Yup.number().when("sub_type", {
+  item_no: Yup.string().when("sub_type", {
     is: "ASSEMBLY",
     then: (schema) => schema.notRequired().nullable(),
     otherwise: (schema) =>
@@ -96,10 +93,7 @@ const validationSchema = Yup.object().shape({
         is: (job_type) => job_type !== "KANBAN",
         then: (schema) =>
           schema
-            .required("Item No is required")
-            .typeError("Item No must be a number")
-            .positive("Item No must be positive")
-            .integer("Item No must be an integer"),
+            .required("Item No is required"),
         otherwise: (schema) => schema.notRequired().nullable(),
       }),
   }),
@@ -147,11 +141,8 @@ const validationSchema = Yup.object().shape({
             item_description: Yup.string().required(
               "Item Description is required"
             ),
-            item_no: Yup.number()
-              .required("Item No is required")
-              .typeError("Item No must be a number")
-              .positive("Item No must be positive")
-              .integer("Item No must be an integer"),
+            item_no: Yup.string()
+              .required("Item No is required"),
             qty: Yup.number()
               .required("Quantity is required")
               .typeError("Quantity must be a number")
@@ -232,7 +223,7 @@ export default function Home() {
         jo_number: values.jo_number,
         job_order_date: formatDate(values.job_order_date),
         mtl_rcd_date: formatDate(values.mtl_rcd_date),
-        mtl_challan_no: Number(values.mtl_challan_no),
+        mtl_challan_no: values.mtl_challan_no,
         product_desc: values.product_desc,
         product_qty: Number(values.product_qty),
         client_name: values.client_name,
@@ -252,7 +243,7 @@ export default function Home() {
         common_data: commonData,
         items: values.assembly_items.map((item: any) => ({
           item_description: item.item_description,
-          item_no: Number(item.item_no),
+          item_no: item.item_no,
           qty: Number(item.qty),
           moc: item.moc,
           bin_location: item.bin_location,
@@ -279,9 +270,9 @@ export default function Home() {
       jo_number: values.jo_number,
       job_order_date: formatDate(values.job_order_date),
       mtl_rcd_date: formatDate(values.mtl_rcd_date),
-      mtl_challan_no: Number(values.mtl_challan_no),
+      mtl_challan_no: values.mtl_challan_no,
       item_description: values.item_description,
-      item_no: Number(values.item_no),
+      item_no: values.item_no,
       qty: Number(values.qty),
       moc: values.moc,
       bin_location: values.bin_location,
@@ -1068,7 +1059,7 @@ export default function Home() {
                             Material Challan No
                           </p>
                           <input
-                            type="number"
+                            type="text"
                             name="mtl_challan_no"
                             value={values.mtl_challan_no}
                             onChange={(e) =>
@@ -1121,7 +1112,7 @@ export default function Home() {
                                   Item No
                                 </p>
                                 <input
-                                  type="number"
+                                  type="text"
                                   name="item_no"
                                   value={values.item_no}
                                   onChange={(e) =>
@@ -1302,7 +1293,7 @@ export default function Home() {
                                               Item No
                                             </p>
                                             <input
-                                              type="number"
+                                              type="text"
                                               name={`assembly_items.${index}.item_no`}
                                               value={item.item_no}
                                               onChange={(e) =>

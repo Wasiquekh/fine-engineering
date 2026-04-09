@@ -547,10 +547,10 @@ export default function JobDetailsPage() {
                         const isExpanded = expandedJoNumbers.includes(joNumber);
                         const hasMultiple = jobs.length > 1;
 
-                        const renderJobRow = (item: JobDetail, isFirst: boolean) => {
+                        const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
                           return (
-                          <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                          <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
                             <td className="px-2 py-2 border border-tableBorder">
                               {isFirst && (
                                 <div className="flex items-center gap-2">
@@ -563,15 +563,15 @@ export default function JobDetailsPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.job_type}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.product_desc || "-"}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.product_qty || "-"}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.serial_no || 'N/A'}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? item.job_category : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
                                 <td className="px-2 py-2 border border-tableBorder">
                                   {isFirst && (assignments[item.id]?.assignTo === "Others" ? (
                                     <div className="flex items-center gap-1">
@@ -634,7 +634,7 @@ export default function JobDetailsPage() {
                                 </td>
                                 <td className="px-2 py-2 border border-tableBorder">
                                   <div className="flex items-center gap-2">
-                                    {isFirst && (
+                                    {isFirst && !isChild && (
                                       <button
                                         onClick={() => !item.assign_to && item.urgent && !isRejected && item.status !== 'completed' && handleAssign(item.id)}
                                         disabled={!!item.assign_to || !item.urgent || !!isRejected || item.status === 'completed'}
@@ -648,6 +648,7 @@ export default function JobDetailsPage() {
                                         {item.status === 'completed' ? 'Completed' : item.assign_to ? "Assigned" : "Assign"}
                                       </button>
                                     )}
+                                    {!isChild && ( <>
                                     <button
                                       onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleReject(item.id)}
                                       disabled={!!item.assign_to || !!isRejected || item.status === 'completed'}
@@ -674,15 +675,20 @@ export default function JobDetailsPage() {
                                     >
                                       <FaCheckCircle className="w-4 h-4" />
                                     </button>
+                                    </> )}
                                   </div>
                                 </td>
                           </tr>
                         );
                         };
 
-                        const rows = [renderJobRow(jobs[0], true)];
-                        if (hasMultiple && isExpanded) {
-                          jobs.slice(1).forEach(job => rows.push(renderJobRow(job, false)));
+                        if (!hasMultiple) {
+                          return [renderJobRow(jobs[0], true, false)];
+                        }
+
+                        const rows = [renderJobRow(jobs[0], true, false)];
+                        if (isExpanded) {
+                          jobs.forEach(job => rows.push(renderJobRow(job, false, true)));
                         }
                         return rows;
                       })
