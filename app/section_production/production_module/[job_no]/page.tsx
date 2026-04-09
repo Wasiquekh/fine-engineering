@@ -117,12 +117,11 @@ export default function JobDetailsPage() {
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th scope="col" className="p-3 border border-tableBorder">J/O No</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Job Type</th>
                       <th scope="col" className="p-3 border border-tableBorder">Job Category</th>
                       <th scope="col" className="p-3 border border-tableBorder">Item No</th>
+                      <th scope="col" className="p-3 border border-tableBorder">Item Description</th>
                       <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
                       <th scope="col" className="p-3 border border-tableBorder">MOC</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
                       <th scope="col" className="p-3 border border-tableBorder">Assign To</th>
                       <th scope="col" className="p-3 border border-tableBorder">Assign Date</th>
                     </tr>
@@ -130,11 +129,11 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={9} className="text-center py-4 border border-tableBorder">Loading...</td>
+                        <td colSpan={8} className="text-center py-4 border border-tableBorder">Loading...</td>
                       </tr>
                     ) : uniqueJobDetails.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
+                        <td colSpan={8} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
                       </tr>
                     ) : (
                       uniqueJobDetails.map((item) => (
@@ -152,12 +151,11 @@ export default function JobDetailsPage() {
                               "N/A"
                             )}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.job_type}</td>
                           <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
                           <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
+                          <td className="px-2 py-2 border border-tableBorder">{item.item_description}</td>
                           <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
                           <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <p className="text-[#232323] text-base leading-normal">{item.assign_to || "Not Assigned"}</p>
                           </td>
