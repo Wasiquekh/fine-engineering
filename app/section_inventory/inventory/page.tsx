@@ -856,7 +856,7 @@ export default function Home() {
                   isSubmitting,
                   errors,
                 }) => (
-                  <Form onSubmit={handleSubmit}>
+                  <Form onSubmit={handleSubmit} autoComplete="off">
                     <div className="w-full">
                       {/* Grid container for form fields */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
