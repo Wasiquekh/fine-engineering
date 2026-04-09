@@ -210,15 +210,42 @@ export default function ProductionPlanningDashboard() {
         urgentRes,
         activitiesRes
       ] = await Promise.all([
-        axiosProvider.get("/fineengg_erp/system/jobs", { params: { ...params, job_type: "JOB_SERVICE", limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/jobs", { params: { ...params, job_type: "TSO_SERVICE", limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/jobs", { params: { ...params, job_type: "KANBAN", limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/categories", { params: { ...params, limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/assign-to-worker", { params: { ...params, status: "qc-welding", limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/assign-to-worker", { params: { ...params, status: "qc-vendor", limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/jobs", { params: { ...params, limit: 1000 } }),
-        axiosProvider.get("/fineengg_erp/system/jobs", { params: { ...params, urgent: true, limit: 100 } }),
-        axiosProvider.get("/fineengg_erp/system/activities", { params: { limit: 50 } }).catch(() => ({ data: { data: [] } }))
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, job_type: "JOB_SERVICE", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, job_type: "TSO_SERVICE", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, job_type: "KANBAN", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/categories", {
+          params: { ...params, limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+          params: { ...params, status: "qc-welding", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+          params: { ...params, status: "qc-vendor", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, urgent: true, limit: 100 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/activities", {
+          params: { limit: 50 },
+          headers: undefined
+        }).catch(() => ({ data: { data: [] } }))
       ]);
       
       // Process Job Service Stats
