@@ -829,27 +829,27 @@ export default function QcWeldingPage() {
                             <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={5}>
                               JO: {jo} ({items.length} item(s))
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={2}></td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={5}></td>
+                            <td className="px-2 py-2 border border-tableBorder" colSpan={2}>
                               <div className="flex items-center gap-2">
-                                <button
+                                {/* <button
                                   onClick={() => handleJoOk(items)}
                                   className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
                                 >
                                   OK All
-                                </button>
+                                </button> */}
                                 <button
                                   onClick={() => handleJoNotOk(items)}
                                   className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                                 >
                                   Not OK All
                                 </button>
-                                <button
+                                {/* <button
                                   onClick={() => handleJoRework(items)}
                                   className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                                 >
                                   Rework All
-                                </button>
+                                </button> */}
                               </div>
                             </td>
                           </tr>

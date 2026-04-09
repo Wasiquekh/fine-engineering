@@ -1,9 +1,10 @@
-// materialMovement.constants.ts
+// app/section_material_movement/materialMovement.constants.ts
+
 export const STAGE_OPTIONS = [
   "All Status",
   "Lathe",
   "cnc",
-  "vmc",
+  "vmc", // Changed from "umc" to "vmc"
   "Milling",
   "Drilling",
   "Vendor",
@@ -25,7 +26,7 @@ export const MACHINE_CODES = {
   large: Array.from({ length: 4 }, (_, i) => ({ value: `LFL${i + 1}`, label: `LFL${i + 1}` })),
 };
 
-export const vmc_CODES = [{ value: "FVMC01", label: "FVMC01" }];
+export const VMC_CODES = [{ value: "FVMC01", label: "FVMC01" }]; // Changed from UMC_CODES
 export const MILLING_CODES = [{ value: "FML01", label: "FML01" }];
 export const DRILLING_CODES = [{ value: "FDL01", label: "FDL01" }];
 
@@ -93,7 +94,7 @@ export const WORKER_OPTIONS = {
     medium: ["Ziyaul mustafa", "Mufeed alam"],
     large: ["Aqif khan"],
   },
-  vmc: {
+  vmc: { // Changed from "umc" to "vmc"
     default: ["Rajnish kumar"],
   },
   Milling: {

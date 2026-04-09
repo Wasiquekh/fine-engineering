@@ -1,4 +1,4 @@
-// app/section_production_planning/dashboard/page.tsx - PRODUCTION PLANNING DASHBOARD (Limited Data)
+// app/section_production_planning/dashboard/page.tsx - PRODUCTION PLANNING DASHBOARD
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -32,6 +32,7 @@ import {
   FiBox,
   FiUsers,
   FiShoppingCart,
+  FiGrid,
 } from "react-icons/fi";
 import { MdPendingActions, MdWorkOutline, MdDesignServices, MdViewKanban, MdCategory } from "react-icons/md";
 import LeftSideBar from "../../component/LeftSideBar";
@@ -50,7 +51,7 @@ ChartJS.register(
   Legend,
   PointElement,
   LineElement,
-  Filler
+  Filler  
 );
 
 const axiosProvider = new AxiosProvider();
@@ -96,40 +97,18 @@ interface ProductionStats {
     completedQty: number;
     pendingQty: number;
   };
-  pendingMaterials: {
+  categories: {
     total: number;
-    pending: number;
-    completed: number;
-    totalQty: number;
-    byClient: Array<{ client_name: string; count: number; qty: number }>;
-  };
-  poServices: {
-    total: number;
-    fine: number;
-    pressFlow: number;
-    approved: number;
-    pending: number;
-    rejected: number;
-    urgent: number;
-    totalAmount: number;
-  };
-  vendors: {
-    total: number;
-    active: number;
-    byCategory: Array<{ category: string; count: number }>;
-  };
-  recentActivities: Array<{
-    id: string;
-    activity: string;
-    type: string;
-    module: string;
-    created_at: string;
-  }>;
-  weeklyTrends: {
-    labels: string[];
-    jobService: number[];
-    tsoService: number[];
-    kanban: number[];
+    list: Array<{
+      id: string;
+      job_no: string;
+      job_category: string;
+      description: string;
+      qty: number;
+      client_name: string;
+      material_type: string;
+      is_urgent: boolean;
+    }>;
   };
   assigneeStats: Array<{
     assign_to: string;
@@ -147,6 +126,13 @@ interface ProductionStats {
     client_name: string;
     urgent_due_date: string;
     qty: number;
+  }>;
+  recentActivities: Array<{
+    id: string;
+    activity: string;
+    type: string;
+    module: string;
+    created_at: string;
   }>;
 }
 
@@ -166,12 +152,14 @@ export default function ProductionPlanningDashboard() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      console.log("📊 Fetching Production Planning Dashboard data...");
+      
+      // Fetch dashboard stats
       const response = await axiosProvider.get("/fineengg_erp/producitondashboard/production-planning/dashboard-stats", {
-          params: {
-              client: selectedClient !== "all" ? selectedClient : undefined,
-              assign_to: selectedAssignee !== "all" ? selectedAssignee : undefined,
-          },
-          headers: undefined
+        params: {
+          client: selectedClient !== "all" ? selectedClient : undefined,
+          assign_to: selectedAssignee !== "all" ? selectedAssignee : undefined,
+        }
       });
       
       if (response.data?.success) {
@@ -250,7 +238,7 @@ export default function ProductionPlanningDashboard() {
     </div>
   );
 
-  // Chart Data - Limited to Planning View
+  // Chart Data for Planning View
   const jobTypeChartData = {
     labels: ["Job Service", "TSO Service", "Kanban"],
     datasets: [
@@ -297,36 +285,6 @@ export default function ProductionPlanningDashboard() {
     ],
   };
 
-  const weeklyTrendsData = {
-    labels: stats?.weeklyTrends.labels || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        label: "Job Service",
-        data: stats?.weeklyTrends.jobService || [0, 0, 0, 0, 0, 0, 0],
-        borderColor: "#3B82F6",
-        backgroundColor: "rgba(59,130,246,0.1)",
-        fill: true,
-        tension: 0.4,
-      },
-      {
-        label: "TSO Service",
-        data: stats?.weeklyTrends.tsoService || [0, 0, 0, 0, 0, 0, 0],
-        borderColor: "#8B5CF6",
-        backgroundColor: "rgba(139,92,246,0.1)",
-        fill: true,
-        tension: 0.4,
-      },
-      {
-        label: "Kanban",
-        data: stats?.weeklyTrends.kanban || [0, 0, 0, 0, 0, 0, 0],
-        borderColor: "#10B981",
-        backgroundColor: "rgba(16,185,129,0.1)",
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  };
-
   const assigneeChartData = {
     labels: stats?.assigneeStats.map(a => a.assign_to) || [],
     datasets: [
@@ -356,7 +314,7 @@ export default function ProductionPlanningDashboard() {
       <LeftSideBar />
 
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-screen">
-        {/* <DesktopHeader /> */}
+        <DesktopHeader />
 
         <div className="p-4 md:p-6">
           {/* Header */}
@@ -447,7 +405,7 @@ export default function ProductionPlanningDashboard() {
             )}
           </div>
 
-          {/* Summary Cards - Limited to Planning View */}
+          {/* Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <StatCard title="Total Jobs" value={(stats?.jobService.total || 0) + (stats?.tsoService.total || 0) + (stats?.kanban.total || 0)} icon={FiBriefcase} color="bg-blue-500" />
             <StatCard title="Pending Approval" value={(stats?.jobService.pending || 0) + (stats?.tsoService.pending || 0) + (stats?.kanban.pending || 0)} icon={MdPendingActions} color="bg-yellow-500" />
@@ -456,7 +414,7 @@ export default function ProductionPlanningDashboard() {
             <StatCard title="Completed" value={(stats?.jobService.completed || 0) + (stats?.tsoService.completed || 0) + (stats?.kanban.completed || 0)} icon={FiCheckCircle} color="bg-purple-500" />
           </div>
 
-          {/* Tabs - Planning Focused */}
+          {/* Tabs */}
           <div className="border-b border-gray-200 mb-6 overflow-x-auto">
             <div className="flex gap-6 min-w-max">
               {[
@@ -491,16 +449,12 @@ export default function ProductionPlanningDashboard() {
                   <Bar data={jobTypeChartData} options={{ responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }} />
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-5">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Weekly Planning Trends</h3>
-                  <Line data={weeklyTrendsData} options={{ responsive: true }} />
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Workload by Assignee</h3>
+                  <Bar data={assigneeChartData} options={{ responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div className="bg-white rounded-xl shadow-sm p-5">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Workload by Assignee</h3>
-                  <Bar data={assigneeChartData} options={{ responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }} />
-                </div>
                 <div className="bg-white rounded-xl shadow-sm p-5">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Quantity Overview</h3>
                   <div className="space-y-4">
@@ -515,6 +469,23 @@ export default function ProductionPlanningDashboard() {
                     <div className="flex justify-between p-3 bg-yellow-50 rounded-lg">
                       <span>Pending Quantity</span>
                       <span className="font-bold text-yellow-600">{(stats?.jobService.pendingQty || 0) + (stats?.tsoService.pendingQty || 0) + (stats?.kanban.pendingQty || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Categories Summary</h3>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-blue-600">{stats?.categories?.total || 0}</p>
+                    <p className="text-sm text-gray-500">Total Categories</p>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="bg-blue-50 rounded-lg p-2">
+                        <p className="text-xs text-gray-500">Job Categories</p>
+                        <p className="text-lg font-bold">{stats?.categories?.list?.filter(c => c.job_category && c.job_category !== 'N/A').length || 0}</p>
+                      </div>
+                      <div className="bg-red-50 rounded-lg p-2">
+                        <p className="text-xs text-gray-500">Urgent Categories</p>
+                        <p className="text-lg font-bold text-red-600">{stats?.categories?.list?.filter(c => c.is_urgent).length || 0}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -568,61 +539,98 @@ export default function ProductionPlanningDashboard() {
           {/* Category Tab */}
           {selectedTab === "category" && stats && (
             <div className="bg-white rounded-xl shadow-sm p-5">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Categories</h3>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{stats.jobService.total}</p>
-                    <p className="text-sm text-gray-600">Job Service Categories</p>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-4 text-center">
-                    <p className="text-2xl font-bold text-purple-600">{stats.tsoService.total}</p>
-                    <p className="text-sm text-gray-600">TSO Categories</p>
-                  </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">📁 Categories List</h3>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-blue-600">{stats.categories?.total || 0}</p>
+                  <p className="text-sm text-gray-600">Total Categories</p>
                 </div>
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-500 text-center">Categories help organize and track different types of production jobs</p>
+                <div className="bg-red-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-red-600">{stats.categories?.list?.filter(c => c.is_urgent).length || 0}</p>
+                  <p className="text-sm text-gray-600">Urgent Categories</p>
                 </div>
               </div>
+              
+              {stats.categories?.list && stats.categories.list.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Material Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {stats.categories.list.map((category) => (
+                        <tr key={category.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{category.job_no}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">{category.job_category || 'N/A'}</span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{category.description || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{category.material_type || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-yellow-600">{category.qty}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{category.client_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {category.is_urgent ? (
+                              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">Urgent</span>
+                            ) : (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Normal</span>
+                            )}
+                          </td>
+                          </tr>
+                     
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">No categories found</div>
+              )}
             </div>
           )}
 
           {/* Job Service Tab */}
           {selectedTab === "jobs" && stats && (
             <div className="bg-white rounded-xl shadow-sm p-5">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Service Details</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Service Planning</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-blue-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-blue-600">{stats.jobService.total}</p>
-                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-xs text-gray-500">Total Jobs</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-yellow-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-yellow-600">{stats.jobService.pending}</p>
                   <p className="text-xs text-gray-500">Pending</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-green-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-green-600">{stats.jobService.approved}</p>
                   <p className="text-xs text-gray-500">Approved</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-indigo-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-indigo-600">{stats.jobService.inProcess}</p>
                   <p className="text-xs text-gray-500">In Process</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Total Quantity</p>
                   <p className="text-xl font-semibold">{stats.jobService.totalQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Completed Quantity</p>
                   <p className="text-xl font-semibold text-green-600">{stats.jobService.completedQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Pending Quantity</p>
                   <p className="text-xl font-semibold text-yellow-600">{stats.jobService.pendingQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Urgent Jobs</p>
                   <p className="text-xl font-semibold text-red-600">{stats.jobService.urgent}</p>
                 </div>
@@ -633,39 +641,39 @@ export default function ProductionPlanningDashboard() {
           {/* TSO Service Tab */}
           {selectedTab === "tso" && stats && (
             <div className="bg-white rounded-xl shadow-sm p-5">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">TSO Service Details</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">TSO Service Planning</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-purple-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-purple-600">{stats.tsoService.total}</p>
-                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-xs text-gray-500">Total TSO</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-yellow-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-yellow-600">{stats.tsoService.pending}</p>
                   <p className="text-xs text-gray-500">Pending</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-green-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-green-600">{stats.tsoService.approved}</p>
                   <p className="text-xs text-gray-500">Approved</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-indigo-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-indigo-600">{stats.tsoService.inProcess}</p>
                   <p className="text-xs text-gray-500">In Process</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Total Quantity</p>
                   <p className="text-xl font-semibold">{stats.tsoService.totalQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Completed Quantity</p>
                   <p className="text-xl font-semibold text-green-600">{stats.tsoService.completedQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Pending Quantity</p>
                   <p className="text-xl font-semibold text-yellow-600">{stats.tsoService.pendingQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Urgent TSOs</p>
                   <p className="text-xl font-semibold text-red-600">{stats.tsoService.urgent}</p>
                 </div>
@@ -676,39 +684,39 @@ export default function ProductionPlanningDashboard() {
           {/* Kanban Tab */}
           {selectedTab === "kanban" && stats && (
             <div className="bg-white rounded-xl shadow-sm p-5">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Kanban Details</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Kanban Planning</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-green-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-green-600">{stats.kanban.total}</p>
-                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-xs text-gray-500">Total Kanban</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-yellow-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-yellow-600">{stats.kanban.pending}</p>
                   <p className="text-xs text-gray-500">Pending</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-green-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-green-600">{stats.kanban.approved}</p>
                   <p className="text-xs text-gray-500">Approved</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <div className="bg-indigo-50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-indigo-600">{stats.kanban.inProcess}</p>
                   <p className="text-xs text-gray-500">In Process</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Total Quantity</p>
                   <p className="text-xl font-semibold">{stats.kanban.totalQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Completed Quantity</p>
                   <p className="text-xl font-semibold text-green-600">{stats.kanban.completedQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Pending Quantity</p>
                   <p className="text-xl font-semibold text-yellow-600">{stats.kanban.pendingQty}</p>
                 </div>
-                <div>
+                <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-sm text-gray-500">Urgent Kanban</p>
                   <p className="text-xl font-semibold text-red-600">{stats.kanban.urgent}</p>
                 </div>
