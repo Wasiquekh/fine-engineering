@@ -492,72 +492,147 @@ const handleJoOK = async (items: QcRow[]) => {
 };
 
   // ========== JO-WISE Not OK ==========
-  const handleJoNotOk = async (items: QcRow[]) => {
-    if (!items || items.length === 0) {
-      toast.error("No items to process.");
-      return;
-    }
+// ========== JO-WISE Not OK with QUANTITY SELECTION ==========
+const handleJoNotOk = async (items: QcRow[]) => {
+  if (!items || items.length === 0) {
+    toast.error("No items to process.");
+    return;
+  }
+
+  const firstItem = items[0];
+  const jobType = filterParam;
+  const jobId = firstItem?.job_id || firstItem?.job?.id;
   
-    const joNo = items[0]?.job?.jo_number || "Unknown";
-    const jobId = items[0]?.job_id || items[0]?.job?.id;
+  if (!jobId) {
+    toast.error("Job ID not found");
+    return;
+  }
   
-    if (!jobId) {
-      toast.error("Job ID not found");
-      return;
-    }
+  let displayIdentifier = null;
+  if (jobType === "TSO_SERVICE") {
+    displayIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
+  } else {
+    displayIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
+  }
   
-    const { value: reason } = await Swal.fire({
-      title: "Reason for Not OK",
-      html: `
-        <p>Marking JO: <strong>${joNo}</strong> as Not OK</p>
-        <p class="text-sm text-gray-600 mt-2">Items in this JO: ${items.length}</p>
-      `,
-      input: "textarea",
-      inputPlaceholder: "Enter the reason...",
-      showCancelButton: true,
-      confirmButtonText: "Submit",
-      confirmButtonColor: "#d33",
-      inputValidator: (value) => {
-        if (!value) return "Reason is required!";
-        return null;
-      },
-    });
+  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
   
-    if (!reason) return;
-  
-    const updated_by = storage.getUserId();
-  
-    if (!updated_by) {
-      toast.error("User not found");
-      return;
-    }
-  
-    let successCount = 0;
-    let failCount = 0;
-  
-    for (const item of items) {
-      try {
-        // ✅ FIXED: Use correct endpoint
-        await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
-          reason: reason,
-          updated_by: updated_by,
+  const { value: selectedData } = await Swal.fire({
+    title: `Select Items & Quantity to Mark as NOT OK`,
+    html: `
+      <div class="text-left">
+        <div class="bg-red-50 p-3 rounded-lg mb-4">
+          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span class="text-red-600">${displayIdentifier}</span></p>
+          <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
+        </div>
+        
+        <div class="mb-3">
+          <p class="text-sm font-semibold text-gray-700 mb-2">Select items and quantity to mark as NOT OK:</p>
+          <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+            ${items.map((item, idx) => `
+              <div class="item-row p-3 border-b border-gray-200 hover:bg-gray-100">
+                <div class="flex items-center gap-3 mb-2">
+                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" ${idx === 0 ? 'checked' : ''}>
+                  <div class="flex-1">
+                    <span class="font-mono font-medium">${item.serial_no || 'N/A'}</span>
+                    <span class="text-gray-500 ml-2">(Total Qty: ${item.quantity_no || 0})</span>
+                  </div>
+                </div>
+                <div class="ml-7">
+                  <label class="text-xs text-gray-600">Not OK Quantity:</label>
+                  <input type="number" class="notok-qty ml-2 px-2 py-1 border rounded text-sm w-24" data-id="${item.id}" value="${item.quantity_no}" min="1" max="${item.quantity_no}" ${idx === 0 ? '' : 'disabled'}>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Reason <span class="text-red-500">*</span></label>
+          <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason..." required></textarea>
+        </div>
+      </div>
+    `,
+    width: '650px',
+    showCancelButton: true,
+    confirmButtonText: `Mark as NOT OK`,
+    confirmButtonColor: "#d33",
+    didOpen: () => {
+      const checkboxes = document.querySelectorAll('.item-checkbox');
+      const qtyInputs = document.querySelectorAll('.notok-qty');
+      checkboxes.forEach((cb, index) => {
+        cb.addEventListener('change', (e) => {
+          const isChecked = (e.target as HTMLInputElement).checked;
+          const qtyInput = qtyInputs[index] as HTMLInputElement;
+          if (qtyInput) {
+            qtyInput.disabled = !isChecked;
+            if (!isChecked) qtyInput.value = '0';
+            else qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+          }
         });
-        successCount++;
-      } catch (error: any) {
-        console.error(`Failed to mark item ${item.serial_no}:`, error);
-        failCount++;
+      });
+    },
+    preConfirm: () => {
+      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+      if (checkboxes.length === 0) {
+        Swal.showValidationMessage("Please select at least one item");
+        return false;
       }
+      
+      const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
+      if (!reason?.trim()) {
+        Swal.showValidationMessage("Reason is required!");
+        return false;
+      }
+      
+      const selectedItems: any[] = [];
+      checkboxes.forEach((cb) => {
+        const itemId = (cb as HTMLInputElement).getAttribute('data-id');
+        const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
+        const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
+        let notOkQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
+        if (isNaN(notOkQty)) notOkQty = 0;
+        if (notOkQty > maxQty) notOkQty = maxQty;
+        if (notOkQty > 0) {
+          selectedItems.push({ assignment_id: itemId, quantity: notOkQty });
+        }
+      });
+      
+      if (selectedItems.length === 0) {
+        Swal.showValidationMessage("Please enter valid quantity for at least one item");
+        return false;
+      }
+      
+      return { items: selectedItems, reason: reason.trim() };
+    },
+  });
+
+  if (!selectedData) return;
+
+  const loadingToast = toast.loading(`Marking items as NOT OK...`);
+  const updated_by = storage.getUserId();
+
+  try {
+    const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
+      items: selectedData.items,
+      reason: selectedData.reason,
+      updated_by: updated_by,
+    });
+
+    toast.dismiss(loadingToast);
+    
+    if (response?.data?.success) {
+      toast.warning(response.data.message);
+      fetchData();
+      setSelectedJobNo(null);
+    } else {
+      toast.error(response?.data?.error || "Failed to mark as NOT OK");
     }
-  
-    if (successCount > 0) {
-      toast.success(`${successCount} item(s) from JO ${joNo} marked as Not OK`);
-    }
-    if (failCount > 0) {
-      toast.error(`Failed to mark ${failCount} item(s)`);
-    }
-  
-    fetchData();
-  };
+  } catch (error: any) {
+    toast.dismiss(loadingToast);
+    toast.error(error?.response?.data?.error || "Failed to mark as NOT OK");
+  }
+};
 
   // ========== JO-WISE Rework ==========
   const handleJoRework = async (items: QcRow[]) => {

@@ -1,3 +1,4 @@
+// app/section_material_movement/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -21,6 +22,7 @@ import {
   REVIEW_FOR_OPTIONS,
   TSO_SERVICE_CATEGORIES,
   KANBAN_CATEGORIES,
+  WORKER_OPTIONS,
 } from "./materialMovement.constants";
 
 const axiosProvider = new AxiosProvider();
@@ -43,7 +45,7 @@ export default function MaterialMovementPage() {
 
   const stageLower = stage.toLowerCase();
 
-  // Check stage types
+  // Check stage types - IMPORTANT: "cnc" matches database value
   const isLathe = stageLower === "lathe";
   const isCnc = stageLower === "cnc";
   const isvmc = stageLower === "vmc";
@@ -89,7 +91,10 @@ export default function MaterialMovementPage() {
   // Fetch categories
   const fetchCategories = async () => {
     try {
+      console.log("📁 Fetching categories for Material Movement...");
       const response = await axiosProvider.get("/fineengg_erp/system/categories");
+      console.log("Categories API Response:", response?.data);
+      
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -106,7 +111,7 @@ export default function MaterialMovementPage() {
         }
       });
 
-      // Add hardcoded categories from your image
+      // Add hardcoded categories
       const hardcodedCategories = ["SFR", "ANFD", "NON STD", "AD", "MD"];
       hardcodedCategories.forEach(cat => {
         if (!uniqueMap.has(cat)) {
@@ -121,11 +126,10 @@ export default function MaterialMovementPage() {
         a.label.localeCompare(b.label)
       );
       
-      console.log("Fetched categories:", formattedCats);
+      console.log("✅ Fetched categories:", formattedCats);
       setCategories(formattedCats);
     } catch (error) {
       console.error("Error fetching categories:", error);
-      // Fallback to hardcoded categories
       const fallbackCategories = ["SFR", "ANFD", "NON STD", "AD", "MD"].map(cat => ({
         value: cat,
         label: cat,
@@ -147,31 +151,40 @@ export default function MaterialMovementPage() {
 
     if (search) params.q = search;
 
+    console.log("🔍 Stage selected:", stage, "stageLower:", stageLower);
+    console.log("🔍 isCnc:", isCnc, "isLathe:", isLathe);
+
     // ============= STAGE BASED FILTERS =============
     
-    // Machine stages - with exact database values
+    // Lathe
     if (isLathe) {
       params.status = "machine";
       params.machine_category = "Lathe";
       if (size) params.machine_size = size;
       if (machineCode) params.machine_code = machineCode;
+      console.log("🔧 Lathe params:", params);
     }
+    // CNC - FIXED: Use "cnc" (lowercase) to match database
     else if (isCnc) {
       params.status = "machine";
-      params.machine_category = "cnc"; // Database has lowercase "cnc"
+      params.machine_category = "cnc"; // ✅ This matches database value
       if (size) params.machine_size = size;
       if (machineCode) params.machine_code = machineCode;
+      console.log("🔧 CNC params:", params);
     }
     else if (isvmc) {
       params.status = "machine";
       params.machine_category = "vmc"; // Database has lowercase "vmc"
       if (machineCode) params.machine_code = machineCode;
+      console.log("🔧 UMC params:", params);
     }
+    // Milling
     else if (isMilling) {
       params.status = "machine";
       params.machine_category = "Milling";
       if (machineCode) params.machine_code = machineCode;
     }
+    // Drilling
     else if (isDrilling) {
       params.status = "machine";
       params.machine_category = "Drilling";
@@ -230,7 +243,7 @@ export default function MaterialMovementPage() {
       delete params.status;
     }
 
-    console.log("🚀 API Params being sent:", JSON.stringify(params, null, 2));
+    console.log("🚀 Final API Params:", JSON.stringify(params, null, 2));
     return params;
   };
 
@@ -240,17 +253,22 @@ export default function MaterialMovementPage() {
       setLoading(true);
       const params = buildParams(pageNumber);
       
-      console.log("📡 Sending request with params:", params);
+      console.log("📡 Sending request to API...");
       const resp = await getMaterialMovement(params);
       console.log("📡 Response received:", resp);
       
-      setRows(resp.data || []);
-      setPage(resp.pagination.page);
-      setTotal(resp.pagination.total);
-      setTotalPages(resp.pagination.totalPages);
+      if (resp && resp.data) {
+        setRows(resp.data || []);
+        setPage(resp.pagination?.page || 1);
+        setTotal(resp.pagination?.total || 0);
+        setTotalPages(resp.pagination?.totalPages || 1);
+      } else {
+        setRows([]);
+      }
     } catch (error) {
       toast.error("Failed to load data");
       console.error("❌ Fetch error:", error);
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -271,7 +289,9 @@ export default function MaterialMovementPage() {
 
   // Reset filters
   const handleStageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setStage(e.target.value);
+    const newStage = e.target.value;
+    console.log("📌 Stage changed to:", newStage);
+    setStage(newStage);
     setSize("");
     setMachineCode("");
     setDocType("");
@@ -299,6 +319,8 @@ export default function MaterialMovementPage() {
       case 'qc-welding':
       case 'qc-vendor':
         return 'bg-purple-100 text-purple-800';
+      case 'machine':
+        return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-blue-100 text-blue-800';
     }
@@ -507,22 +529,22 @@ export default function MaterialMovementPage() {
 
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border">{r.jo_no}</td>
+                      <td className="p-3 border">{r.jo_no || "-"}</td>
                       <td className="p-3 border">{r.job_no || r.tso_no || "-"}</td>
-                      <td className="p-3 border">{r.serial_no}</td>
-                      <td className="p-3 border">{r.item_description}</td>
-                      <td className="p-3 border">{r.item_no}</td>
-                      <td className="p-3 border">{r.quantity_no}</td>
+                      <td className="p-3 border">{r.serial_no || "-"}</td>
+                      <td className="p-3 border">{r.item_description || "-"}</td>
+                      <td className="p-3 border">{r.item_no || "-"}</td>
+                      <td className="p-3 border font-semibold">{r.quantity_no || 0}</td>
                       <td className="p-3 border">
                         <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(r.status)}`}>
-                          {r.status}
+                          {r.status || "-"}
                         </span>
                       </td>
-                      <td className="p-3 border">{r.machine_category}</td>
-                      <td className="p-3 border">{r.machine_size}</td>
-                      <td className="p-3 border">{r.machine_code}</td>
-                      <td className="p-3 border">{r.worker_name}</td>
-                      <td className="p-3 border">{r.vendor_name}</td>
+                      <td className="p-3 border">{r.machine_category || "-"}</td>
+                      <td className="p-3 border">{r.machine_size || "-"}</td>
+                      <td className="p-3 border">{r.machine_code || "-"}</td>
+                      <td className="p-3 border">{r.worker_name || "-"}</td>
+                      <td className="p-3 border">{r.vendor_name || "-"}</td>
                       <td className="p-3 border">
                         {r.review_for && r.review_for !== "-" ? (
                           <span className={`px-2 py-1 rounded-full text-xs ${
@@ -532,12 +554,10 @@ export default function MaterialMovementPage() {
                           }`}>
                             {r.review_for}
                           </span>
-                        ) : (
-                          "-"
-                        )}
+                        ) : "-"}
                       </td>
-                      <td className="p-3 border">{r.job_type}</td>
-                      <td className="p-3 border">{r.job_category}</td>
+                      <td className="p-3 border">{r.job_type || "-"}</td>
+                      <td className="p-3 border">{r.job_category || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

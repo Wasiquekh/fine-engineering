@@ -530,49 +530,124 @@ export default function QcVendorPage() {
     }
   };
 
-  const handleJoNotOk = async (items: Row[]) => {
-    if (!items || items.length === 0) return;
+// Add this function in QcVendorPage
+const handleJoNotOk = async (items: Row[]) => {
+  if (!items || items.length === 0) {
+    toast.error("No items to process.");
+    return;
+  }
 
-    const { value: reason, isConfirmed } = await Swal.fire({
-      title: "Mark JO as Not OK",
-      html: `
-        <p>Marking <strong>${items.length}</strong> item(s) as Not OK</p>
-        <p class="text-sm text-gray-600 mt-2">This will mark all items in this JO as Not OK</p>
-      `,
-      input: "textarea",
-      inputPlaceholder: "Enter reason for Not OK...",
-      showCancelButton: true,
-      confirmButtonText: "Yes, Mark Not OK",
-      confirmButtonColor: "#f59e0b",
-      inputValidator: (value) => {
-        if (!value) return "Reason is required!";
-        return null;
-      },
+  const firstItem = items[0];
+  const jobId = getJobId(firstItem);
+  const jobType = firstItem.job_type || "JOB_SERVICE";
+  
+  let displayIdentifier = jobType === "TSO_SERVICE" ? firstItem.tso_no : 
+                         jobType === "KANBAN" ? firstItem.jo_no : 
+                         firstItem.job_no;
+  
+  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+  
+  const { value: selectedData } = await Swal.fire({
+    title: `Select Items & Quantity to Mark as NOT OK (Vendor)`,
+    html: `
+      <div class="text-left">
+        <div class="bg-red-50 p-3 rounded-lg mb-4">
+          <p class="font-semibold">Identifier: <span class="text-red-600">${displayIdentifier}</span></p>
+          <p class="text-sm text-gray-600">Total Quantity: <span class="font-bold">${totalQuantity}</span></p>
+        </div>
+        
+        <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50 mb-3">
+          ${items.map((item, idx) => `
+            <div class="item-row p-3 border-b">
+              <div class="flex items-center gap-3 mb-2">
+                <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" ${idx === 0 ? 'checked' : ''}>
+                <span class="font-mono">${item.serial_no || 'N/A'}</span>
+                <span>(Qty: ${item.quantity_no || 0})</span>
+              </div>
+              <div class="ml-7">
+                <input type="number" class="notok-qty px-2 py-1 border rounded w-24" data-id="${item.id}" value="${item.quantity_no}" min="1" max="${item.quantity_no}" ${idx === 0 ? '' : 'disabled'}>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        
+        <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason..." required></textarea>
+      </div>
+    `,
+    width: '650px',
+    showCancelButton: true,
+    confirmButtonText: `Mark as NOT OK`,
+    confirmButtonColor: "#d33",
+    didOpen: () => {
+      const checkboxes = document.querySelectorAll('.item-checkbox');
+      const qtyInputs = document.querySelectorAll('.notok-qty');
+      checkboxes.forEach((cb, index) => {
+        cb.addEventListener('change', (e) => {
+          const checked = (e.target as HTMLInputElement).checked;
+          const qtyInput = qtyInputs[index] as HTMLInputElement;
+          if (qtyInput) {
+            qtyInput.disabled = !checked;
+            if (!checked) qtyInput.value = '0';
+            else qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+          }
+        });
+      });
+    },
+    preConfirm: () => {
+      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+      const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
+      if (!reason?.trim()) {
+        Swal.showValidationMessage("Reason is required!");
+        return false;
+      }
+      
+      const selectedItems: any[] = [];
+      checkboxes.forEach((cb) => {
+        const itemId = (cb as HTMLInputElement).getAttribute('data-id');
+        const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
+        const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
+        let qty = qtyInput ? parseInt(qtyInput.value) : maxQty;
+        if (qty > 0 && qty <= maxQty) {
+          selectedItems.push({ assignment_id: itemId, quantity: qty });
+        }
+      });
+      
+      if (selectedItems.length === 0) {
+        Swal.showValidationMessage("Please select items with valid quantity");
+        return false;
+      }
+      
+      return { items: selectedItems, reason: reason.trim() };
+    },
+  });
+
+  if (!selectedData) return;
+
+  const updated_by = storage.getUserId();
+  const loadingToast = toast.loading("Processing...");
+
+  try {
+    const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
+      items: selectedData.items,
+      reason: selectedData.reason,
+      updated_by: updated_by,
+      review_for: "vendor",
     });
 
-    if (!isConfirmed || !reason) return;
-
-    const job_id = getJobId(items[0]);
-    const updated_by = storage.getUserId();
-
-    if (!job_id || !updated_by) {
-      toast.error("Job or User not found");
-      return;
-    }
-
-    try {
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
-        reason,
-        updated_by,
-        review_for: REVIEW_FOR,
-      });
-
-      toast.success(`${items.length} item(s) marked as Not OK`);
+    toast.dismiss(loadingToast);
+    
+    if (response?.data?.success) {
+      toast.warning(response.data.message);
       fetchData();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to mark as Not OK");
+      setSelectedJobNo(null);
+    } else {
+      toast.error(response?.data?.error || "Failed");
     }
-  };
+  } catch (error: any) {
+    toast.dismiss(loadingToast);
+    toast.error(error?.response?.data?.error || "Failed");
+  }
+};
 
   const handleJoRework = async (items: Row[]) => {
     if (!items || items.length === 0) return;
