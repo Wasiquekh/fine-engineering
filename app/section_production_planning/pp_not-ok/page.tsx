@@ -58,10 +58,11 @@ type QcRow = {
     tso_no?: string | null;
     job_category?: string | null;
     client_name?: string | null;
+    reason?: string | null;
   } | null;
 };
 
-export default function QcMainPage() {
+export default function NotokMainPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
@@ -174,7 +175,6 @@ export default function QcMainPage() {
     }
   };
 
-  // Rework function using reject endpoint (rework = reject)
   const handleRework = async (item: QcRow) => {
     if (!item) return;
 
@@ -300,6 +300,7 @@ export default function QcMainPage() {
         uniqueJoCount: number;
         jobCategory: string;
         assigningDate: string;
+        reason: string;
       }
     > = {};
 
@@ -329,12 +330,15 @@ export default function QcMainPage() {
           : "N/A";
 
       const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
+      
+      const reason = items.length > 0 ? (items[0].job?.reason || "-") : "-";
 
       summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
+        reason,
       };
     });
 
@@ -463,6 +467,7 @@ export default function QcMainPage() {
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
                       <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
@@ -470,24 +475,22 @@ export default function QcMainPage() {
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No JO data found</p>
                         </td>
                       </tr>
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
                         <Fragment key={jo}>
-                          {/* JO Group Header */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
                               JO: {jo}
                             </td>
                           </tr>
 
-                          {/* Individual Items with Actions */}
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">—</td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
@@ -496,6 +499,11 @@ export default function QcMainPage() {
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <span className="text-red-600 text-xs font-medium">
+                                  {item.job?.reason || "-"}
+                                </span>
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 <div className="flex items-center gap-1 flex-wrap">
                                   <button
@@ -557,19 +565,20 @@ export default function QcMainPage() {
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
@@ -597,6 +606,9 @@ export default function QcMainPage() {
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-red-600 text-xs font-medium">{summary.reason}</p>
                             </td>
                           </tr>
                         );

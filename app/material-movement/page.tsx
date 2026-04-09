@@ -12,7 +12,7 @@ import {
   STAGE_OPTIONS,
   SIZE_OPTIONS,
   MACHINE_CODES,
-  vmc_CODES,
+  VMC_CODES, // Changed from UMC_CODES
   MILLING_CODES,
   DRILLING_CODES,
   VENDOR_OPTIONS,
@@ -45,10 +45,10 @@ export default function MaterialMovementPage() {
 
   const stageLower = stage.toLowerCase();
 
-  // Check stage types - IMPORTANT: "cnc" matches database value
+  // Check stage types - UPDATED: "vmc" instead of "umc"
   const isLathe = stageLower === "lathe";
   const isCnc = stageLower === "cnc";
-  const isvmc = stageLower === "vmc";
+  const isVmc = stageLower === "vmc"; // Changed from isUmc
   const isMilling = stageLower === "milling";
   const isDrilling = stageLower === "drilling";
   const isVendor = stageLower === "vendor";
@@ -66,12 +66,12 @@ export default function MaterialMovementPage() {
     return [];
   };
 
-  // Get machine code options based on stage and size
+  // Get machine code options based on stage and size - UPDATED
   const getMachineCodeOptions = () => {
     if (isLatheOrCnc && size) {
       return MACHINE_CODES[size as keyof typeof MACHINE_CODES] || [];
     }
-    if (isvmc) return vmc_CODES;
+    if (isVmc) return VMC_CODES; // Changed from UMC_CODES
     if (isMilling) return MILLING_CODES;
     if (isDrilling) return DRILLING_CODES;
     if (isVendor) return VENDOR_OPTIONS;
@@ -142,7 +142,18 @@ export default function MaterialMovementPage() {
     fetchCategories();
   }, []);
 
-  // Build API parameters - FIXED for CNC and vmc
+  // Format date function
+  const formatDate = (dateString: string) => {
+    if (!dateString || dateString === "-") return "-";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Build API parameters - FIXED for CNC
   const buildParams = (pageNumber: number) => {
     const params: any = {
       page: pageNumber,
@@ -152,7 +163,7 @@ export default function MaterialMovementPage() {
     if (search) params.q = search;
 
     console.log("🔍 Stage selected:", stage, "stageLower:", stageLower);
-    console.log("🔍 isCnc:", isCnc, "isLathe:", isLathe);
+    console.log("🔍 isCnc:", isCnc, "isLathe:", isLathe, "isVmc:", isVmc);
 
     // ============= STAGE BASED FILTERS =============
     
@@ -172,11 +183,12 @@ export default function MaterialMovementPage() {
       if (machineCode) params.machine_code = machineCode;
       console.log("🔧 CNC params:", params);
     }
-    else if (isvmc) {
+    // VMC - Changed from UMC
+    else if (isVmc) {
       params.status = "machine";
-      params.machine_category = "vmc"; // Database has lowercase "vmc"
+      params.machine_category = "vmc"; // ✅ Changed from "umc" to "vmc"
       if (machineCode) params.machine_code = machineCode;
-      console.log("🔧 UMC params:", params);
+      console.log("🔧 VMC params:", params);
     }
     // Milling
     else if (isMilling) {
@@ -262,6 +274,12 @@ export default function MaterialMovementPage() {
         setPage(resp.pagination?.page || 1);
         setTotal(resp.pagination?.total || 0);
         setTotalPages(resp.pagination?.totalPages || 1);
+        
+        // Log CNC records count for debugging
+        const cncRecords = resp.data.filter((r: any) => 
+          r.machine_category?.toLowerCase() === "cnc"
+        );
+        console.log(`📊 Found ${cncRecords.length} CNC records`);
       } else {
         setRows([]);
       }
@@ -342,7 +360,7 @@ export default function MaterialMovementPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="border pl-10 h-10 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search JO / Serial / Machine / Worker / Vendor / Job No / TSO No"
+                placeholder="Search JO / Serial / Machine / Worker / Vendor / Job No / TSO No / Chalan No"
               />
             </div>
 
@@ -384,7 +402,7 @@ export default function MaterialMovementPage() {
                 >
                   <option value="">
                     {isLatheOrCnc ? "Select Machine Code" : 
-                     isvmc ? "Select vmc Code" :
+                     isVmc ? "Select VMC Code" : // Changed from UMC
                      isMilling ? "Select Milling Code" :
                      isDrilling ? "Select Drilling Code" :
                      isVendor ? "Select Vendor Option" :
@@ -485,13 +503,16 @@ export default function MaterialMovementPage() {
               </button>
             </div>
 
-            {/* Results Table */}
+            {/* Results Table - Added Chalan columns */}
             <div className="overflow-auto">
               <table className="w-full text-sm border-collapse">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="p-3 text-left border">JO No</th>
                     <th className="p-3 text-left border">Job/TSO No</th>
+                    <th className="p-3 text-left border">Chalan No</th>
+                    <th className="p-3 text-left border">Mtl Challan No</th>
+                    <th className="p-3 text-left border">Chalan Date</th>
                     <th className="p-3 text-left border">Serial No</th>
                     <th className="p-3 text-left border">Item Description</th>
                     <th className="p-3 text-left border">Item No</th>
@@ -505,12 +526,13 @@ export default function MaterialMovementPage() {
                     <th className="p-3 text-left border">Review For</th>
                     <th className="p-3 text-left border">Job Type</th>
                     <th className="p-3 text-left border">Job Category</th>
+                    <th className="p-3 text-left border">Client Name</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={15} className="text-center p-6 border">
+                      <td colSpan={19} className="text-center p-6 border">
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
                           Loading...
@@ -521,7 +543,7 @@ export default function MaterialMovementPage() {
 
                   {!loading && rows.length === 0 && (
                     <tr>
-                      <td colSpan={15} className="text-center p-6 text-gray-500 border">
+                      <td colSpan={19} className="text-center p-6 text-gray-500 border">
                         No Data Found
                       </td>
                     </tr>
@@ -529,8 +551,16 @@ export default function MaterialMovementPage() {
 
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border">{r.jo_no || "-"}</td>
+                      <td className="p-3 border font-medium">{r.jo_no || "-"}</td>
                       <td className="p-3 border">{r.job_no || r.tso_no || "-"}</td>
+                      <td className="p-3 border">
+                        <span className="font-bold text-blue-600">
+                          {r.chalan_no !== "-" ? r.chalan_no : 
+                           r.mtl_challan_no !== "-" ? r.mtl_challan_no : "-"}
+                        </span>
+                      </td>
+                      <td className="p-3 border">{r.mtl_challan_no || "-"}</td>
+                      <td className="p-3 border">{formatDate(r.chalan_date)}</td>
                       <td className="p-3 border">{r.serial_no || "-"}</td>
                       <td className="p-3 border">{r.item_description || "-"}</td>
                       <td className="p-3 border">{r.item_no || "-"}</td>
@@ -558,6 +588,7 @@ export default function MaterialMovementPage() {
                       </td>
                       <td className="p-3 border">{r.job_type || "-"}</td>
                       <td className="p-3 border">{r.job_category || "-"}</td>
+                      <td className="p-3 border">{r.client_name || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

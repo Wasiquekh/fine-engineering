@@ -266,7 +266,7 @@ export default function MainDashboardPage() {
   const machineCategories = [
     { name: "Lathe", icon: FiTool, color: "bg-blue-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "Lathe")?.count || 0 },
     { name: "CNC", icon: FiSettings, color: "bg-purple-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "CNC")?.count || 0 },
-    { name: "VMC", icon: FiCpu, color: "bg-green-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "VMC")?.count || 0 },
+    { name: "UMC", icon: FiCpu, color: "bg-green-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "UMC")?.count || 0 },
     { name: "Milling", icon: FiGrid, color: "bg-orange-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "Milling")?.count || 0 },
     { name: "Drilling", icon: FiActivity, color: "bg-red-500", jobs: stats?.assignments.assignments_by_machine?.find(m => m.machine_category === "Drilling")?.count || 0 },
   ];
