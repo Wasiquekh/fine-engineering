@@ -155,12 +155,13 @@ export default function ProductionPlanningDashboard() {
       console.log("📊 Fetching Production Planning Dashboard data...");
       
       // Fetch dashboard stats
-      const response = await axiosProvider.get("/fineengg_erp/producitondashboard/production-planning/dashboard-stats", {
-        params: {
-          client: selectedClient !== "all" ? selectedClient : undefined,
-          assign_to: selectedAssignee !== "all" ? selectedAssignee : undefined,
-        }
-      });
+      const urlParams = new URLSearchParams();
+      if (selectedClient !== "all") urlParams.append("client", selectedClient);
+      if (selectedAssignee !== "all") urlParams.append("assign_to", selectedAssignee);
+
+      const queryString = urlParams.toString();
+      const url = `/fineengg_erp/producitondashboard/production-planning/dashboard-stats${queryString ? `?${queryString}` : ""}`;
+      const response = await axiosProvider.get(url);
       
       if (response.data?.success) {
         setStats(response.data.data);
