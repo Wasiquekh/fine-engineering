@@ -25,20 +25,19 @@ type Row = {
   status?: string | null;
   job_id?: string | null;
   jobId?: string | null;
-  machine_category?: string | null;
-  machine_size?: string | null;
-  machine_code?: string | null;
   job_type?: string | null;
   tso_no?: string | null;
   job_category?: string | null;
   worker_name?: string | null;
   job_no?: string | null;
-  job?: { 
+  job?: {
     id?: string | null;
     job_no?: string | null;
     tso_no?: string | null;
     job_category?: string | null;
     job_type?: string | null;
+    item_description?: string | null;
+    moc?: string | null;
   } | null;
 };
 
@@ -50,8 +49,11 @@ export default function QcWeldingPage() {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
-  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
-  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [jobServiceCategoryFilter, setJobServiceCategoryFilter] =
+    useState("ALL");
+  const [categories, setCategories] = useState<
+    { value: string; label: string }[]
+  >([]);
 
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
@@ -65,11 +67,14 @@ export default function QcWeldingPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
-        params: {
-          ...(client ? { client_name: client } : {}),
-        },
-      } as any);
+      const response = await axiosProvider.get(
+        "/fineengg_erp/system/categories",
+        {
+          params: {
+            ...(client ? { client_name: client } : {}),
+          },
+        } as any
+      );
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -100,21 +105,24 @@ export default function QcWeldingPage() {
       let allData: Row[] = [];
 
       for (const jobType of jobTypes) {
-        const res = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
-          params: {
-            status,
-            job_type: jobType,
-            ...(client ? { client_name: client } : {}),
-          },
-        } as any);
+        const res = await axiosProvider.get(
+          "/fineengg_erp/system/assign-to-worker",
+          {
+            params: {
+              status,
+              job_type: jobType,
+              ...(client ? { client_name: client } : {}),
+            },
+          } as any
+        );
 
         const fetchedData = Array.isArray(res?.data?.data) ? res.data.data : [];
-        
+
         const dataWithJobType = fetchedData.map((item: any) => ({
           ...item,
-          job_type: jobType
+          job_type: jobType,
         }));
-        
+
         allData = [...allData, ...dataWithJobType];
       }
 
@@ -148,11 +156,11 @@ export default function QcWeldingPage() {
 
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
-    
+
     filteredData.forEach((item) => {
       const jobType = item.job_type || item.job?.job_type;
       let identifier: string | null | undefined;
-      
+
       if (jobType === "TSO_SERVICE") {
         identifier = item.tso_no || item.job?.tso_no;
       } else if (jobType === "KANBAN") {
@@ -160,10 +168,10 @@ export default function QcWeldingPage() {
       } else {
         identifier = item.job_no || item.job?.job_no;
       }
-      
+
       if (identifier) ids.add(identifier);
     });
-    
+
     return Array.from(ids);
   }, [filteredData]);
 
@@ -171,7 +179,7 @@ export default function QcWeldingPage() {
     return filteredData.filter((item) => {
       const jobType = item.job_type || item.job?.job_type;
       let itemIdentifier: string | null | undefined;
-      
+
       if (jobType === "TSO_SERVICE") {
         itemIdentifier = item.tso_no || item.job?.tso_no;
       } else if (jobType === "KANBAN") {
@@ -179,7 +187,7 @@ export default function QcWeldingPage() {
       } else {
         itemIdentifier = item.job_no || item.job?.job_no;
       }
-      
+
       return itemIdentifier === identifier;
     });
   };
@@ -212,23 +220,30 @@ export default function QcWeldingPage() {
 
     jobIdentifiers.forEach((identifier) => {
       const items = getItemsForIdentifier(identifier);
-      
+
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
         0
       );
 
-      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
+      const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown"))
+        .size;
 
-      const jobCategory = items.length > 0
-        ? items[0].job_category || items[0].job?.job_category || "N/A"
-        : "N/A";
+      const jobCategory =
+        items.length > 0
+          ? items[0].job_category || items[0].job?.job_category || "N/A"
+          : "N/A";
 
-      const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
-      
-      const workerName = items.length > 0 ? items[0].worker_name || "N/A" : "N/A";
-      
-      const jobType = items.length > 0 ? items[0].job_type || items[0].job?.job_type || "JOB_SERVICE" : "JOB_SERVICE";
+      const assigningDate =
+        items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
+
+      const workerName =
+        items.length > 0 ? items[0].worker_name || "N/A" : "N/A";
+
+      const jobType =
+        items.length > 0
+          ? items[0].job_type || items[0].job?.job_type || "JOB_SERVICE"
+          : "JOB_SERVICE";
 
       summary[identifier] = {
         totalQty,
@@ -251,10 +266,16 @@ export default function QcWeldingPage() {
       title: "Send for Rework",
       html: `
         <div class="text-left">
-          <p class="mb-2"><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
-          <p class="mb-2"><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
-          <p class="mb-2"><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
-          <p class="mb-4"><strong>Quantity:</strong> ${item.quantity_no || 'N/A'}</p>
+          <p class="mb-2"><strong>Serial No:</strong> ${
+            item.serial_no || "N/A"
+          }</p>
+          <p class="mb-2"><strong>JO No:</strong> ${item.jo_no || "N/A"}</p>
+          <p class="mb-2"><strong>Job Type:</strong> ${
+            item.job_type || item.job?.job_type || "N/A"
+          }</p>
+          <p class="mb-4"><strong>Quantity:</strong> ${
+            item.quantity_no || "N/A"
+          }</p>
           <p class="text-sm text-gray-600">This item will be sent back to production with status "machine"</p>
         </div>
       `,
@@ -279,9 +300,12 @@ export default function QcWeldingPage() {
     }
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
-        updated_by,
-      });
+      await axiosProvider.post(
+        `/fineengg_erp/system/assign-to-worker/${item.id}/reject`,
+        {
+          updated_by,
+        }
+      );
 
       toast.success(`Item ${item.serial_no} sent for rework`);
       fetchData();
@@ -290,32 +314,67 @@ export default function QcWeldingPage() {
     }
   };
 
-  // ========== SERIAL-WISE NOT OK ==========
+  // ========== SERIAL-WISE NOT OK with QUANTITY (Like QC Vendor) ==========
   const handleSerialNotOk = async (item: Row) => {
     if (!item) return;
 
-    const { value: reason, isConfirmed } = await Swal.fire({
-      title: "Mark as Not OK",
+    const maxQty = Number(item.quantity_no ?? 0);
+
+    const { value: result, isConfirmed } = await Swal.fire({
+      title: `Mark as NOT OK - ${item.serial_no || "N/A"}`,
       html: `
         <div class="text-left">
-          <p class="mb-2"><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
-          <p class="mb-2"><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
-          <p class="mb-2"><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
-          <p class="mb-4"><strong>Quantity:</strong> ${item.quantity_no || 'N/A'}</p>
+          <div class="bg-red-50 p-3 rounded-lg mb-4">
+            <p class="font-semibold">Serial No: <span class="text-red-600">${
+              item.serial_no || "N/A"
+            }</span></p>
+            <p class="text-sm text-gray-600">JO No: ${item.jo_no || "N/A"}</p>
+            <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${maxQty}</span></p>
+          </div>
+          
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Not OK Quantity:</label>
+            <input id="notok_qty" type="number" class="swal2-input w-full" value="${maxQty}" min="1" max="${maxQty}" required />
+            <p class="text-xs text-gray-500 mt-1">Enter quantity to mark as NOT OK (remaining will stay in-${REVIEW_FOR})</p>
+          </div>
+          
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Reason <span class="text-red-500">*</span></label>
+            <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason for NOT OK..." required></textarea>
+          </div>
         </div>
       `,
-      input: "textarea",
-      inputPlaceholder: "Enter reason for Not OK...",
+      width: "550px",
       showCancelButton: true,
-      confirmButtonText: "Yes, Mark Not OK",
-      confirmButtonColor: "#f59e0b",
-      inputValidator: (value) => {
-        if (!value) return "Reason is required!";
-        return null;
+      confirmButtonText: "Mark as NOT OK",
+      confirmButtonColor: "#d33",
+      preConfirm: () => {
+        const notOkQty = parseInt(
+          (document.getElementById("notok_qty") as HTMLInputElement)?.value ||
+            "0"
+        );
+        const reason = (
+          document.getElementById("reason") as HTMLTextAreaElement
+        )?.value;
+
+        if (!notOkQty || notOkQty <= 0) {
+          Swal.showValidationMessage("Please enter valid quantity");
+          return false;
+        }
+        if (notOkQty > maxQty) {
+          Swal.showValidationMessage(`Quantity cannot exceed ${maxQty}`);
+          return false;
+        }
+        if (!reason || reason.trim() === "") {
+          Swal.showValidationMessage("Reason is required!");
+          return false;
+        }
+
+        return { notOkQty, reason: reason.trim() };
       },
     });
 
-    if (!isConfirmed || !reason) return;
+    if (!isConfirmed || !result) return;
 
     const job_id = getJobId(item);
     const updated_by = storage.getUserId();
@@ -325,17 +384,56 @@ export default function QcWeldingPage() {
       return;
     }
 
-    try {
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/not-ok`, {
-        reason,
-        updated_by,
-        review_for: REVIEW_FOR,
-      });
+    const loadingToast = toast.loading(
+      `Marking ${item.serial_no} as NOT OK...`
+    );
 
-      toast.success(`Item ${item.serial_no} marked as Not OK`);
-      fetchData();
+    try {
+      const response = await axiosProvider.post(
+        `/fineengg_erp/system/jobs/${job_id}/not-ok`,
+        {
+          items: [
+            {
+              assignment_id: item.id,
+              quantity: result.notOkQty,
+            },
+          ],
+          reason: result.reason,
+          updated_by: updated_by,
+          review_for: REVIEW_FOR,
+        }
+      );
+
+      toast.dismiss(loadingToast);
+
+      if (response?.data?.success) {
+        const remainingQty = maxQty - result.notOkQty;
+        toast.warning(
+          <div>
+            <div className="font-semibold text-red-600">
+              ⚠️ Marked as NOT OK!
+            </div>
+            <div className="text-sm mt-1">
+              Serial: <span className="font-mono">{item.serial_no}</span>
+            </div>
+            <div className="text-sm">
+              Not OK Qty: <span className="font-bold">{result.notOkQty}</span>
+            </div>
+            {remainingQty > 0 && (
+              <div className="text-sm text-orange-600">
+                Remaining: {remainingQty} quantity still in-${REVIEW_FOR}
+              </div>
+            )}
+          </div>,
+          { autoClose: 5000 }
+        );
+        fetchData();
+      } else {
+        toast.error(response?.data?.error || "Failed to mark as NOT OK");
+      }
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || "Failed to mark as Not OK");
+      toast.dismiss(loadingToast);
+      toast.error(error?.response?.data?.error || "Failed to mark as NOT OK");
     }
   };
 
@@ -355,37 +453,51 @@ export default function QcWeldingPage() {
       title: "QC Welding • Outgoing",
       html: `
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
-          <p><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
-          <p><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
-          <p><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
+          <p><strong>Serial No:</strong> ${item.serial_no || "N/A"}</p>
+          <p><strong>JO No:</strong> ${item.jo_no || "N/A"}</p>
           <p><strong>Pending Qty:</strong> <b>${maxQty}</b></p>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
         <input id="qc_quantity" type="number" class="swal2-input" placeholder="QC Quantity (<= ${maxQty})" />
+        <input id="gatepass_no" type="text" class="swal2-input" placeholder="Gatepass No" />
       `,
       showCancelButton: true,
       confirmButtonText: "Submit Outgoing",
       preConfirm: () => {
-        const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
+        const qc_date = (document.getElementById("qc_date") as HTMLInputElement)
+          ?.value;
         const qc_quantity = Number(
-          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
+          (document.getElementById("qc_quantity") as HTMLInputElement)?.value ||
+            0
         );
+        const gatepass_no = (
+          document.getElementById("gatepass_no") as HTMLInputElement
+        )?.value?.trim();
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
-        if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
-        if (qc_quantity > maxQty) return Swal.showValidationMessage(`QC Quantity cannot exceed ${maxQty}`);
+        if (!qc_quantity || qc_quantity <= 0)
+          return Swal.showValidationMessage("QC Quantity required");
+        if (qc_quantity > maxQty)
+          return Swal.showValidationMessage(
+            `QC Quantity cannot exceed ${maxQty}`
+          );
+        if (!gatepass_no)
+          return Swal.showValidationMessage("Gatepass No required");
 
-        return { qc_date, qc_quantity };
+        return { qc_date, qc_quantity, gatepass_no };
       },
     });
 
     if (!isConfirmed || !value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-outgoing`, {
-        ...value,
-        review_for: REVIEW_FOR,
-      });
+      await axiosProvider.post(
+        `/fineengg_erp/system/assign-to-worker/${item.id}/qc-outgoing`,
+        {
+          ...value,
+          review_for: REVIEW_FOR,
+        }
+      );
 
       toast.success(
         value.qc_quantity < maxQty
@@ -405,9 +517,8 @@ export default function QcWeldingPage() {
       title: "QC Welding • Incoming",
       html: `
         <div style="text-align:left; font-size:13px; margin-bottom:8px;">
-          <p><strong>Serial No:</strong> ${item.serial_no || 'N/A'}</p>
-          <p><strong>JO No:</strong> ${item.jo_no || 'N/A'}</p>
-          <p><strong>Job Type:</strong> ${item.job_type || item.job?.job_type || 'N/A'}</p>
+          <p><strong>Serial No:</strong> ${item.serial_no || "N/A"}</p>
+          <p><strong>JO No:</strong> ${item.jo_no || "N/A"}</p>
           <p><strong>Pending Qty:</strong> <b>${maxQty}</b></p>
         </div>
         <input id="qc_date" type="date" class="swal2-input" />
@@ -416,14 +527,20 @@ export default function QcWeldingPage() {
       showCancelButton: true,
       confirmButtonText: "Submit Incoming",
       preConfirm: () => {
-        const qc_date = (document.getElementById("qc_date") as HTMLInputElement)?.value;
+        const qc_date = (document.getElementById("qc_date") as HTMLInputElement)
+          ?.value;
         const qc_quantity = Number(
-          (document.getElementById("qc_quantity") as HTMLInputElement)?.value || 0
+          (document.getElementById("qc_quantity") as HTMLInputElement)?.value ||
+            0
         );
 
         if (!qc_date) return Swal.showValidationMessage("QC Date required");
-        if (!qc_quantity || qc_quantity <= 0) return Swal.showValidationMessage("QC Quantity required");
-        if (qc_quantity > maxQty) return Swal.showValidationMessage(`Incoming qty cannot exceed ${maxQty}`);
+        if (!qc_quantity || qc_quantity <= 0)
+          return Swal.showValidationMessage("QC Quantity required");
+        if (qc_quantity > maxQty)
+          return Swal.showValidationMessage(
+            `Incoming qty cannot exceed ${maxQty}`
+          );
 
         return { qc_date, qc_quantity };
       },
@@ -432,15 +549,18 @@ export default function QcWeldingPage() {
     if (!isConfirmed || !value) return;
 
     try {
-      await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
-        ...value,
-        review_for: REVIEW_FOR,
-      });
+      await axiosProvider.post(
+        `/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`,
+        {
+          ...value,
+          review_for: REVIEW_FOR,
+        }
+      );
 
       toast.success(
         value.qc_quantity < maxQty
           ? `Partial incoming saved (${value.qc_quantity}). Remaining will stay in-welding.`
-          : "Incoming saved → moved to Review/Welding"
+          : "Incoming saved"
       );
       fetchData();
     } catch (e: any) {
@@ -449,40 +569,6 @@ export default function QcWeldingPage() {
   };
 
   // ========== JO-WISE BATCH OPERATIONS ==========
-  const handleJoOk = async (items: Row[]) => {
-    if (!items || items.length === 0) return;
-    
-    if (tab === "outgoing") {
-      toast.info("Please process outgoing items individually");
-      return;
-    }
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const item of items) {
-      try {
-        const maxQty = Number(item.quantity_no ?? 0);
-        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/qc-incoming`, {
-          qc_date: new Date().toISOString().split('T')[0],
-          qc_quantity: maxQty,
-          review_for: REVIEW_FOR,
-        });
-        successCount++;
-      } catch (error) {
-        failCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      toast.success(`${successCount} item(s) processed successfully`);
-      fetchData();
-    }
-    if (failCount > 0) {
-      toast.error(`Failed to process ${failCount} item(s)`);
-    }
-  };
-
   const handleJoNotOk = async (items: Row[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to process.");
@@ -491,14 +577,19 @@ export default function QcWeldingPage() {
 
     const firstItem = items[0];
     const jobId = getJobId(firstItem);
-    const jobType = firstItem.job_type || "JOB_SERVICE";
-    
-    let displayIdentifier = jobType === "TSO_SERVICE" ? firstItem.tso_no : 
-                           jobType === "KANBAN" ? firstItem.jo_no : 
-                           firstItem.job_no;
-    
-    const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
-    
+
+    let displayIdentifier =
+      firstItem.job_type === "TSO_SERVICE"
+        ? firstItem.tso_no
+        : firstItem.job_type === "KANBAN"
+        ? firstItem.jo_no
+        : firstItem.job_no;
+
+    const totalQuantity = items.reduce(
+      (sum, item) => sum + (Number(item.quantity_no) || 0),
+      0
+    );
+
     const { value: selectedData } = await Swal.fire({
       title: `Select Items & Quantity to Mark as NOT OK (Welding)`,
       html: `
@@ -509,66 +600,84 @@ export default function QcWeldingPage() {
           </div>
           
           <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50 mb-3">
-            ${items.map((item, idx) => `
+            ${items
+              .map(
+                (item, idx) => `
               <div class="item-row p-3 border-b">
                 <div class="flex items-center gap-3 mb-2">
-                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" ${idx === 0 ? 'checked' : ''}>
-                  <span class="font-mono">${item.serial_no || 'N/A'}</span>
+                  <input type="checkbox" class="item-checkbox" data-id="${
+                    item.id
+                  }" data-max="${item.quantity_no}" ${
+                  idx === 0 ? "checked" : ""
+                }>
+                  <span class="font-mono">${item.serial_no || "N/A"}</span>
                   <span>(Qty: ${item.quantity_no || 0})</span>
                 </div>
                 <div class="ml-7">
-                  <input type="number" class="notok-qty px-2 py-1 border rounded w-24" data-id="${item.id}" value="${item.quantity_no}" min="1" max="${item.quantity_no}" ${idx === 0 ? '' : 'disabled'}>
+                  <input type="number" class="notok-qty px-2 py-1 border rounded w-24" data-id="${
+                    item.id
+                  }" value="${item.quantity_no}" min="1" max="${
+                  item.quantity_no
+                }" ${idx === 0 ? "" : "disabled"}>
                 </div>
               </div>
-            `).join('')}
+            `
+              )
+              .join("")}
           </div>
           
           <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason..." required></textarea>
         </div>
       `,
-      width: '650px',
+      width: "650px",
       showCancelButton: true,
       confirmButtonText: `Mark as NOT OK`,
       confirmButtonColor: "#d33",
       didOpen: () => {
-        const checkboxes = document.querySelectorAll('.item-checkbox');
-        const qtyInputs = document.querySelectorAll('.notok-qty');
+        const checkboxes = document.querySelectorAll(".item-checkbox");
+        const qtyInputs = document.querySelectorAll(".notok-qty");
         checkboxes.forEach((cb, index) => {
-          cb.addEventListener('change', (e) => {
+          cb.addEventListener("change", (e) => {
             const checked = (e.target as HTMLInputElement).checked;
             const qtyInput = qtyInputs[index] as HTMLInputElement;
             if (qtyInput) {
               qtyInput.disabled = !checked;
-              if (!checked) qtyInput.value = '0';
-              else qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+              if (!checked) qtyInput.value = "0";
+              else qtyInput.value = qtyInput.getAttribute("data-max") || "1";
             }
           });
         });
       },
       preConfirm: () => {
-        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-        const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
+        const checkboxes = document.querySelectorAll(".item-checkbox:checked");
+        const reason = (
+          document.getElementById("reason") as HTMLTextAreaElement
+        )?.value;
         if (!reason?.trim()) {
           Swal.showValidationMessage("Reason is required!");
           return false;
         }
-        
+
         const selectedItems: any[] = [];
         checkboxes.forEach((cb) => {
-          const itemId = (cb as HTMLInputElement).getAttribute('data-id');
-          const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
-          const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
+          const itemId = (cb as HTMLInputElement).getAttribute("data-id");
+          const maxQty = parseInt(
+            (cb as HTMLInputElement).getAttribute("data-max") || "0"
+          );
+          const qtyInput = document.querySelector(
+            `.notok-qty[data-id="${itemId}"]`
+          ) as HTMLInputElement;
           let qty = qtyInput ? parseInt(qtyInput.value) : maxQty;
           if (qty > 0 && qty <= maxQty) {
             selectedItems.push({ assignment_id: itemId, quantity: qty });
           }
         });
-        
+
         if (selectedItems.length === 0) {
           Swal.showValidationMessage("Please select items with valid quantity");
           return false;
         }
-        
+
         return { items: selectedItems, reason: reason.trim() };
       },
     });
@@ -579,15 +688,18 @@ export default function QcWeldingPage() {
     const loadingToast = toast.loading("Processing...");
 
     try {
-      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
-        items: selectedData.items,
-        reason: selectedData.reason,
-        updated_by: updated_by,
-        review_for: REVIEW_FOR,
-      });
+      const response = await axiosProvider.post(
+        `/fineengg_erp/system/jobs/${jobId}/not-ok`,
+        {
+          items: selectedData.items,
+          reason: selectedData.reason,
+          updated_by: updated_by,
+          review_for: REVIEW_FOR,
+        }
+      );
 
       toast.dismiss(loadingToast);
-      
+
       if (response?.data?.success) {
         toast.warning(response.data.message);
         fetchData();
@@ -601,69 +713,32 @@ export default function QcWeldingPage() {
     }
   };
 
-  const handleJoRework = async (items: Row[]) => {
-    if (!items || items.length === 0) return;
-
-    const { value: reason, isConfirmed } = await Swal.fire({
-      title: "Send JO for Rework",
-      html: `
-        <p>Sending <strong>${items.length}</strong> item(s) for rework</p>
-        <p class="text-sm text-gray-600 mt-2">These items will be sent back to production with status "machine"</p>
-      `,
-      input: "textarea",
-      inputPlaceholder: "Enter reason for rework...",
-      showCancelButton: true,
-      confirmButtonText: "Yes, Send to Rework",
-      confirmButtonColor: "#ef4444",
-      inputValidator: (value) => {
-        if (!value) return "Reason is required!";
-        return null;
-      },
-    });
-
-    if (!isConfirmed || !reason) return;
-
-    const updated_by = storage.getUserId();
-
-    if (!updated_by) {
-      toast.error("User not found");
-      return;
-    }
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const item of items) {
-      try {
-        await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
-          updated_by,
-        });
-        successCount++;
-      } catch (error) {
-        failCount++;
-      }
-    }
-
-    if (successCount > 0) {
-      toast.success(`${successCount} item(s) sent for rework successfully`);
-    }
-    if (failCount > 0) {
-      toast.error(`Failed to process ${failCount} item(s)`);
-    }
-    
-    fetchData();
-  };
-
   const getJobTypeBadge = (jobType: string | null | undefined) => {
-    switch(jobType) {
+    switch (jobType) {
       case "TSO_SERVICE":
-        return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
+        return (
+          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+            TSO
+          </span>
+        );
       case "KANBAN":
-        return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
+        return (
+          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+            KANBAN
+          </span>
+        );
       case "JOB_SERVICE":
-        return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
+        return (
+          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+            JOB
+          </span>
+        );
       default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">-</span>;
+        return (
+          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-medium">
+            -
+          </span>
+        );
     }
   };
 
@@ -672,16 +747,16 @@ export default function QcWeldingPage() {
       JOB_SERVICE: 0,
       TSO_SERVICE: 0,
       KANBAN: 0,
-      TOTAL: rows.length
+      TOTAL: rows.length,
     };
-    
-    rows.forEach(item => {
+
+    rows.forEach((item) => {
       const type = item.job_type || item.job?.job_type;
       if (type === "JOB_SERVICE") counts.JOB_SERVICE++;
       else if (type === "TSO_SERVICE") counts.TSO_SERVICE++;
       else if (type === "KANBAN") counts.KANBAN++;
     });
-    
+
     return counts;
   }, [rows]);
 
@@ -747,10 +822,18 @@ export default function QcWeldingPage() {
             </div>
 
             <div className="flex gap-3 mt-2 text-xs">
-              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
-              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">TSO: {countsByType.TSO_SERVICE}</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">KANBAN: {countsByType.KANBAN}</span>
-              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">TOTAL: {countsByType.TOTAL}</span>
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded">
+                JOB: {countsByType.JOB_SERVICE}
+              </span>
+              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">
+                TSO: {countsByType.TSO_SERVICE}
+              </span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                KANBAN: {countsByType.KANBAN}
+              </span>
+              <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">
+                TOTAL: {countsByType.TOTAL}
+              </span>
             </div>
           </div>
 
@@ -794,90 +877,130 @@ export default function QcWeldingPage() {
                   Back to Jobs
                 </button>
 
-                <h2 className="text-xl font-bold mb-4">
-                  {selectedJobNo}
-                </h2>
+                <h2 className="text-xl font-bold mb-4">{selectedJobNo}</h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Type</th>
-                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Pending Qty</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Type
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Serial No
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Item No
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Item Description
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        MOC
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Pending Qty
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Assigning Date
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
+                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo))
+                      .length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No JO data found</p>
+                        <td
+                          colSpan={10}
+                          className="px-4 py-6 text-center border border-tableBorder"
+                        >
+                          <p className="text-[#666666] text-base">
+                            No JO data found
+                          </p>
                         </td>
                       </tr>
                     ) : (
-                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
+                      Object.entries(
+                        getJoGroupsForIdentifier(selectedJobNo)
+                      ).map(([jo, items]) => (
                         <Fragment key={jo}>
                           {/* JO Group Header with Batch Actions */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={5}>
+                            <td
+                              className="px-2 py-2 border border-tableBorder font-semibold"
+                              colSpan={4}
+                            >
                               JO: {jo} ({items.length} item(s))
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={5}></td>
-                            <td className="px-2 py-2 border border-tableBorder" colSpan={2}>
-                              <div className="flex items-center gap-2">
-                                {/* <button
-                                  onClick={() => handleJoOk(items)}
-                                  className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                                >
-                                  OK All
-                                </button> */}
+                            <td
+                              className="px-2 py-2 border border-tableBorder"
+                              colSpan={4}
+                            ></td>
+                            <td
+                              className="px-2 py-2 border border-tableBorder"
+                              colSpan={2}
+                            >
+                              {/* <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleJoNotOk(items)}
                                   className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                                 >
                                   Not OK All
                                 </button>
-                                {/* <button
-                                  onClick={() => handleJoRework(items)}
-                                  className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                                >
-                                  Rework All
-                                </button> */}
-                              </div>
+                              </div> */}
                             </td>
                           </tr>
-                          
+
                           {/* Individual Items with Actions */}
                           {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder">{jo}</td>
+                            <tr
+                              key={item.id}
+                              className="border border-tableBorder bg-white hover:bg-gray-50"
+                            >
                               <td className="px-2 py-2 border border-tableBorder">
-                                {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
+                                {jo}
                               </td>
-                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getJobTypeBadge(
+                                  item.job_type ||
+                                    item.job?.job_type ||
+                                    "JOB_SERVICE"
+                                )}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">
+                                {item.serial_no || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.item_no ?? "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.job?.item_description || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.job?.moc || "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">
+                                {item.quantity_no ?? "-"}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {item.assigning_date || "-"}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 <div className="flex flex-col gap-1">
                                   <button
                                     onClick={() => handleSerialOk(item)}
                                     className={`px-2 py-1 rounded text-xs text-white ${
-                                      tab === "outgoing" ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"
+                                      tab === "outgoing"
+                                        ? "bg-blue-600 hover:bg-blue-700"
+                                        : "bg-green-600 hover:bg-green-700"
                                     }`}
                                   >
-                                    {tab === "outgoing" ? "Outgoing" : "Incoming"}
+                                    {tab === "outgoing"
+                                      ? "Outgoing"
+                                      : "Incoming"}
                                   </button>
                                   <button
                                     onClick={() => handleSerialNotOk(item)}
@@ -903,34 +1026,57 @@ export default function QcWeldingPage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Welding QC - All Services</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  Welding QC - All Services
+                </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">
-                        {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
+                        {filterParam === "TSO_SERVICE"
+                          ? "TSO No"
+                          : filterParam === "KANBAN"
+                          ? "J/O Number"
+                          : "Job No"}
                       </th>
-                      <th className="px-2 py-0 border border-tableBorder">Type</th>
-                      <th className="px-2 py-0 border border-tableBorder">Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total JO</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Type
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Category
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Total JO
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Total Quantity
+                      </th>
+                      <th className="px-2 py-0 border border-tableBorder">
+                        Assigning Date
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                        <td
+                          colSpan={7}
+                          className="px-4 py-6 text-center border border-tableBorder"
+                        >
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No welding items found.</p>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-6 text-center border border-tableBorder"
+                        >
+                          <p className="text-[#666666] text-base">
+                            No welding items found.
+                          </p>
                         </td>
                       </tr>
                     ) : (
@@ -945,25 +1091,33 @@ export default function QcWeldingPage() {
                             onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
+                              <p className="text-blue-600 text-base leading-normal">
+                                {identifier}
+                              </p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               {getJobTypeBadge(summary.jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
+                              <p className="text-[#232323] text-base">
+                                {summary.jobCategory}
+                              </p>
+                            </td>
+
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-base">
+                                {summary.uniqueJoCount}
+                              </p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.workerName}</p>
+                              <p className="text-[#232323] text-base">
+                                {summary.totalQty}
+                              </p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.assigningDate}</p>
+                              <p className="text-[#232323] text-base">
+                                {summary.assigningDate}
+                              </p>
                             </td>
                           </tr>
                         );
@@ -977,10 +1131,16 @@ export default function QcWeldingPage() {
 
           <div className="text-xs text-gray-500 mt-3 px-2 flex justify-between">
             <div>
-              Total Items: {filteredData.length} | 
-              Jobs: {jobIdentifiers.filter(id => !id.startsWith('TSO:') && !id.startsWith('KANBAN:')).length} | 
-              TSO: {jobIdentifiers.filter(id => id.startsWith('TSO:')).length} |
-              KANBAN: {jobIdentifiers.filter(id => id.startsWith('KANBAN:')).length}
+              Total Items: {filteredData.length} | Jobs:{" "}
+              {
+                jobIdentifiers.filter(
+                  (id) => !id.startsWith("TSO:") && !id.startsWith("KANBAN:")
+                ).length
+              }{" "}
+              | TSO:{" "}
+              {jobIdentifiers.filter((id) => id.startsWith("TSO:")).length} |
+              KANBAN:{" "}
+              {jobIdentifiers.filter((id) => id.startsWith("KANBAN:")).length}
             </div>
             <div className="text-xs text-gray-400">
               ✅ Click on any row to view JO details with serial-wise actions
