@@ -514,33 +514,34 @@ export default function JobDetailsPage() {
             {/* Left Side: Assignment Form */}
             <div className="w-full">
               <h2 className="text-xl font-bold mb-4">Material Recieved From Amar</h2>
-              <div className="relative overflow-x-auto sm:rounded-lg">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-[#999999]">
+              <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1600px]">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th scope="col" className="p-3 border border-tableBorder">J/O No</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Job Type</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Job Category</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Product Desc</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Product Qty</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Item No</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
-                      <th scope="col" className="p-3 border border-tableBorder">MOC</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Assign To</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Assign Date</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Action</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Type</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Category</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Desc</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Qty</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Desc</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign Date</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={13} className="text-center py-4 border border-tableBorder">Loading...</td>
+                        <td colSpan={14} className="text-center py-4 border border-tableBorder">Loading...</td>
                       </tr>
                     ) : jobDetails.length === 0 ? (
                       <tr>
-                        <td colSpan={13} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
+                        <td colSpan={14} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
                       </tr>
                     ) : (
                       Object.entries(groupedJobDetails).flatMap(([joNumber, jobs]) => {
@@ -550,8 +551,8 @@ export default function JobDetailsPage() {
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
                           return (
-                          <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
-                            <td className="px-2 py-2 border border-tableBorder">
+                          <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 transition-colors ${isChild ? "bg-gray-50" : ""}`}>
+                            <td className="px-4 py-3 border border-tableBorder">
                               {isFirst && (
                                 <div className="flex items-center gap-2">
                                   {joNumber}
@@ -563,16 +564,17 @@ export default function JobDetailsPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? item.job_category : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
-                            <td className="px-2 py-2 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
-                                <td className="px-2 py-2 border border-tableBorder">
+                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_category : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
+                                <td className="px-4 py-3 border border-tableBorder">
                                   {isFirst && (assignments[item.id]?.assignTo === "Others" ? (
                                     <div className="flex items-center gap-1">
                                       <input
@@ -621,7 +623,7 @@ export default function JobDetailsPage() {
                                     </select>
                                   ))}
                                 </td>
-                                <td className="px-2 py-2 border border-tableBorder">
+                                <td className="px-4 py-3 border border-tableBorder">
                                   {isFirst && (
                                   <input
                                     type="date"
@@ -632,7 +634,7 @@ export default function JobDetailsPage() {
                                   />
                                   )}
                                 </td>
-                                <td className="px-2 py-2 border border-tableBorder">
+                                <td className="px-4 py-3 border border-tableBorder">
                                   <div className="flex items-center gap-2">
                                     {isFirst && !isChild && (
                                       <button
@@ -703,29 +705,29 @@ export default function JobDetailsPage() {
               <h1 className="text-2xl font-bold mb-6">
                 Pending Materials for Job No: {job_no}
               </h1>
-              <div className="relative overflow-x-auto sm:rounded-lg">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-[#999999]">
+              <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1000px]">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Job No
                       </th>
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Item No
                       </th>
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Size
                       </th>
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         MOC
                       </th>
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Quantity
                       </th>
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Description
                       </th>
-                      <th scope="col" className="p-3 border border-tableBorder">
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Status
                       </th>
                     </tr>
@@ -749,25 +751,25 @@ export default function JobDetailsPage() {
                           key={item.id}
                           className="border border-tableBorder bg-white hover:bg-primary-100"
                         >
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.job_no}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.item_no}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.size}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.moc}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.qty}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.description}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             <span
                               className={`px-2 py-1 rounded text-sm ${
                                 item.is_completed
