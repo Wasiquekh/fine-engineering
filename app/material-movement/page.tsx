@@ -40,7 +40,9 @@ export default function MaterialMovementPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [categories, setCategories] = useState<
+    { value: string; label: string }[]
+  >([]);
   const limit = 20;
 
   const stageLower = stage.toLowerCase();
@@ -83,7 +85,9 @@ export default function MaterialMovementPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories");
+      const response = await axiosProvider.get(
+        "/fineengg_erp/system/categories"
+      );
       const cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
@@ -93,24 +97,31 @@ export default function MaterialMovementPage() {
       cats.forEach((cat: any) => {
         const jobCategory = String(cat?.job_category || "").trim();
         if (jobCategory && !uniqueMap.has(jobCategory)) {
-          uniqueMap.set(jobCategory, { value: jobCategory, label: jobCategory });
+          uniqueMap.set(jobCategory, {
+            value: jobCategory,
+            label: jobCategory,
+          });
         }
       });
 
       const hardcodedCategories = ["SFR", "ANFD", "NON STD", "AD", "MD"];
-      hardcodedCategories.forEach(cat => {
+      hardcodedCategories.forEach((cat) => {
         if (!uniqueMap.has(cat)) {
           uniqueMap.set(cat, { value: cat, label: cat });
         }
       });
 
-      const formattedCats = Array.from(uniqueMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+      const formattedCats = Array.from(uniqueMap.values()).sort((a, b) =>
+        a.label.localeCompare(b.label)
+      );
       setCategories(formattedCats);
     } catch (error) {
-      const fallbackCategories = ["SFR", "ANFD", "NON STD", "AD", "MD"].map(cat => ({
-        value: cat,
-        label: cat,
-      }));
+      const fallbackCategories = ["SFR", "ANFD", "NON STD", "AD", "MD"].map(
+        (cat) => ({
+          value: cat,
+          label: cat,
+        })
+      );
       setCategories(fallbackCategories);
     }
   };
@@ -123,7 +134,7 @@ export default function MaterialMovementPage() {
     if (!dateString || dateString === "-") return "-";
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB');
+      return date.toLocaleDateString("en-GB");
     } catch {
       return dateString;
     }
@@ -131,15 +142,31 @@ export default function MaterialMovementPage() {
 
   // Get document type badge
   const getDocumentTypeBadge = (jobType: string) => {
-    switch(jobType) {
-      case 'JOB_SERVICE':
-        return <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">Job</span>;
-      case 'TSO_SERVICE':
-        return <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">TSO</span>;
-      case 'KANBAN':
-        return <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">Kanban</span>;
+    switch (jobType) {
+      case "JOB_SERVICE":
+        return (
+          <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+            Job
+          </span>
+        );
+      case "TSO_SERVICE":
+        return (
+          <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+            TSO
+          </span>
+        );
+      case "KANBAN":
+        return (
+          <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+            Kanban
+          </span>
+        );
       default:
-        return <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">{jobType}</span>;
+        return (
+          <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+            {jobType}
+          </span>
+        );
     }
   };
 
@@ -206,18 +233,26 @@ export default function MaterialMovementPage() {
       setLoading(true);
       const params = buildParams(pageNumber);
       const resp = await getMaterialMovement(params);
-      
+
       if (resp && resp.data) {
         setRows(resp.data || []);
         setPage(resp.pagination?.page || 1);
         setTotal(resp.pagination?.total || 0);
         setTotalPages(resp.pagination?.totalPages || 1);
-        
+
         // Debug log
-        const jobRecords = resp.data.filter((r: any) => r.job_type === "JOB_SERVICE");
-        const tsoRecords = resp.data.filter((r: any) => r.job_type === "TSO_SERVICE");
-        const kanbanRecords = resp.data.filter((r: any) => r.job_type === "KANBAN");
-        console.log(`📊 Records - Job: ${jobRecords.length}, TSO: ${tsoRecords.length}, Kanban: ${kanbanRecords.length}`);
+        const jobRecords = resp.data.filter(
+          (r: any) => r.job_type === "JOB_SERVICE"
+        );
+        const tsoRecords = resp.data.filter(
+          (r: any) => r.job_type === "TSO_SERVICE"
+        );
+        const kanbanRecords = resp.data.filter(
+          (r: any) => r.job_type === "KANBAN"
+        );
+        console.log(
+          `📊 Records - Job: ${jobRecords.length}, TSO: ${tsoRecords.length}, Kanban: ${kanbanRecords.length}`
+        );
       } else {
         setRows([]);
       }
@@ -253,15 +288,22 @@ export default function MaterialMovementPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch(status) {
-      case 'not-ok': return 'bg-red-100 text-red-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in-progress': return 'bg-yellow-100 text-yellow-800';
-      case 'rejected': return 'bg-gray-100 text-gray-800';
-      case 'qc-welding':
-      case 'qc-vendor': return 'bg-purple-100 text-purple-800';
-      case 'machine': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-blue-100 text-blue-800';
+    switch (status) {
+      case "not-ok":
+        return "bg-red-100 text-red-800";
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "in-progress":
+        return "bg-yellow-100 text-yellow-800";
+      case "rejected":
+        return "bg-gray-100 text-gray-800";
+      case "qc-welding":
+      case "qc-vendor":
+        return "bg-purple-100 text-purple-800";
+      case "machine":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-blue-100 text-blue-800";
     }
   };
 
@@ -287,44 +329,99 @@ export default function MaterialMovementPage() {
 
             {/* Filters */}
             <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
-              <select value={stage} onChange={handleStageChange} className="border h-10 rounded px-2">
-                {STAGE_OPTIONS.map(v => <option key={v}>{v}</option>)}
+              <select
+                value={stage}
+                onChange={handleStageChange}
+                className="border h-10 rounded px-2"
+              >
+                {STAGE_OPTIONS.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
               </select>
 
               {getSizeOptions().length > 0 && (
-                <select value={size} onChange={(e) => { setSize(e.target.value); setMachineCode(""); }} className="border h-10 rounded px-2">
+                <select
+                  value={size}
+                  onChange={(e) => {
+                    setSize(e.target.value);
+                    setMachineCode("");
+                  }}
+                  className="border h-10 rounded px-2"
+                >
                   <option value="">Select Size</option>
-                  {getSizeOptions().map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {getSizeOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               )}
 
               {getMachineCodeOptions().length > 0 && (
-                <select value={machineCode} onChange={(e) => setMachineCode(e.target.value)} className="border h-10 rounded px-2">
+                <select
+                  value={machineCode}
+                  onChange={(e) => setMachineCode(e.target.value)}
+                  className="border h-10 rounded px-2"
+                >
                   <option value="">Select</option>
-                  {getMachineCodeOptions().map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {getMachineCodeOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               )}
 
-              <select value={docType} onChange={(e) => { setDocType(e.target.value); setJobCategory(""); }} className="border h-10 rounded px-2">
+              <select
+                value={docType}
+                onChange={(e) => {
+                  setDocType(e.target.value);
+                  setJobCategory("");
+                }}
+                className="border h-10 rounded px-2"
+              >
                 <option value="">All Document Types</option>
-                {DOC_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {DOC_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
 
               {getJobCategoryOptions().length > 0 && (
-                <select value={jobCategory} onChange={(e) => setJobCategory(e.target.value)} className="border h-10 rounded px-2">
+                <select
+                  value={jobCategory}
+                  onChange={(e) => setJobCategory(e.target.value)}
+                  className="border h-10 rounded px-2"
+                >
                   <option value="">All Categories</option>
-                  {getJobCategoryOptions().map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {getJobCategoryOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               )}
 
               {isQc && machineCode === "not-ok" && (
-                <select value={reviewFor} onChange={(e) => setReviewFor(e.target.value)} className="border h-10 rounded px-2">
+                <select
+                  value={reviewFor}
+                  onChange={(e) => setReviewFor(e.target.value)}
+                  className="border h-10 rounded px-2"
+                >
                   <option value="">All Review Types</option>
-                  {REVIEW_FOR_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  {REVIEW_FOR_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               )}
 
-              <button onClick={handleApplyFilters} className="bg-blue-600 hover:bg-blue-700 text-white rounded h-10 px-4">
+              <button
+                onClick={handleApplyFilters}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded h-10 px-4"
+              >
                 Apply Filters
               </button>
             </div>
@@ -337,6 +434,9 @@ export default function MaterialMovementPage() {
                     <th className="p-3 text-left border">JO No</th>
                     <th className="p-3 text-left border">Document No</th>
                     <th className="p-3 text-left border">Document Type</th>
+                    <th className="p-3 text-left border">
+                      Material Challan No
+                    </th>
                     <th className="p-3 text-left border">Chalan No</th>
                     <th className="p-3 text-left border">Chalan Date</th>
                     <th className="p-3 text-left border">Serial No</th>
@@ -366,7 +466,10 @@ export default function MaterialMovementPage() {
 
                   {!loading && rows.length === 0 && (
                     <tr>
-                      <td colSpan={16} className="text-center p-6 text-gray-500 border">
+                      <td
+                        colSpan={16}
+                        className="text-center p-6 text-gray-500 border"
+                      >
                         No Data Found
                       </td>
                     </tr>
@@ -374,24 +477,43 @@ export default function MaterialMovementPage() {
 
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border font-medium">{r.jo_no || "-"}</td>
-                      <td className="p-3 border font-semibold text-blue-600">{r.document_no || "-"}</td>
-                      <td className="p-3 border">{getDocumentTypeBadge(r.job_type)}</td>
+                      <td className="p-3 border font-medium">
+                        {r.jo_no || "-"}
+                      </td>
+                      <td className="p-3 border font-semibold text-blue-600">
+                        {r.document_no || "-"}
+                      </td>
+                      <td className="p-3 border">
+                        {getDocumentTypeBadge(r.job_type)}
+                      </td>
                       <td className="p-3 border">
                         <span className="font-bold text-blue-600">
-                          {r.chalan_no !== "-" ? r.chalan_no : r.mtl_challan_no !== "-" ? r.mtl_challan_no : "-"}
+                          {r.mtl_challan_no || 0}
                         </span>
                       </td>
-                      <td className="p-3 border">{formatDate(r.chalan_date)}</td>
-                      <td className="p-3 border">{r.serial_no || "-"}</td>
-                      <td className="p-3 border">{r.item_description || "-"}</td>
-                      <td className="p-3 border font-semibold">{r.quantity_no || 0}</td>
+                      <td className="p-3 border">{r.chalan_no || "-"}</td>
                       <td className="p-3 border">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(r.status)}`}>
+                        {formatDate(r.chalan_date)}
+                      </td>
+                      <td className="p-3 border">{r.serial_no || "-"}</td>
+                      <td className="p-3 border">
+                        {r.item_description || "-"}
+                      </td>
+                      <td className="p-3 border font-semibold">
+                        {r.quantity_no || 0}
+                      </td>
+                      <td className="p-3 border">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(
+                            r.status
+                          )}`}
+                        >
                           {r.status || "-"}
                         </span>
                       </td>
-                      <td className="p-3 border">{r.machine_category || "-"}</td>
+                      <td className="p-3 border">
+                        {r.machine_category || "-"}
+                      </td>
                       <td className="p-3 border">{r.machine_size || "-"}</td>
                       <td className="p-3 border">{r.machine_code || "-"}</td>
                       <td className="p-3 border">{r.worker_name || "-"}</td>
@@ -413,7 +535,9 @@ export default function MaterialMovementPage() {
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600">Page {page} of {totalPages} | Total {total} records</span>
+              <span className="text-sm text-gray-600">
+                Page {page} of {totalPages} | Total {total} records
+              </span>
               <button
                 disabled={page === totalPages}
                 onClick={() => fetchData(page + 1)}
