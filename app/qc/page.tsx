@@ -60,6 +60,7 @@ type QcRow = {
     job_category?: string | null;
     client_name?: string | null;
     item_description?: string | null;
+    product_desc?: string | null;
     moc?: string | null;
     qty?: number | null;
   } | null;
@@ -69,8 +70,10 @@ export default function QcMainPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
+  const [selectedJO, setSelectedJO] = useState<string | null>(null);
   
-  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
+  // Store selected JOs for multi-select (at JO level)
+  const [selectedJOs, setSelectedJOs] = useState<Set<string>>(new Set());
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
@@ -144,7 +147,8 @@ export default function QcMainPage() {
 
   useEffect(() => {
     setSelectedJobNo(null);
-    setSelectedJobs(new Set());
+    setSelectedJO(null);
+    setSelectedJOs(new Set());
     setIsMultiSelectMode(false);
     fetchData();
   }, [filterParam, client]);
@@ -178,95 +182,93 @@ export default function QcMainPage() {
     return currentData;
   }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
-  const jobIdentifiers = useMemo(() => {
-    const ids = new Set<string>();
+  // Group by Job Number first
+  const jobsGrouped = useMemo(() => {
+    const jobMap = new Map<string, {
+      jobNo: string;
+      jobCategory: string;
+      clientName: string;
+      productDesc: string;
+      items: QcRow[];
+      totalQty: number;
+      uniqueJOs: Set<string>;
+    }>();
+    
     filteredData.forEach((item) => {
-      let identifier: string | null | undefined;
-      if (filterParam === "TSO_SERVICE") {
-        identifier = item.tso_no || item.job?.tso_no;
-      } else if (filterParam === "KANBAN") {
-        identifier = item.jo_no || item.job_no || item.job?.job_no;
-      } else {
-        identifier = item.job_no || item.job?.job_no;
+      const jobNo = item.job?.job_no;
+      if (jobNo) {
+        if (!jobMap.has(jobNo)) {
+          jobMap.set(jobNo, {
+            jobNo,
+            jobCategory: item.job_category || item.job?.job_category || "N/A",
+            clientName: item.job?.client_name || "N/A",
+            productDesc: item.job?.product_desc || "N/A",
+            items: [],
+            totalQty: 0,
+            uniqueJOs: new Set(),
+          });
+        }
+        const jobData = jobMap.get(jobNo)!;
+        jobData.items.push(item);
+        jobData.totalQty += Number(item.quantity_no) || 0;
+        if (item.job?.jo_number) {
+          jobData.uniqueJOs.add(item.job.jo_number);
+        }
       }
-      if (identifier) ids.add(identifier);
-    });
-    return Array.from(ids);
-  }, [filteredData, filterParam]);
-
-  const getJoGroupsForIdentifier = (identifier: string) => {
-    const items = filteredData.filter((item) => {
-      let itemIdentifier: string | null | undefined;
-      if (filterParam === "TSO_SERVICE") {
-        itemIdentifier = item.tso_no || item.job?.tso_no;
-      } else if (filterParam === "KANBAN") {
-        itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
-      } else {
-        itemIdentifier = item.job_no || item.job?.job_no;
-      }
-      return itemIdentifier === identifier;
     });
     
-    const groups: Record<string, QcRow[]> = {};
+    return Array.from(jobMap.values());
+  }, [filteredData]);
 
-    items.forEach((item) => {
-      const joKey = item.job?.jo_number || "Unknown";
-      if (!groups[joKey]) groups[joKey] = [];
-      groups[joKey].push(item);
-    });
-
-    return groups;
-  };
-
-  const jobSummary = useMemo(() => {
-    const summary: Record<
-      string,
-      {
-        totalQty: number;
-        uniqueJoCount: number;
-        jobCategory: string;
-        assigningDate: string;
-      }
-    > = {};
-
-    jobIdentifiers.forEach((identifier) => {
-      const items = filteredData.filter((item) => {
-        let itemIdentifier: string | null | undefined;
-        if (filterParam === "TSO_SERVICE") {
-          itemIdentifier = item.tso_no || item.job?.tso_no;
-        } else if (filterParam === "KANBAN") {
-          itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
-        } else {
-          itemIdentifier = item.job_no || item.job?.job_no;
+  // Group by JO Number for a specific Job
+  const getJOsForJob = (jobNo: string) => {
+    const joMap = new Map<string, {
+      joNumber: string;
+      items: QcRow[];
+      totalQty: number;
+      jobNo: string;
+      clientName: string;
+      productDesc: string;
+      itemDescriptions: string[];
+      mocList: string[];
+      itemNos: string[];
+    }>();
+    
+    const jobItems = filteredData.filter(item => item.job?.job_no === jobNo);
+    
+    jobItems.forEach((item) => {
+      const joNumber = item.job?.jo_number;
+      if (joNumber) {
+        if (!joMap.has(joNumber)) {
+          joMap.set(joNumber, {
+            joNumber,
+            items: [],
+            totalQty: 0,
+            jobNo: jobNo,
+            clientName: item.job?.client_name || "N/A",
+            productDesc: item.job?.product_desc || "N/A",
+            itemDescriptions: [],
+            mocList: [],
+            itemNos: [],
+          });
         }
-        return itemIdentifier === identifier;
-      });
-
-      const totalQty = items.reduce(
-        (sum, item) => sum + (Number(item.quantity_no) || 0),
-        0
-      );
-
-      const uniqueJoCount = new Set(items.map((x) => x.job?.jo_number || "Unknown")).size;
-
-      const jobCategory =
-        items.length > 0
-          ? items[0].job_category || items[0].job?.job_category || "N/A"
-          : "N/A";
-
-      const assigningDate =
-        items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
-
-      summary[identifier] = {
-        totalQty,
-        uniqueJoCount,
-        jobCategory,
-        assigningDate,
-      };
+        const joData = joMap.get(joNumber)!;
+        joData.items.push(item);
+        joData.totalQty += Number(item.quantity_no) || 0;
+        if (item.job?.item_description && !joData.itemDescriptions.includes(item.job.item_description)) {
+          joData.itemDescriptions.push(item.job.item_description);
+        }
+        if (item.job?.moc && !joData.mocList.includes(item.job.moc)) {
+          joData.mocList.push(item.job.moc);
+        }
+        if (item.item_no && !joData.itemNos.includes(String(item.item_no))) {
+          joData.itemNos.push(String(item.item_no));
+        }
+      }
     });
-
-    return summary;
-  }, [filteredData, jobIdentifiers, filterParam]);
+    
+    return Array.from(joMap.values());
+  };
 
   const uniqueCategories = useMemo(() => {
     if (filterParam === "JOB_SERVICE") return categories;
@@ -275,47 +277,34 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
-  const toggleJobSelection = (jobIdentifier: string) => {
-    const newSelected = new Set(selectedJobs);
-    if (newSelected.has(jobIdentifier)) {
-      newSelected.delete(jobIdentifier);
+  const toggleJOSelection = (joNumber: string) => {
+    const newSelected = new Set(selectedJOs);
+    if (newSelected.has(joNumber)) {
+      newSelected.delete(joNumber);
     } else {
-      newSelected.add(jobIdentifier);
+      newSelected.add(joNumber);
     }
-    setSelectedJobs(newSelected);
+    setSelectedJOs(newSelected);
   };
 
-  const toggleSelectAll = () => {
-    if (selectedJobs.size === jobIdentifiers.length) {
-      setSelectedJobs(new Set());
+  const toggleSelectAllJOs = (jos: { joNumber: string }[]) => {
+    if (selectedJOs.size === jos.length) {
+      setSelectedJOs(new Set());
     } else {
-      setSelectedJobs(new Set(jobIdentifiers));
+      setSelectedJOs(new Set(jos.map(jo => jo.joNumber)));
     }
   };
 
-  const handleBulkDispatch = async () => {
-    if (selectedJobs.size === 0) {
+  const handleBulkDispatch = async (selectedJOList: string[], currentJobNo: string) => {
+    if (selectedJOList.length === 0) {
       toast.error("Please select at least one JO to dispatch");
       return;
     }
 
-    const allSelectedItems: QcRow[] = [];
-    const selectedJobsList = Array.from(selectedJobs);
-    
-    for (const jobIdentifier of selectedJobsList) {
-      const items = filteredData.filter((item) => {
-        let itemIdentifier: string | null | undefined;
-        if (filterParam === "TSO_SERVICE") {
-          itemIdentifier = item.tso_no || item.job?.tso_no;
-        } else if (filterParam === "KANBAN") {
-          itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
-        } else {
-          itemIdentifier = item.job_no || item.job?.job_no;
-        }
-        return itemIdentifier === jobIdentifier;
-      });
-      allSelectedItems.push(...items);
-    }
+    // Get all items from selected JOs
+    const jos = getJOsForJob(currentJobNo);
+    const selectedJOsData = jos.filter(jo => selectedJOList.includes(jo.joNumber));
+    const allSelectedItems = selectedJOsData.flatMap(jo => jo.items);
 
     if (allSelectedItems.length === 0) {
       toast.error("No items found for selected JOs");
@@ -325,33 +314,15 @@ export default function QcMainPage() {
     const totalItems = allSelectedItems.length;
     const totalQuantity = allSelectedItems.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
     
-    const joGroups: Record<string, { count: number; qty: number }> = {};
-    for (const jobId of selectedJobsList) {
-      const jobItems = allSelectedItems.filter(item => {
-        let itemIdentifier: string | null | undefined;
-        if (filterParam === "TSO_SERVICE") {
-          itemIdentifier = item.tso_no || item.job?.tso_no;
-        } else if (filterParam === "KANBAN") {
-          itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
-        } else {
-          itemIdentifier = item.job_no || item.job?.job_no;
-        }
-        return itemIdentifier === jobId;
-      });
-      joGroups[jobId] = {
-        count: jobItems.length,
-        qty: jobItems.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0)
-      };
-    }
-    
+    // Prepare summary HTML
     let joSummaryHtml = '<div class="max-h-60 overflow-y-auto border rounded-lg">';
-    for (const [joId, info] of Object.entries(joGroups)) {
+    for (const jo of selectedJOsData) {
       joSummaryHtml += `
         <div class="flex justify-between items-center p-3 border-b">
-          <span class="font-mono text-sm font-medium">${joId}</span>
+          <span class="font-mono text-sm font-medium">JO: ${jo.joNumber}</span>
           <div class="text-right">
-            <span class="text-xs text-gray-500">${info.count} items</span>
-            <span class="text-sm font-semibold ml-3 text-green-600">Qty: ${info.qty}</span>
+            <span class="text-xs text-gray-500">${jo.items.length} items</span>
+            <span class="text-sm font-semibold ml-3 text-green-600">Qty: ${jo.totalQty}</span>
           </div>
         </div>
       `;
@@ -359,14 +330,14 @@ export default function QcMainPage() {
     joSummaryHtml += '</div>';
 
     const { value: dispatchData } = await Swal.fire({
-      title: `Bulk Dispatch - ${selectedJobs.size} JO${selectedJobs.size > 1 ? 's' : ''}`,
+      title: `Bulk Dispatch - ${selectedJOList.length} JO${selectedJOList.length > 1 ? 's' : ''}`,
       html: `
         <div class="text-left">
           <div class="bg-blue-50 p-4 rounded-lg mb-4">
             <p class="font-semibold text-blue-800 mb-2">📦 Dispatch Summary</p>
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div class="text-gray-600">Total JOs:</div>
-              <div class="font-bold text-blue-600">${selectedJobs.size}</div>
+              <div class="font-bold text-blue-600">${selectedJOList.length}</div>
               <div class="text-gray-600">Total Items:</div>
               <div class="font-bold">${totalItems}</div>
               <div class="text-gray-600">Total Quantity:</div>
@@ -392,13 +363,13 @@ export default function QcMainPage() {
           
           <div class="bg-yellow-50 p-3 rounded text-sm">
             <p class="font-semibold text-yellow-800">⚠️ Note:</p>
-            <p class="text-yellow-700 text-xs mt-1">All selected JOs will be dispatched with FULL quantities. For partial dispatch, please dispatch JOs individually.</p>
+            <p class="text-yellow-700 text-xs mt-1">All selected JOs will be dispatched with FULL quantities.</p>
           </div>
         </div>
       `,
       width: '600px',
       showCancelButton: true,
-      confirmButtonText: `Dispatch ${selectedJobs.size} JO${selectedJobs.size > 1 ? 's' : ''}`,
+      confirmButtonText: `Dispatch ${selectedJOList.length} JO${selectedJOList.length > 1 ? 's' : ''}`,
       cancelButtonText: "Cancel",
       confirmButtonColor: "#10B981",
       preConfirm: () => {
@@ -427,7 +398,7 @@ export default function QcMainPage() {
         <div class="text-left">
           <p class="mb-3">You are about to dispatch:</p>
           <ul class="list-disc list-inside mb-4 space-y-1">
-            <li><strong class="text-blue-600">${selectedJobs.size}</strong> JO(s)</li>
+            <li><strong class="text-blue-600">${selectedJOList.length}</strong> JO(s)</li>
             <li><strong>${totalItems}</strong> item(s)</li>
             <li>Total quantity: <strong class="text-green-600">${totalQuantity}</strong></li>
             <li>Chalan: <strong class="font-mono">${dispatchData.chalan_no}</strong></li>
@@ -449,7 +420,7 @@ export default function QcMainPage() {
       quantity: Number(item.quantity_no) || 0
     }));
 
-    const loadingToast = toast.loading(`Dispatching ${selectedJobs.size} JO(s)...`);
+    const loadingToast = toast.loading(`Dispatching ${selectedJOList.length} JO(s)...`);
 
     try {
       const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
@@ -466,16 +437,16 @@ export default function QcMainPage() {
           <div>
             <div className="font-semibold text-green-600">✅ Bulk Dispatch Successful!</div>
             <div className="text-sm mt-2 space-y-1">
-              <div>📦 Dispatched: <span className="font-bold">{selectedJobs.size}</span> JO(s)</div>
-              <div>📄 Total Items: <span className="font-bold">{totalItems}</span></div>
-              <div>📊 Total Qty: <span className="font-bold">{totalQuantity}</span></div>
-              <div>📄 Chalan: <span className="font-mono">{dispatchData.chalan_no}</span></div>
+              <div>📦 Dispatched: <span className="font-bold">${selectedJOList.length}</span> JO(s)</div>
+              <div>📄 Total Items: <span className="font-bold">${totalItems}</span></div>
+              <div>📊 Total Qty: <span className="font-bold">${totalQuantity}</span></div>
+              <div>📄 Chalan: <span className="font-mono">${dispatchData.chalan_no}</span></div>
             </div>
           </div>,
           { autoClose: 5000 }
         );
         
-        setSelectedJobs(new Set());
+        setSelectedJOs(new Set());
         setIsMultiSelectMode(false);
         await fetchData();
       } else {
@@ -517,7 +488,7 @@ export default function QcMainPage() {
     const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
     
     const { value: selectedItems } = await Swal.fire({
-      title: `Dispatch Items - ${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: ${displayIdentifier}`,
+      title: `Dispatch Items - JO: ${displayIdentifier}`,
       html: `
         <div class="text-left">
           <div class="bg-blue-50 p-3 rounded-lg mb-4">
@@ -764,7 +735,7 @@ export default function QcMainPage() {
       if (response?.data?.success) {
         toast.success(response.data.message);
         await fetchData();
-        setSelectedJobNo(null);
+        setSelectedJO(null);
       } else {
         toast.error(response?.data?.error || "Dispatch failed");
       }
@@ -804,7 +775,7 @@ export default function QcMainPage() {
       html: `
         <div class="text-left">
           <div class="bg-red-50 p-3 rounded-lg mb-4">
-            <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span class="text-red-600">${displayIdentifier}</span></p>
+            <p class="font-semibold">JO: <span class="text-red-600">${displayIdentifier}</span></p>
             <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
           </div>
           
@@ -906,7 +877,7 @@ export default function QcMainPage() {
       if (response?.data?.success) {
         toast.warning(response.data.message);
         fetchData();
-        setSelectedJobNo(null);
+        setSelectedJO(null);
       } else {
         toast.error(response?.data?.error || "Failed to mark as NOT OK");
       }
@@ -1102,125 +1073,209 @@ export default function QcMainPage() {
 
         <div className="relative overflow-x-auto sm:rounded-lg">
           {selectedJobNo ? (
+            // JO Level View - Show JOs for selected Job with Multi-Select
             <>
               <div className="flex items-center justify-between mb-4">
                 <button
-                  onClick={() => setSelectedJobNo(null)}
+                  onClick={() => {
+                    setSelectedJobNo(null);
+                    setSelectedJOs(new Set());
+                    setIsMultiSelectMode(false);
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
                 >
                   <FaArrowLeft />
                   Back to Jobs
                 </button>
+                
+                {(() => {
+                  const jos = getJOsForJob(selectedJobNo);
+                  return jos.length > 0 && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsMultiSelectMode(!isMultiSelectMode);
+                          if (isMultiSelectMode) {
+                            setSelectedJOs(new Set());
+                          }
+                        }}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          isMultiSelectMode 
+                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        {isMultiSelectMode ? 'Exit Multi-Select' : 'Multi-Select Mode'}
+                      </button>
+                      
+                      {isMultiSelectMode && selectedJOs.size > 0 && (
+                        <button
+                          onClick={() => handleBulkDispatch(Array.from(selectedJOs), selectedJobNo)}
+                          className="px-4 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 flex items-center gap-2"
+                        >
+                          🚚 Dispatch Selected ({selectedJOs.size})
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <h2 className="text-xl font-bold mb-4">
-                {filterParam === "TSO_SERVICE"
-                  ? "TSO"
-                  : filterParam === "KANBAN"
-                  ? "J/O Number"
-                  : "Job"}
-                : {selectedJobNo}
+                Job: {selectedJobNo}
               </h2>
 
-              <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder bg-gray-50">
-                    <th className="p-3 border border-tableBorder font-semibold">JO No</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">Serial No</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">Item No</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">Item Description</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">MOC</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Qty</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">Assigning Date</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
-                  </tr>
-                </thead>
+              {isMultiSelectMode && selectedJOs.size > 0 && (
+                <div className="mb-3 p-2 bg-green-50 rounded-lg flex justify-between items-center">
+                  <span className="text-sm text-green-700">
+                    ✓ {selectedJOs.size} JO(s) selected for dispatch
+                  </span>
+                  <button
+                    onClick={() => {
+                      const jos = getJOsForJob(selectedJobNo);
+                      toggleSelectAllJOs(jos);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    {selectedJOs.size === getJOsForJob(selectedJobNo).length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+              )}
 
-                <tbody>
-                  {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">No JO data found</p>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-[#999999]">
+                    <tr className="border border-tableBorder bg-gray-50">
+                      {isMultiSelectMode && (
+                        <th className="p-3 border border-tableBorder w-10">
+                          <input
+                            type="checkbox"
+                            checked={(() => {
+                              const jos = getJOsForJob(selectedJobNo);
+                              return selectedJOs.size === jos.length && jos.length > 0;
+                            })()}
+                            onChange={() => {
+                              const jos = getJOsForJob(selectedJobNo);
+                              toggleSelectAllJOs(jos);
+                            }}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </th>
+                      )}
+                      <th className="p-3 border border-tableBorder font-semibold">JO Number</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Items</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item No</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item Description</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">MOC</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
                     </tr>
-                  ) : (
-                    Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                      <Fragment key={jo}>
-                        <tr className="border border-tableBorder bg-gray-100">
-                          <td className="px-3 py-2 border border-tableBorder font-semibold" colSpan={3}>
-                            JO: {jo}
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder" colSpan={2}>
-                            <span className="text-xs text-gray-600">{items.length} item(s)</span>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="text-xs font-semibold text-green-600">
-                              Total: {items.reduce((sum, i) => sum + (Number(i.quantity_no) || 0), 0)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder" colSpan={2}>
-                            <div className="flex items-center gap-2 justify-end">
-                              <button
-                                onClick={() => handleJoOK(items)}
-                                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
-                              >
-                                Dispatch JO
-                              </button>
-                              <button
-                                onClick={() => handleJoNotOk(items)}
-                                className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 transition-colors"
-                              >
-                                Not OK JO
-                              </button>
-                              <button
-                                onClick={() => handleJoRework(items)}
-                                className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
-                              >
-                                Rework JO
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                  </thead>
 
-                        {items.map((item) => (
-                          <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50 transition-colors">
-                            <td className="px-3 py-2 border border-tableBorder"> </td>
-                            <td className="px-3 py-2 border border-tableBorder font-mono text-sm">
-                              {item.serial_no || "-"}
-                            </td>
-                            <td className="px-3 py-2 border border-tableBorder">
-                              {item.item_no ?? "-"}
-                            </td>
-                            <td className="px-3 py-2 border border-tableBorder text-sm">
-                              {item.job?.item_description || "-"}
-                            </td>
-                            <td className="px-3 py-2 border border-tableBorder">
-                              {item.job?.moc || "-"}
-                            </td>
-                            <td className="px-3 py-2 border border-tableBorder text-center">
-                              <span className="font-semibold text-blue-600">{item.quantity_no ?? "-"}</span>
-                            </td>
-                            <td className="px-3 py-2 border border-tableBorder">
-                              {item.assigning_date || "-"}
-                            </td>
-                            <td className="px-3 py-2 border border-tableBorder text-center">
-                              <button
-                                onClick={() => handleSingleItemRework(item)}
-                                className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
-                                title={`Rework: ${item.serial_no || "N/A"}`}
-                              >
-                                Rework
-                              </button>
+                  <tbody>
+                    {(() => {
+                      const jos = getJOsForJob(selectedJobNo);
+                      if (jos.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={isMultiSelectMode ? 10 : 9} className="px-4 py-6 text-center border border-tableBorder">
+                              <p className="text-[#666666] text-base">No JO data found</p>
                             </td>
                           </tr>
-                        ))}
-                      </Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                        );
+                      }
+                      
+                      return jos.map((jo) => {
+                        const isSelected = selectedJOs.has(jo.joNumber);
+                        
+                        return (
+                          <Fragment key={jo.joNumber}>
+                            <tr className={`border border-tableBorder cursor-pointer transition-colors ${
+                              isSelected 
+                                ? 'bg-green-50 hover:bg-green-100' 
+                                : 'bg-white hover:bg-primary-50'
+                            }`}>
+                              {isMultiSelectMode && (
+                                <td className="px-3 py-2 border border-tableBorder text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleJOSelection(jo.joNumber)}
+                                    className="w-4 h-4 cursor-pointer"
+                                  />
+                                </td>
+                              )}
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <p className="text-base leading-normal text-blue-600 font-medium">
+                                  {jo.joNumber}
+                                </p>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <p className="text-[#232323] text-base">{jo.clientName}</p>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                  {jo.items.length}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <span className="font-semibold text-green-600">{jo.totalQty}</span>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.itemNos.map((itemNo, idx) => (
+                                    <div key={idx} className="mb-1">{itemNo}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.itemDescriptions.map((desc, idx) => (
+                                    <div key={idx} className="mb-1">{desc}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.mocList.map((moc, idx) => (
+                                    <div key={idx} className="mb-1">{moc}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <div className="flex items-center gap-2 justify-center flex-wrap">
+                                  <button
+                                    onClick={() => handleJoOK(jo.items)}
+                                    className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
+                                  >
+                                    Dispatch
+                                  </button>
+                                  <button
+                                    onClick={() => handleJoNotOk(jo.items)}
+                                    className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 transition-colors"
+                                  >
+                                    Not OK
+                                  </button>
+                                  <button
+                                    onClick={() => handleJoRework(jo.items)}
+                                    className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                                  >
+                                    Rework
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </Fragment>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
             </>
           ) : (
+            // Job Level View - Show all Jobs
             <>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">
@@ -1230,157 +1285,95 @@ export default function QcMainPage() {
                     ? "Kanban Ready for QC"
                     : "Jobs Ready for QC"}
                 </h2>
-                
-                {jobIdentifiers.length > 0 && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setIsMultiSelectMode(!isMultiSelectMode);
-                        if (isMultiSelectMode) {
-                          setSelectedJobs(new Set());
-                        }
-                      }}
-                      className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                        isMultiSelectMode 
-                          ? 'bg-red-500 text-white hover:bg-red-600' 
-                          : 'bg-blue-500 text-white hover:bg-blue-600'
-                      }`}
-                    >
-                      {isMultiSelectMode ? 'Exit Multi-Select' : 'Multi-Select Mode'}
-                    </button>
-                    
-                    {isMultiSelectMode && selectedJobs.size > 0 && (
-                      <button
-                        onClick={handleBulkDispatch}
-                        className="px-4 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 flex items-center gap-2"
-                      >
-                        🚚 Dispatch Selected ({selectedJobs.size})
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {isMultiSelectMode && selectedJobs.size > 0 && (
-                <div className="mb-3 p-2 bg-green-50 rounded-lg flex justify-between items-center">
-                  <span className="text-sm text-green-700">
-                    ✓ {selectedJobs.size} JO(s) selected for dispatch
-                  </span>
-                  <button
-                    onClick={toggleSelectAll}
-                    className="text-xs text-blue-600 hover:text-blue-800"
-                  >
-                    {selectedJobs.size === jobIdentifiers.length ? 'Deselect All' : 'Select All'}
-                  </button>
-                </div>
-              )}
-
-              <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder bg-gray-50">
-                    {isMultiSelectMode && (
-                      <th className="p-3 border border-tableBorder w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedJobs.size === jobIdentifiers.length && jobIdentifiers.length > 0}
-                          onChange={toggleSelectAll}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                      </th>
-                    )}
-                    <th className="p-3 border border-tableBorder font-semibold">
-                      {filterParam === "TSO_SERVICE"
-                        ? "TSO No"
-                        : filterParam === "KANBAN"
-                        ? "J/O Number"
-                        : "Job No"}
-                    </th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">Job Category</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total JO</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
-                    <th className="px-3 py-2 border border-tableBorder font-semibold">Assigning Date</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={isMultiSelectMode ? 6 : 5} className="px-4 py-6 text-center border border-tableBorder">
-                        <div className="flex justify-center items-center gap-2">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                          <p className="text-[#666666] text-base">Loading...</p>
-                        </div>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-[#999999]">
+                    <tr className="border border-tableBorder bg-gray-50">
+                      <th className="p-3 border border-tableBorder font-semibold">Job No</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Job Category</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Product Description</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total JOs</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
                     </tr>
-                  ) : jobIdentifiers.length === 0 ? (
-                    <tr>
-                      <td colSpan={isMultiSelectMode ? 6 : 5} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">No data found</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    jobIdentifiers.map((identifier) => {
-                      const summary = jobSummary[identifier];
-                      const isSelected = selectedJobs.has(identifier);
+                  </thead>
 
-                      return (
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                          <div className="flex justify-center items-center gap-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                            <p className="text-[#666666] text-base">Loading...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : jobsGrouped.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                          <p className="text-[#666666] text-base">No data found</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      jobsGrouped.map((job) => (
                         <tr
-                          key={identifier}
-                          className={`border border-tableBorder cursor-pointer transition-colors ${
-                            isSelected 
-                              ? 'bg-green-50 hover:bg-green-100' 
-                              : 'bg-white hover:bg-primary-50'
-                          }`}
-                          onClick={() => {
-                            if (isMultiSelectMode) {
-                              toggleJobSelection(identifier);
-                            } else {
-                              setSelectedJobNo(identifier);
-                            }
-                          }}
+                          key={job.jobNo}
+                          className="border border-tableBorder cursor-pointer bg-white hover:bg-primary-50 transition-colors"
+                          onClick={() => setSelectedJobNo(job.jobNo)}
                         >
-                          {isMultiSelectMode && (
-                            <td className="px-3 py-2 border border-tableBorder text-center" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleJobSelection(identifier)}
-                                className="w-4 h-4 cursor-pointer"
-                              />
-                            </td>
-                          )}
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className={`text-base leading-normal ${!isMultiSelectMode ? 'text-blue-600 font-medium' : ''}`}>
-                              {identifier}
+                            <p className="text-base leading-normal text-blue-600 font-medium">
+                              {job.jobNo}
                             </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{summary.jobCategory}</p>
+                            <p className="text-[#232323] text-base">{job.jobCategory}</p>
+                          </td>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">{job.clientName}</p>
+                          </td>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">{job.productDesc}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder text-center">
                             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                              {summary.uniqueJoCount}
+                              {job.uniqueJOs.size}
                             </span>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="font-semibold text-green-600">{summary.totalQty}</span>
+                            <span className="font-semibold text-green-600">{job.totalQty}</span>
                           </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                          <td className="px-3 py-2 border border-tableBorder text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedJobNo(job.jobNo);
+                              }}
+                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+                            >
+                              View JOs
+                            </button>
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </div>
 
         <div className="text-xs text-gray-500 mt-4 px-2 flex justify-between items-center">
           <div>
-            Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: <span className="font-semibold">{jobIdentifiers.length}</span> | Total Items: <span className="font-semibold">{filteredData.length}</span>
+            {selectedJobNo ? (
+              <>Total JOs: <span className="font-semibold">{getJOsForJob(selectedJobNo).length}</span> | Total Items: <span className="font-semibold">{filteredData.filter(item => item.job?.job_no === selectedJobNo).length}</span></>
+            ) : (
+              <>Total Jobs: <span className="font-semibold">{jobsGrouped.length}</span> | Total Items: <span className="font-semibold">{filteredData.length}</span></>
+            )}
           </div>
           <div className="text-gray-400">
             💡 Click on any row to view details
