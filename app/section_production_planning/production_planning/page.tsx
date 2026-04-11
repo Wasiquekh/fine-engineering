@@ -81,15 +81,10 @@ const validationSchema = Yup.object().shape({
     then: (schema) => schema.notRequired(),
     otherwise: (schema) => schema.required("Item Description is required"),
   }),
-  item_no: Yup.number().when("job_type", {
+  item_no: Yup.string().when("job_type", {
     is: "PENDING_MATERIAL",
     then: (schema) => schema.notRequired().nullable(),
-    otherwise: (schema) =>
-      schema
-        .required("Item No is required")
-        .typeError("Item No must be a number")
-        .positive("Item No must be positive")
-        .integer("Item No must be an integer"),
+    otherwise: (schema) => schema.required("Item No is required"),
   }),
   qty: Yup.number().when("job_type", {
     is: "PENDING_MATERIAL",
@@ -119,11 +114,7 @@ const validationSchema = Yup.object().shape({
         .of(
           Yup.object().shape({
             item_description: Yup.string().required("Item Description is required"),
-            item_no: Yup.number()
-              .required("Item No is required")
-              .typeError("Item No must be a number")
-              .positive("Item No must be positive")
-              .integer("Item No must be an integer"),
+            item_no: Yup.string().required("Item No is required"),
             qty: Yup.number()
               .required("Quantity is required")
               .typeError("Quantity must be a number")
@@ -284,7 +275,7 @@ export default function Home() {
           client_name: clientParam || values.client_name || "",
         },
         items: values.pending_items.map((item: any) => ({
-          item_no: Number(item.item_no),
+          item_no: item.item_no,
           description: item.item_description,
           size: item.size,
           moc: item.moc,
@@ -307,7 +298,7 @@ export default function Home() {
     // Create payload based on job type
     payload = {
       job_type: values.job_type,
-      item_no: Number(values.item_no),
+      item_no: values.item_no,
       qty: Number(values.qty),
       moc: values.moc,
       remark: values.remark || "",
@@ -1329,7 +1320,7 @@ export default function Home() {
                           Item No
                         </p>
                         <input
-                          type="number"
+                          type="text"
                           name="item_no"
                           value={values.item_no}
                           onChange={(e) =>
@@ -1468,7 +1459,7 @@ export default function Home() {
                                           Item No
                                         </p>
                                         <input
-                                          type="number"
+                                          type="text"
                                           name={`pending_items.${index}.item_no`}
                                           value={item.item_no}
                                           onChange={(e) =>
