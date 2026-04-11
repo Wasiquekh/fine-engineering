@@ -1652,7 +1652,7 @@ const LeftSideBar: React.FC = () => {
 
                 {isQCAmarEquipmentOpen && (
                   <div className="pl-4 flex flex-col gap-1">
-                    {hasJobServiceView && (
+                    {  (
                       <Link href="/qc?filter=JOB_SERVICE&client=Amar%20Equipment" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "JOB_SERVICE")}>
                           <MdWorkOutline className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "JOB_SERVICE")} />
@@ -1661,7 +1661,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasTSOServiceView && (
+                    {  (
                       <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Equipment" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")}>
                           <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "TSO_SERVICE")} />
@@ -1670,7 +1670,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasKanbanView && (
+                    {  (
                       <Link href="/qc?filter=KANBAN&client=Amar%20Equipment" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")}>
                           <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Equipment" && filter === "KANBAN")} />
@@ -1679,7 +1679,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasWeldingView && (
+                    {  (
                       <Link href="/qc/welding?filter=JOB_SERVICE&client=Amar%20Equipment" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc/welding" && client === "Amar Equipment")}>
                           <MdPrecisionManufacturing className={iconCls(pathname === "/qc/welding" && client === "Amar Equipment")} />
@@ -1688,7 +1688,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasVendorsView && (
+                    {  (
                       <Link href="/qc/vendor?filter=JOB_SERVICE&client=Amar%20Equipment" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc/vendor" && client === "Amar Equipment")}>
                           <MdOutlinePeopleOutline className={iconCls(pathname === "/qc/vendor" && client === "Amar Equipment")} />
@@ -1713,7 +1713,7 @@ const LeftSideBar: React.FC = () => {
 
                 {isQCAmarBioOpen && (
                   <div className="pl-4 flex flex-col gap-1">
-                    {hasJobServiceView && (
+                    { (
                       <Link href="/qc?filter=JOB_SERVICE&client=Amar%20Biosystem" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "JOB_SERVICE")}>
                           <MdWorkOutline className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "JOB_SERVICE")} />
@@ -1722,7 +1722,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasTSOServiceView && (
+                    { (
                       <Link href="/qc?filter=TSO_SERVICE&client=Amar%20Biosystem" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")}>
                           <MdDesignServices className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "TSO_SERVICE")} />
@@ -1731,7 +1731,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasKanbanView && (
+                    { (
                       <Link href="/qc?filter=KANBAN&client=Amar%20Biosystem" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")}>
                           <MdViewKanban className={iconCls(pathname === "/qc" && client === "Amar Biosystem" && filter === "KANBAN")} />
@@ -1740,7 +1740,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasWeldingView && (
+                    { (
                       <Link href="/qc/welding?filter=JOB_SERVICE&client=Amar%20Biosystem" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc/welding" && client === "Amar Biosystem")}>
                           <MdPrecisionManufacturing className={iconCls(pathname === "/qc/welding" && client === "Amar Biosystem")} />
@@ -1749,7 +1749,7 @@ const LeftSideBar: React.FC = () => {
                       </Link>
                     )}
 
-                    {hasVendorsView && (
+                    {  (
                       <Link href="/qc/vendor?filter=JOB_SERVICE&client=Amar%20Biosystem" onClick={(e) => e.stopPropagation()}>
                         <div className={itemCls(pathname === "/qc/vendor" && client === "Amar Biosystem")}>
                           <MdOutlinePeopleOutline className={iconCls(pathname === "/qc/vendor" && client === "Amar Biosystem")} />
