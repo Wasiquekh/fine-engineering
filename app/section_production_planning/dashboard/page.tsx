@@ -1,4 +1,4 @@
-// app/section_production_planning/dashboard/page.tsx - PRODUCTION PLANNING DASHBOARD
+// app/section_production_planning/dashboard/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -33,6 +33,8 @@ import {
   FiUsers,
   FiShoppingCart,
   FiGrid,
+  FiTool,
+  FiTruck,
 } from "react-icons/fi";
 import { MdPendingActions, MdWorkOutline, MdDesignServices, MdViewKanban, MdCategory } from "react-icons/md";
 import LeftSideBar from "../../component/LeftSideBar";
@@ -51,7 +53,7 @@ ChartJS.register(
   Legend,
   PointElement,
   LineElement,
-  Filler  
+  Filler
 );
 
 const axiosProvider = new AxiosProvider();
@@ -108,6 +110,43 @@ interface ProductionStats {
       client_name: string;
       material_type: string;
       is_urgent: boolean;
+      created_at: string;
+    }>;
+  };
+  welding: {
+    total: number;
+    totalQty: number;
+    items: Array<{
+      id: string;
+      serial_no: string;
+      jo_no: string;
+      item_no: number;
+      quantity_no: number;
+      status: string;
+      job_type: string;
+      job_no: string;
+      tso_no: string;
+      client_name: string;
+      worker_name: string;
+      created_at: string;
+    }>;
+  };
+  vendor: {
+    total: number;
+    totalQty: number;
+    items: Array<{
+      id: string;
+      serial_no: string;
+      jo_no: string;
+      item_no: number;
+      quantity_no: number;
+      status: string;
+      vendor_name: string;
+      job_type: string;
+      job_no: string;
+      tso_no: string;
+      client_name: string;
+      created_at: string;
     }>;
   };
   assigneeStats: Array<{
@@ -142,7 +181,7 @@ export default function ProductionPlanningDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
-  const [selectedTab, setSelectedTab] = useState<"overview" | "category" | "jobs" | "tso" | "kanban">("overview");
+  const [selectedTab, setSelectedTab] = useState<"overview" | "category" | "jobs" | "tso" | "kanban" | "welding" | "vendor">("overview");
   const [selectedClient, setSelectedClient] = useState<"all" | "Amar Equipment" | "Amar Biosystem">("all");
   const [selectedAssignee, setSelectedAssignee] = useState<"all" | "Usmaan" | "Riyaaz" | "Ramzaan">("all");
 
@@ -154,24 +193,226 @@ export default function ProductionPlanningDashboard() {
       setLoading(true);
       console.log("📊 Fetching Production Planning Dashboard data...");
       
-      // Fetch dashboard stats
-      const urlParams = new URLSearchParams();
-      if (selectedClient !== "all") urlParams.append("client", selectedClient);
-      if (selectedAssignee !== "all") urlParams.append("assign_to", selectedAssignee);
-
-      const queryString = urlParams.toString();
-      const url = `/fineengg_erp/producitondashboard/production-planning/dashboard-stats${queryString ? `?${queryString}` : ""}`;
-      const response = await axiosProvider.get(url);
+      // Build params
+      const params: any = {};
+      if (selectedClient !== "all") params.client_name = selectedClient;
+      if (selectedAssignee !== "all") params.assign_to = selectedAssignee;
       
-      if (response.data?.success) {
-        setStats(response.data.data);
-      }
+      // Fetch all data in parallel
+      const [
+        jobServiceRes,
+        tsoServiceRes,
+        kanbanRes,
+        categoriesRes,
+        weldingRes,
+        vendorRes,
+        assigneeRes,
+        urgentRes,
+        activitiesRes
+      ] = await Promise.all([
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, job_type: "JOB_SERVICE", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, job_type: "TSO_SERVICE", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, job_type: "KANBAN", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/categories", {
+          params: { ...params, limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+          params: { ...params, status: "qc-welding", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+          params: { ...params, status: "qc-vendor", limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, limit: 1000 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/jobs", {
+          params: { ...params, urgent: true, limit: 100 },
+          headers: undefined
+        }),
+        axiosProvider.get("/fineengg_erp/system/activities", {
+          params: { limit: 50 },
+          headers: undefined
+        }).catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      // Process Job Service Stats
+      const jobServiceData = jobServiceRes?.data?.data || [];
+      const jobServiceStats = {
+        total: jobServiceData.length,
+        totalQty: jobServiceData.reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+        pending: jobServiceData.filter((j: any) => j.job_status === "pending_approval").length,
+        approved: jobServiceData.filter((j: any) => j.is_approved === true).length,
+        inProcess: jobServiceData.filter((j: any) => j.status === "in-process").length,
+        completed: jobServiceData.filter((j: any) => j.status === "completed").length,
+        notOk: jobServiceData.filter((j: any) => j.status === "not-ok").length,
+        rejected: jobServiceData.filter((j: any) => j.rejected === true).length,
+        urgent: jobServiceData.filter((j: any) => j.urgent === true).length,
+        completedQty: jobServiceData.filter((j: any) => j.status === "completed").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+        pendingQty: jobServiceData.filter((j: any) => j.job_status === "pending_approval").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+      };
+      
+      // Process TSO Service Stats
+      const tsoServiceData = tsoServiceRes?.data?.data || [];
+      const tsoServiceStats = {
+        total: tsoServiceData.length,
+        totalQty: tsoServiceData.reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+        pending: tsoServiceData.filter((j: any) => j.job_status === "pending_approval").length,
+        approved: tsoServiceData.filter((j: any) => j.is_approved === true).length,
+        inProcess: tsoServiceData.filter((j: any) => j.status === "in-process").length,
+        completed: tsoServiceData.filter((j: any) => j.status === "completed").length,
+        notOk: tsoServiceData.filter((j: any) => j.status === "not-ok").length,
+        rejected: tsoServiceData.filter((j: any) => j.rejected === true).length,
+        urgent: tsoServiceData.filter((j: any) => j.urgent === true).length,
+        completedQty: tsoServiceData.filter((j: any) => j.status === "completed").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+        pendingQty: tsoServiceData.filter((j: any) => j.job_status === "pending_approval").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+      };
+      
+      // Process Kanban Stats
+      const kanbanData = kanbanRes?.data?.data || [];
+      const kanbanStats = {
+        total: kanbanData.length,
+        totalQty: kanbanData.reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+        pending: kanbanData.filter((j: any) => j.job_status === "pending_approval").length,
+        approved: kanbanData.filter((j: any) => j.is_approved === true).length,
+        inProcess: kanbanData.filter((j: any) => j.status === "in-process").length,
+        completed: kanbanData.filter((j: any) => j.status === "completed").length,
+        notOk: kanbanData.filter((j: any) => j.status === "not-ok").length,
+        rejected: kanbanData.filter((j: any) => j.rejected === true).length,
+        urgent: kanbanData.filter((j: any) => j.urgent === true).length,
+        completedQty: kanbanData.filter((j: any) => j.status === "completed").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+        pendingQty: kanbanData.filter((j: any) => j.job_status === "pending_approval").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
+      };
+      
+      // Process Categories
+      const categoriesData = categoriesRes?.data?.data || [];
+      const categoriesList = categoriesData.map((c: any) => ({
+        id: c.id,
+        job_no: c.job_no,
+        job_category: c.job_category || 'N/A',
+        description: c.description,
+        qty: c.qty,
+        client_name: c.client_name,
+        material_type: c.material_type,
+        is_urgent: c.is_urgent || false,
+        created_at: c.created_at,
+      }));
+      
+      // Process Welding Data
+      const weldingData = weldingRes?.data?.data || [];
+      const weldingItems = weldingData.map((item: any) => ({
+        id: item.id,
+        serial_no: item.serial_no || '-',
+        jo_no: item.jo_no || '-',
+        item_no: item.item_no || '-',
+        quantity_no: item.quantity_no || 0,
+        status: item.status,
+        job_type: item.job?.job_type,
+        job_no: item.job?.job_no,
+        tso_no: item.job?.tso_no,
+        client_name: item.job?.client_name,
+        worker_name: item.worker_name || '-',
+        created_at: item.created_at,
+      }));
+      
+      // Process Vendor Data
+      const vendorData = vendorRes?.data?.data || [];
+      const vendorItems = vendorData.map((item: any) => ({
+        id: item.id,
+        serial_no: item.serial_no || '-',
+        jo_no: item.jo_no || '-',
+        item_no: item.item_no || '-',
+        quantity_no: item.quantity_no || 0,
+        status: item.status,
+        vendor_name: item.vendor_name || '-',
+        job_type: item.job?.job_type,
+        job_no: item.job?.job_no,
+        tso_no: item.job?.tso_no,
+        client_name: item.job?.client_name,
+        created_at: item.created_at,
+      }));
+      
+      // Process Assignee Stats
+      const allJobsData = assigneeRes?.data?.data || [];
+      const assigneeMap = new Map();
+      ["Usmaan", "Riyaaz", "Ramzaan"].forEach(assignee => {
+        assigneeMap.set(assignee, { jobServiceCount: 0, tsoServiceCount: 0, kanbanCount: 0 });
+      });
+      
+      allJobsData.forEach((job: any) => {
+        const assignee = job.assign_to;
+        if (assigneeMap.has(assignee)) {
+          const stats = assigneeMap.get(assignee);
+          if (job.job_type === "JOB_SERVICE") stats.jobServiceCount++;
+          else if (job.job_type === "TSO_SERVICE") stats.tsoServiceCount++;
+          else if (job.job_type === "KANBAN") stats.kanbanCount++;
+        }
+      });
+      
+      const assigneeStats = Array.from(assigneeMap.entries()).map(([assignee, data]) => ({
+        assign_to: assignee,
+        jobServiceCount: data.jobServiceCount,
+        tsoServiceCount: data.tsoServiceCount,
+        kanbanCount: data.kanbanCount,
+        total: data.jobServiceCount + data.tsoServiceCount + data.kanbanCount,
+      }));
+      
+      // Process Urgent Items
+      const urgentData = urgentRes?.data?.data || [];
+      const urgentItems = urgentData.map((item: any) => ({
+        id: item.id,
+        job_no: item.job_no,
+        tso_no: item.tso_no,
+        jo_number: item.jo_number,
+        job_type: item.job_type,
+        client_name: item.client_name,
+        urgent_due_date: item.urgent_due_date,
+        qty: item.qty,
+      }));
+      
+      // Process Recent Activities
+      const activitiesData = activitiesRes?.data?.data || [];
+      
+      setStats({
+        jobService: jobServiceStats,
+        tsoService: tsoServiceStats,
+        kanban: kanbanStats,
+        categories: {
+          total: categoriesList.length,
+          list: categoriesList,
+        },
+        welding: {
+          total: weldingItems.length,
+          totalQty: weldingItems.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0),
+          items: weldingItems,
+        },
+        vendor: {
+          total: vendorItems.length,
+          totalQty: vendorItems.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0),
+          items: vendorItems,
+        },
+        assigneeStats,
+        urgentItems,
+        recentActivities: activitiesData.slice(0, 30),
+      });
       
       setLastRefreshed(new Date());
       setError(null);
     } catch (err: any) {
       console.error("Failed to fetch dashboard data:", err);
-      setError(err.response?.data?.error || "Failed to load dashboard");
+      setError(err?.response?.data?.error || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
@@ -187,8 +428,12 @@ export default function ProductionPlanningDashboard() {
 
   const handleExport = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/producitondashboard/production-planning/export-dashboard");
-      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: "application/json" });
+      const exportData = {
+        stats,
+        exported_at: new Date().toISOString(),
+        filters: { client: selectedClient, assignee: selectedAssignee }
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -202,11 +447,11 @@ export default function ProductionPlanningDashboard() {
 
   const handleAddJob = (type: string) => {
     if (type === "JOB_SERVICE") {
-      router.push("/section_production_planning/production_planning?filter=JOB_SERVICE&client=Amar%20Equipment");
+      router.push("/section_production_planning/production_planning?filter=JOB_SERVICE");
     } else if (type === "TSO_SERVICE") {
-      router.push("/section_production_planning/production_planning?filter=TSO_SERVICE&client=Amar%20Equipment");
+      router.push("/section_production_planning/production_planning?filter=TSO_SERVICE");
     } else if (type === "KANBAN") {
-      router.push("/section_production_planning/production_planning?filter=KANBAN&client=Amar%20Equipment");
+      router.push("/section_production_planning/production_planning?filter=KANBAN");
     }
   };
 
@@ -218,6 +463,23 @@ export default function ProductionPlanningDashboard() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading Production Planning Dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-end min-h-screen bg-gray-50">
+        <LeftSideBar />
+        <div className="w-full md:w-[83%] bg-[#F5F7FA] flex items-center justify-center">
+          <div className="text-center bg-white p-8 rounded-xl shadow-lg">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button onClick={handleRefresh} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+              Try Again
+            </button>
           </div>
         </div>
       </div>
@@ -239,7 +501,7 @@ export default function ProductionPlanningDashboard() {
     </div>
   );
 
-  // Chart Data for Planning View
+  // Chart Data
   const jobTypeChartData = {
     labels: ["Job Service", "TSO Service", "Kanban"],
     datasets: [
@@ -315,7 +577,7 @@ export default function ProductionPlanningDashboard() {
       <LeftSideBar />
 
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-screen">
-        <DesktopHeader />
+        {/* <DesktopHeader /> */}
 
         <div className="p-4 md:p-6">
           {/* Header */}
@@ -377,7 +639,7 @@ export default function ProductionPlanningDashboard() {
             </div>
           </div>
 
-          {/* Action Buttons - Only Planning Actions */}
+          {/* Action Buttons */}
           <div className="flex flex-wrap gap-3 mb-6">
             {canCreateJob && (
               <>
@@ -424,6 +686,8 @@ export default function ProductionPlanningDashboard() {
                 { id: "jobs", label: "Job Service", icon: MdWorkOutline },
                 { id: "tso", label: "TSO Service", icon: MdDesignServices },
                 { id: "kanban", label: "Kanban", icon: MdViewKanban },
+                { id: "welding", label: "Welding QC", icon: FiTool },
+                { id: "vendor", label: "Vendor QC", icon: FiTruck },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -446,7 +710,7 @@ export default function ProductionPlanningDashboard() {
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div className="bg-white rounded-xl shadow-sm p-5">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Type Status (Planning View)</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Job Type Status</h3>
                   <Bar data={jobTypeChartData} options={{ responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }} />
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-5">
@@ -474,19 +738,17 @@ export default function ProductionPlanningDashboard() {
                   </div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm p-5">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Categories Summary</h3>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-blue-600">{stats?.categories?.total || 0}</p>
-                    <p className="text-sm text-gray-500">Total Categories</p>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <div className="bg-blue-50 rounded-lg p-2">
-                        <p className="text-xs text-gray-500">Job Categories</p>
-                        <p className="text-lg font-bold">{stats?.categories?.list?.filter(c => c.job_category && c.job_category !== 'N/A').length || 0}</p>
-                      </div>
-                      <div className="bg-red-50 rounded-lg p-2">
-                        <p className="text-xs text-gray-500">Urgent Categories</p>
-                        <p className="text-lg font-bold text-red-600">{stats?.categories?.list?.filter(c => c.is_urgent).length || 0}</p>
-                      </div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">QC Status Summary</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-orange-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-orange-600">{stats?.welding?.total || 0}</p>
+                      <p className="text-xs text-gray-500">QC Welding</p>
+                      <p className="text-xs text-gray-400">Qty: {stats?.welding?.totalQty || 0}</p>
+                    </div>
+                    <div className="bg-purple-50 rounded-lg p-3 text-center">
+                      <p className="text-2xl font-bold text-purple-600">{stats?.vendor?.total || 0}</p>
+                      <p className="text-xs text-gray-500">QC Vendor</p>
+                      <p className="text-xs text-gray-400">Qty: {stats?.vendor?.totalQty || 0}</p>
                     </div>
                   </div>
                 </div>
@@ -497,13 +759,13 @@ export default function ProductionPlanningDashboard() {
                 <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
                   <h3 className="text-lg font-semibold text-red-600 flex items-center gap-2 mb-4">
                     <FiAlertCircle className="w-5 h-5" />
-                    Urgent Planning Items
+                    Urgent Planning Items ({stats.urgentItems.length})
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job No/TSO No</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job/TSO No</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
@@ -519,7 +781,7 @@ export default function ProductionPlanningDashboard() {
                                 item.job_type === "JOB_SERVICE" ? "bg-blue-100 text-blue-700" :
                                 item.job_type === "TSO_SERVICE" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"
                               }`}>
-                                {item.job_type === "JOB_SERVICE" ? "Job Service" : item.job_type === "TSO_SERVICE" ? "TSO Service" : "Kanban"}
+                                {item.job_type === "JOB_SERVICE" ? "Job Service" : item.job_type === "TSO_SERVICE" ? "TSO" : "Kanban"}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600">{item.client_name}</td>
@@ -534,6 +796,32 @@ export default function ProductionPlanningDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Recent Activities */}
+              <div className="bg-white rounded-xl shadow-sm p-5">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activities</h3>
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {stats?.recentActivities && stats.recentActivities.length > 0 ? (
+                    stats.recentActivities.slice(0, 15).map((activity: any) => (
+                      <div key={activity.id} className="flex items-start gap-3 p-2 border-b border-gray-100 hover:bg-gray-50 rounded">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${
+                          activity.type === "create" ? "bg-green-500" :
+                          activity.type === "update" ? "bg-blue-500" :
+                          activity.type === "delete" ? "bg-red-500" : "bg-gray-500"
+                        }`} />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-700">{activity.activity?.substring(0, 150)}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {activity.created_at ? new Date(activity.created_at).toLocaleString() : "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">No recent activities</div>
+                  )}
+                </div>
+              </div>
             </>
           )}
 
@@ -571,7 +859,7 @@ export default function ProductionPlanningDashboard() {
                         <tr key={category.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{category.job_no}</td>
                           <td className="px-4 py-3 text-sm">
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">{category.job_category || 'N/A'}</span>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">{category.job_category}</span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">{category.description || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{category.material_type || '-'}</td>
@@ -584,8 +872,7 @@ export default function ProductionPlanningDashboard() {
                               <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Normal</span>
                             )}
                           </td>
-                          </tr>
-                     
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -722,6 +1009,130 @@ export default function ProductionPlanningDashboard() {
                   <p className="text-xl font-semibold text-red-600">{stats.kanban.urgent}</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Welding Tab */}
+          {selectedTab === "welding" && stats && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <FiTool className="w-5 h-5 text-orange-500" />
+                  QC Welding Items
+                </h3>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">
+                    Total Items: {stats.welding?.total || 0}
+                  </span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                    Total Qty: {stats.welding?.totalQty || 0}
+                  </span>
+                </div>
+              </div>
+              
+              {stats.welding?.items && stats.welding.items.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">JO No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job/TSO No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Worker</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {stats.welding.items.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.jo_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.job_no || item.tso_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-mono">{item.serial_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.item_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-orange-600">{item.quantity_no}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.worker_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.client_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              item.job_type === "JOB_SERVICE" ? "bg-blue-100 text-blue-700" :
+                              item.job_type === "TSO_SERVICE" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"
+                            }`}>
+                              {item.job_type === "JOB_SERVICE" ? "Job" : item.job_type === "TSO_SERVICE" ? "TSO" : "Kanban"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">No welding items found</div>
+              )}
+            </div>
+          )}
+
+          {/* Vendor Tab */}
+          {selectedTab === "vendor" && stats && (
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <FiTruck className="w-5 h-5 text-purple-500" />
+                  QC Vendor Items
+                </h3>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                    Total Items: {stats.vendor?.total || 0}
+                  </span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                    Total Qty: {stats.vendor?.totalQty || 0}
+                  </span>
+                </div>
+              </div>
+              
+              {stats.vendor?.items && stats.vendor.items.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">JO No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job/TSO No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item No</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {stats.vendor.items.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.jo_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.job_no || item.tso_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-mono">{item.serial_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.item_no || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-semibold text-purple-600">{item.quantity_no}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.vendor_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{item.client_name || '-'}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              item.job_type === "JOB_SERVICE" ? "bg-blue-100 text-blue-700" :
+                              item.job_type === "TSO_SERVICE" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"
+                            }`}>
+                              {item.job_type === "JOB_SERVICE" ? "Job" : item.job_type === "TSO_SERVICE" ? "TSO" : "Kanban"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">No vendor items found</div>
+              )}
             </div>
           )}
         </div>

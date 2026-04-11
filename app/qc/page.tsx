@@ -59,6 +59,10 @@ type QcRow = {
     jo_number?: string | null;
     job_category?: string | null;
     client_name?: string | null;
+    item_description?: string | null;
+    product_desc?: string | null;
+    moc?: string | null;
+    qty?: number | null;
   } | null;
 };
 
@@ -66,6 +70,11 @@ export default function QcMainPage() {
   const [data, setData] = useState<QcRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
+  const [selectedJO, setSelectedJO] = useState<string | null>(null);
+  
+  // Store selected JOs for multi-select (at JO level)
+  const [selectedJOs, setSelectedJOs] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
@@ -138,6 +147,9 @@ export default function QcMainPage() {
 
   useEffect(() => {
     setSelectedJobNo(null);
+    setSelectedJO(null);
+    setSelectedJOs(new Set());
+    setIsMultiSelectMode(false);
     fetchData();
   }, [filterParam, client]);
 
@@ -170,97 +182,93 @@ export default function QcMainPage() {
     return currentData;
   }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
-  const jobIdentifiers = useMemo(() => {
-    const ids = new Set<string>();
+  // Group by Job Number first
+  const jobsGrouped = useMemo(() => {
+    const jobMap = new Map<string, {
+      jobNo: string;
+      jobCategory: string;
+      clientName: string;
+      productDesc: string;
+      items: QcRow[];
+      totalQty: number;
+      uniqueJOs: Set<string>;
+    }>();
+    
     filteredData.forEach((item) => {
-      let identifier: string | null | undefined;
-      if (filterParam === "TSO_SERVICE") {
-        identifier = item.tso_no || item.job?.tso_no;
-      } else if (filterParam === "KANBAN") {
-        identifier = item.jo_no || item.job_no || item.job?.job_no;
-      } else {
-        identifier = item.job_no || item.job?.job_no;
+      const jobNo = item.job?.job_no;
+      if (jobNo) {
+        if (!jobMap.has(jobNo)) {
+          jobMap.set(jobNo, {
+            jobNo,
+            jobCategory: item.job_category || item.job?.job_category || "N/A",
+            clientName: item.job?.client_name || "N/A",
+            productDesc: item.job?.product_desc || "N/A",
+            items: [],
+            totalQty: 0,
+            uniqueJOs: new Set(),
+          });
+        }
+        const jobData = jobMap.get(jobNo)!;
+        jobData.items.push(item);
+        jobData.totalQty += Number(item.quantity_no) || 0;
+        if (item.job?.jo_number) {
+          jobData.uniqueJOs.add(item.job.jo_number);
+        }
       }
-      if (identifier) ids.add(identifier);
-    });
-    return Array.from(ids);
-  }, [filteredData, filterParam]);
-
-  // ✅ FIX: Group by job.jo_number (actual JO number)
-  const getJoGroupsForIdentifier = (identifier: string) => {
-    const items = filteredData.filter((item) => {
-      let itemIdentifier: string | null | undefined;
-      if (filterParam === "TSO_SERVICE") {
-        itemIdentifier = item.tso_no || item.job?.tso_no;
-      } else if (filterParam === "KANBAN") {
-        itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
-      } else {
-        itemIdentifier = item.job_no || item.job?.job_no;
-      }
-      return itemIdentifier === identifier;
     });
     
-    const groups: Record<string, QcRow[]> = {};
+    return Array.from(jobMap.values());
+  }, [filteredData]);
 
-    items.forEach((item) => {
-      // ✅ Use job.jo_number for grouping (actual JO number)
-      const joKey = item.job?.jo_number || "Unknown";
-      if (!groups[joKey]) groups[joKey] = [];
-      groups[joKey].push(item);
-    });
-
-    return groups;
-  };
-
-  const jobSummary = useMemo(() => {
-    const summary: Record<
-      string,
-      {
-        totalQty: number;
-        uniqueJoCount: number;
-        jobCategory: string;
-        assigningDate: string;
-      }
-    > = {};
-
-    jobIdentifiers.forEach((identifier) => {
-      const items = filteredData.filter((item) => {
-        let itemIdentifier: string | null | undefined;
-        if (filterParam === "TSO_SERVICE") {
-          itemIdentifier = item.tso_no || item.job?.tso_no;
-        } else if (filterParam === "KANBAN") {
-          itemIdentifier = item.jo_no || item.job_no || item.job?.job_no;
-        } else {
-          itemIdentifier = item.job_no || item.job?.job_no;
+  // Group by JO Number for a specific Job
+  const getJOsForJob = (jobNo: string) => {
+    const joMap = new Map<string, {
+      joNumber: string;
+      items: QcRow[];
+      totalQty: number;
+      jobNo: string;
+      clientName: string;
+      productDesc: string;
+      itemDescriptions: string[];
+      mocList: string[];
+      itemNos: string[];
+    }>();
+    
+    const jobItems = filteredData.filter(item => item.job?.job_no === jobNo);
+    
+    jobItems.forEach((item) => {
+      const joNumber = item.job?.jo_number;
+      if (joNumber) {
+        if (!joMap.has(joNumber)) {
+          joMap.set(joNumber, {
+            joNumber,
+            items: [],
+            totalQty: 0,
+            jobNo: jobNo,
+            clientName: item.job?.client_name || "N/A",
+            productDesc: item.job?.product_desc || "N/A",
+            itemDescriptions: [],
+            mocList: [],
+            itemNos: [],
+          });
         }
-        return itemIdentifier === identifier;
-      });
-
-      const totalQty = items.reduce(
-        (sum, item) => sum + (Number(item.quantity_no) || 0),
-        0
-      );
-
-      const uniqueJoCount = new Set(items.map((x) => x.job?.jo_number || "Unknown")).size;
-
-      const jobCategory =
-        items.length > 0
-          ? items[0].job_category || items[0].job?.job_category || "N/A"
-          : "N/A";
-
-      const assigningDate =
-        items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
-
-      summary[identifier] = {
-        totalQty,
-        uniqueJoCount,
-        jobCategory,
-        assigningDate,
-      };
+        const joData = joMap.get(joNumber)!;
+        joData.items.push(item);
+        joData.totalQty += Number(item.quantity_no) || 0;
+        if (item.job?.item_description && !joData.itemDescriptions.includes(item.job.item_description)) {
+          joData.itemDescriptions.push(item.job.item_description);
+        }
+        if (item.job?.moc && !joData.mocList.includes(item.job.moc)) {
+          joData.mocList.push(item.job.moc);
+        }
+        if (item.item_no && !joData.itemNos.includes(String(item.item_no))) {
+          joData.itemNos.push(String(item.item_no));
+        }
+      }
     });
-
-    return summary;
-  }, [filteredData, jobIdentifiers, filterParam]);
+    
+    return Array.from(joMap.values());
+  };
 
   const uniqueCategories = useMemo(() => {
     if (filterParam === "JOB_SERVICE") return categories;
@@ -269,372 +277,616 @@ export default function QcMainPage() {
     return [];
   }, [filterParam, categories]);
 
-  // ========== JO-WISE DISPATCH (Using job.jo_number) ==========
-  // ========== JO-WISE DISPATCH ==========
-// ========== JO-WISE DISPATCH with SELECTION ==========
-const handleJoOK = async (items: QcRow[]) => {
-  if (!items || items.length === 0) {
-    toast.error("No items to dispatch.");
-    return;
-  }
+  const toggleJOSelection = (joNumber: string) => {
+    const newSelected = new Set(selectedJOs);
+    if (newSelected.has(joNumber)) {
+      newSelected.delete(joNumber);
+    } else {
+      newSelected.add(joNumber);
+    }
+    setSelectedJOs(newSelected);
+  };
 
-  const firstItem = items[0];
-  const jobType = filterParam;
-  
-  let dispatchIdentifier = null;
-  let identifierType = null;
-  let displayIdentifier = null;
-  
-  if (jobType === "TSO_SERVICE") {
-    dispatchIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
-    identifierType = "tso_no";
-    displayIdentifier = dispatchIdentifier;
-  } else {
-    dispatchIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
-    identifierType = "jo_no";
-    displayIdentifier = dispatchIdentifier;
-  }
-  
-  if (!dispatchIdentifier) {
-    toast.error(`${jobType} identifier not found. Cannot dispatch.`);
-    return;
-  }
+  const toggleSelectAllJOs = (jos: { joNumber: string }[]) => {
+    if (selectedJOs.size === jos.length) {
+      setSelectedJOs(new Set());
+    } else {
+      setSelectedJOs(new Set(jos.map(jo => jo.joNumber)));
+    }
+  };
 
-  const jobNo = firstItem?.job?.job_no || "Unknown";
-  
-  // Calculate total quantity and available quantity
-  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
-  
-  // ✅ Show selection dialog with QUANTITY INPUT for each item
-  const { value: selectedItems } = await Swal.fire({
-    title: `Select Items & Quantity to Dispatch`,
-    html: `
-      <div class="text-left">
-        <div class="bg-blue-50 p-3 rounded-lg mb-4">
-          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span class="text-blue-600">${displayIdentifier}</span></p>
-          <p class="text-sm text-gray-600">Job: ${jobNo}</p>
-          <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
-        </div>
-        
-        <div class="mb-3">
-          <p class="text-sm font-semibold text-gray-700 mb-2">Select items and enter quantity to dispatch:</p>
-          <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-            ${items.map((item, idx) => `
-              <div class="item-row p-3 border-b border-gray-200 hover:bg-gray-100">
-                <div class="flex items-center gap-3 mb-2">
-                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" ${idx === 0 ? 'checked' : ''}>
-                  <div class="flex-1">
-                    <span class="font-mono font-medium">${item.serial_no || 'N/A'}</span>
-                    <span class="text-gray-500 ml-2">(Total Qty: ${item.quantity_no || 0})</span>
-                  </div>
-                  <span class="text-xs text-gray-400">Item: ${item.item_no || 'N/A'}</span>
-                </div>
-                <div class="ml-7">
-                  <label class="text-xs text-gray-600">Dispatch Quantity:</label>
-                  <input 
-                    type="number" 
-                    class="dispatch-qty ml-2 px-2 py-1 border rounded text-sm w-24" 
-                    data-id="${item.id}"
-                    value="${item.quantity_no}" 
-                    min="1" 
-                    max="${item.quantity_no}"
-                    ${idx === 0 ? '' : 'disabled'}
-                  >
-                  <span class="text-xs text-gray-400 ml-2">Max: ${item.quantity_no}</span>
-                </div>
-              </div>
-            `).join('')}
+  const handleBulkDispatch = async (selectedJOList: string[], currentJobNo: string) => {
+    if (selectedJOList.length === 0) {
+      toast.error("Please select at least one JO to dispatch");
+      return;
+    }
+
+    // Get all items from selected JOs
+    const jos = getJOsForJob(currentJobNo);
+    const selectedJOsData = jos.filter(jo => selectedJOList.includes(jo.joNumber));
+    const allSelectedItems = selectedJOsData.flatMap(jo => jo.items);
+
+    if (allSelectedItems.length === 0) {
+      toast.error("No items found for selected JOs");
+      return;
+    }
+    
+    const totalItems = allSelectedItems.length;
+    const totalQuantity = allSelectedItems.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+    
+    // Prepare summary HTML
+    let joSummaryHtml = '<div class="max-h-60 overflow-y-auto border rounded-lg">';
+    for (const jo of selectedJOsData) {
+      joSummaryHtml += `
+        <div class="flex justify-between items-center p-3 border-b">
+          <span class="font-mono text-sm font-medium">JO: ${jo.joNumber}</span>
+          <div class="text-right">
+            <span class="text-xs text-gray-500">${jo.items.length} items</span>
+            <span class="text-sm font-semibold ml-3 text-green-600">Qty: ${jo.totalQty}</span>
           </div>
         </div>
-        
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
-          <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+      `;
+    }
+    joSummaryHtml += '</div>';
+
+    const { value: dispatchData } = await Swal.fire({
+      title: `Bulk Dispatch - ${selectedJOList.length} JO${selectedJOList.length > 1 ? 's' : ''}`,
+      html: `
+        <div class="text-left">
+          <div class="bg-blue-50 p-4 rounded-lg mb-4">
+            <p class="font-semibold text-blue-800 mb-2">📦 Dispatch Summary</p>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="text-gray-600">Total JOs:</div>
+              <div class="font-bold text-blue-600">${selectedJOList.length}</div>
+              <div class="text-gray-600">Total Items:</div>
+              <div class="font-bold">${totalItems}</div>
+              <div class="text-gray-600">Total Quantity:</div>
+              <div class="font-bold text-green-600">${totalQuantity}</div>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Selected JOs:</label>
+            ${joSummaryHtml}
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
+              <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
+              <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-3 rounded text-sm">
+            <p class="font-semibold text-yellow-800">⚠️ Note:</p>
+            <p class="text-yellow-700 text-xs mt-1">All selected JOs will be dispatched with FULL quantities.</p>
+          </div>
         </div>
+      `,
+      width: '600px',
+      showCancelButton: true,
+      confirmButtonText: `Dispatch ${selectedJOList.length} JO${selectedJOList.length > 1 ? 's' : ''}`,
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#10B981",
+      preConfirm: () => {
+        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
+        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+
+        if (!chalan_no || !chalan_no.trim()) {
+          Swal.showValidationMessage("Chalan number is required");
+          return false;
+        }
         
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
-          <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+        if (!dispatch_date) {
+          Swal.showValidationMessage("Dispatch date is required");
+          return false;
+        }
+        
+        return { chalan_no: chalan_no.trim(), dispatch_date };
+      }
+    });
+
+    if (!dispatchData) return;
+
+    const confirmResult = await Swal.fire({
+      title: 'Confirm Bulk Dispatch',
+      html: `
+        <div class="text-left">
+          <p class="mb-3">You are about to dispatch:</p>
+          <ul class="list-disc list-inside mb-4 space-y-1">
+            <li><strong class="text-blue-600">${selectedJOList.length}</strong> JO(s)</li>
+            <li><strong>${totalItems}</strong> item(s)</li>
+            <li>Total quantity: <strong class="text-green-600">${totalQuantity}</strong></li>
+            <li>Chalan: <strong class="font-mono">${dispatchData.chalan_no}</strong></li>
+          </ul>
+          <p class="text-sm text-red-600 font-semibold">⚠️ This action cannot be undone!</p>
         </div>
-      </div>
-    `,
-    width: '650px',
-    showCancelButton: true,
-    confirmButtonText: `Dispatch Selected`,
-    cancelButtonText: "Cancel",
-    didOpen: () => {
-      // Enable/disable quantity input based on checkbox
-      const checkboxes = document.querySelectorAll('.item-checkbox');
-      const qtyInputs = document.querySelectorAll('.dispatch-qty');
-      
-      checkboxes.forEach((cb, index) => {
-        cb.addEventListener('change', (e) => {
-          const isChecked = (e.target as HTMLInputElement).checked;
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Dispatch All!',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#10B981'
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    const itemsToDispatch = allSelectedItems.map(item => ({
+      assignment_id: item.id,
+      quantity: Number(item.quantity_no) || 0
+    }));
+
+    const loadingToast = toast.loading(`Dispatching ${selectedJOList.length} JO(s)...`);
+
+    try {
+      const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+        items: itemsToDispatch,
+        chalan_no: dispatchData.chalan_no,
+        dispatch_date: dispatchData.dispatch_date,
+        multi_jo_dispatch: true,
+      });
+
+      toast.dismiss(loadingToast);
+
+      if (response?.data?.success) {
+        toast.success(
+          <div>
+            <div className="font-semibold text-green-600">✅ Bulk Dispatch Successful!</div>
+            <div className="text-sm mt-2 space-y-1">
+              <div>📦 Dispatched: <span className="font-bold">${selectedJOList.length}</span> JO(s)</div>
+              <div>📄 Total Items: <span className="font-bold">${totalItems}</span></div>
+              <div>📊 Total Qty: <span className="font-bold">${totalQuantity}</span></div>
+              <div>📄 Chalan: <span className="font-mono">${dispatchData.chalan_no}</span></div>
+            </div>
+          </div>,
+          { autoClose: 5000 }
+        );
+        
+        setSelectedJOs(new Set());
+        setIsMultiSelectMode(false);
+        await fetchData();
+      } else {
+        toast.error(response?.data?.error || "Bulk dispatch failed");
+      }
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      console.error("Bulk dispatch error:", error);
+      toast.error(error?.response?.data?.error || "Bulk dispatch failed");
+    }
+  };
+
+  const handleJoOK = async (items: QcRow[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to dispatch.");
+      return;
+    }
+
+    const firstItem = items[0];
+    const jobType = filterParam;
+    
+    let dispatchIdentifier = null;
+    let displayIdentifier = null;
+    
+    if (jobType === "TSO_SERVICE") {
+      dispatchIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
+      displayIdentifier = dispatchIdentifier;
+    } else {
+      dispatchIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
+      displayIdentifier = dispatchIdentifier;
+    }
+    
+    if (!dispatchIdentifier) {
+      toast.error(`${jobType} identifier not found. Cannot dispatch.`);
+      return;
+    }
+
+    const jobNo = firstItem?.job?.job_no || "Unknown";
+    const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+    
+    const { value: selectedItems } = await Swal.fire({
+      title: `Dispatch Items - JO: ${displayIdentifier}`,
+      html: `
+        <div class="text-left">
+          <div class="bg-blue-50 p-3 rounded-lg mb-4">
+            <p class="font-semibold">Job: ${jobNo}</p>
+            <p class="text-sm text-gray-600">Total Available Quantity: <span class="font-bold text-green-600">${totalQuantity}</span></p>
+            <p class="text-xs text-gray-500 mt-1">Select items and enter quantity to dispatch</p>
+          </div>
+          
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-semibold text-gray-700">Items</label>
+              <button type="button" id="select-all-btn" class="text-xs text-blue-600 hover:text-blue-800">Select All</button>
+            </div>
+            <div class="max-h-96 overflow-y-auto border rounded-lg divide-y divide-gray-200">
+              ${items.map((item, idx) => `
+                <div class="item-row p-3 hover:bg-gray-50 transition-colors" data-item-idx="${idx}">
+                  <div class="flex items-start gap-3">
+                    <input type="checkbox" class="item-checkbox mt-1" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" data-idx="${idx}">
+                    <div class="flex-1">
+                      <div class="flex justify-between items-start">
+                        <div>
+                          <span class="font-mono font-medium text-sm">${item.serial_no || 'N/A'}</span>
+                          <span class="text-xs text-gray-500 ml-2">Item #${item.item_no || 'N/A'}</span>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-600">Available: ${item.quantity_no || 0}</span>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+                        <div><span class="font-medium">Item Description:</span> ${item.job?.item_description || '-'}</div>
+                        <div><span class="font-medium">MOC:</span> ${item.job?.moc || '-'}</div>
+                      </div>
+                      <div class="mt-2">
+                        <label class="text-xs text-gray-600">Dispatch Quantity:</label>
+                        <input 
+                          type="number" 
+                          class="dispatch-qty ml-2 px-2 py-1 border rounded text-sm w-28" 
+                          data-id="${item.id}"
+                          value="${item.quantity_no}" 
+                          min="1" 
+                          max="${item.quantity_no}"
+                          step="1"
+                        >
+                        <span class="text-xs text-gray-400 ml-2">Max: ${item.quantity_no}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
+              <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
+              <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+            </div>
+          </div>
+          
+          <div class="bg-yellow-50 p-2 rounded text-xs text-yellow-700">
+            💡 Tip: You can partially dispatch items by entering quantity less than available
+          </div>
+        </div>
+      `,
+      width: '750px',
+      showCancelButton: true,
+      confirmButtonText: `Dispatch Selected (${items.length} items)`,
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#10B981",
+      didOpen: () => {
+        const selectAllBtn = document.getElementById('select-all-btn');
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const qtyInputs = document.querySelectorAll('.dispatch-qty');
+        
+        checkboxes.forEach((cb, index) => {
+          (cb as HTMLInputElement).checked = true;
           const qtyInput = qtyInputs[index] as HTMLInputElement;
-          if (qtyInput) {
-            qtyInput.disabled = !isChecked;
-            if (!isChecked) {
-              qtyInput.value = '0';
-            } else {
-              qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+          if (qtyInput) qtyInput.disabled = false;
+        });
+        
+        const confirmBtn = Swal.getConfirmButton();
+        if (confirmBtn) {
+          confirmBtn.textContent = `Dispatch Selected (${items.length} items)`;
+        }
+        
+        if (selectAllBtn) {
+          selectAllBtn.onclick = () => {
+            const allChecked = Array.from(checkboxes).every(cb => (cb as HTMLInputElement).checked);
+            checkboxes.forEach((cb, idx) => {
+              (cb as HTMLInputElement).checked = !allChecked;
+              const qtyInput = qtyInputs[idx] as HTMLInputElement;
+              if (qtyInput) {
+                qtyInput.disabled = !(cb as HTMLInputElement).checked;
+                if (!(cb as HTMLInputElement).checked) {
+                  qtyInput.value = '0';
+                } else {
+                  qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+                }
+              }
+            });
+            
+            const newCount = Array.from(checkboxes).filter(cb => (cb as HTMLInputElement).checked).length;
+            if (confirmBtn) {
+              confirmBtn.textContent = `Dispatch Selected (${newCount} items)`;
             }
+          };
+        }
+        
+        checkboxes.forEach((cb, index) => {
+          cb.addEventListener('change', (e) => {
+            const isChecked = (e.target as HTMLInputElement).checked;
+            const qtyInput = qtyInputs[index] as HTMLInputElement;
+            if (qtyInput) {
+              qtyInput.disabled = !isChecked;
+              if (!isChecked) {
+                qtyInput.value = '0';
+              } else {
+                qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+              }
+            }
+            
+            const checkedCount = Array.from(checkboxes).filter(cb => (cb as HTMLInputElement).checked).length;
+            if (confirmBtn) {
+              confirmBtn.textContent = `Dispatch Selected (${checkedCount} items)`;
+            }
+          });
+        });
+        
+        qtyInputs.forEach((input) => {
+          input.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            let value = parseInt(target.value);
+            const max = parseInt(target.getAttribute('max') || '0');
+            
+            if (isNaN(value)) value = 0;
+            if (value > max) {
+              target.value = max.toString();
+              toast.warning(`Quantity reduced to maximum available (${max})`);
+            }
+            if (value < 0) target.value = '0';
+          });
+        });
+      },
+      preConfirm: () => {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        if (checkboxes.length === 0) {
+          Swal.showValidationMessage("Please select at least one item to dispatch");
+          return false;
+        }
+        
+        const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
+        const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+
+        if (!chalan_no || !chalan_no.trim()) {
+          Swal.showValidationMessage("Chalan number is required");
+          return false;
+        }
+        
+        if (!dispatch_date) {
+          Swal.showValidationMessage("Dispatch date is required");
+          return false;
+        }
+        
+        const selectedItemsData: any[] = [];
+        let hasValidQuantity = false;
+        let totalDispatchQty = 0;
+        
+        checkboxes.forEach((cb) => {
+          const itemId = (cb as HTMLInputElement).getAttribute('data-id');
+          const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
+          const serialNo = (cb as HTMLInputElement).getAttribute('data-serial');
+          
+          const qtyInput = document.querySelector(`.dispatch-qty[data-id="${itemId}"]`) as HTMLInputElement;
+          let dispatchQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
+          
+          if (isNaN(dispatchQty)) dispatchQty = 0;
+          if (dispatchQty > maxQty) dispatchQty = maxQty;
+          if (dispatchQty < 0) dispatchQty = 0;
+          
+          if (dispatchQty > 0) {
+            hasValidQuantity = true;
+            totalDispatchQty += dispatchQty;
+            selectedItemsData.push({
+              assignment_id: itemId,
+              quantity: dispatchQty,
+              serial_no: serialNo,
+              max_quantity: maxQty
+            });
           }
         });
-      });
-    },
-    preConfirm: () => {
-      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-      if (checkboxes.length === 0) {
-        Swal.showValidationMessage("Please select at least one item to dispatch");
-        return false;
-      }
-      
-      const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
-      const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
-
-      if (!chalan_no || !dispatch_date) {
-        Swal.showValidationMessage("Please fill out both fields");
-        return false;
-      }
-      
-      // Collect selected items with quantities
-      const selectedItemsData: any[] = [];
-      let hasValidQuantity = false;
-      
-      checkboxes.forEach((cb) => {
-        const itemId = (cb as HTMLInputElement).getAttribute('data-id');
-        const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
-        const serialNo = (cb as HTMLInputElement).getAttribute('data-serial');
         
-        // Find the corresponding quantity input
-        const qtyInput = document.querySelector(`.dispatch-qty[data-id="${itemId}"]`) as HTMLInputElement;
-        let dispatchQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
-        
-        if (isNaN(dispatchQty)) dispatchQty = 0;
-        if (dispatchQty > maxQty) dispatchQty = maxQty;
-        if (dispatchQty < 0) dispatchQty = 0;
-        
-        if (dispatchQty > 0) {
-          hasValidQuantity = true;
-          selectedItemsData.push({
-            assignment_id: itemId,
-            quantity: dispatchQty,
-            serial_no: serialNo,
-            max_quantity: maxQty
-          });
+        if (!hasValidQuantity) {
+          Swal.showValidationMessage("Please enter valid quantity for at least one item");
+          return false;
         }
-      });
-      
-      if (!hasValidQuantity) {
-        Swal.showValidationMessage("Please enter valid quantity for at least one item");
-        return false;
-      }
-      
-      return { 
-        items: selectedItemsData,
-        chalan_no, 
-        dispatch_date 
-      };
-    },
-  });
-
-  if (!selectedItems) return;
-
-  const loadingToast = toast.loading(`Dispatching ${selectedItems.items.length} item(s)...`);
-
-  try {
-    // Send items with quantities to backend
-    const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
-      items: selectedItems.items,  // Array of { assignment_id, quantity }
-      chalan_no: selectedItems.chalan_no,
-      dispatch_date: selectedItems.dispatch_date,
+        
+        return Swal.fire({
+          title: 'Confirm Dispatch',
+          html: `
+            <div class="text-left">
+              <p>You are about to dispatch:</p>
+              <ul class="list-disc list-inside mt-2 mb-2">
+                <li><strong>${selectedItemsData.length}</strong> item(s)</li>
+                <li>Total quantity: <strong>${totalDispatchQty}</strong></li>
+                <li>Chalan: <strong>${chalan_no}</strong></li>
+                <li>Date: <strong>${dispatch_date}</strong></li>
+              </ul>
+              <p class="text-sm text-yellow-600 mt-2">⚠️ This action cannot be undone!</p>
+            </div>
+          `,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Yes, Dispatch!',
+          cancelButtonText: 'Cancel',
+          confirmButtonColor: '#10B981'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            return { 
+              items: selectedItemsData,
+              chalan_no: chalan_no.trim(), 
+              dispatch_date 
+            };
+          }
+          return false;
+        });
+      },
     });
 
-    toast.dismiss(loadingToast);
+    if (!selectedItems || selectedItems === false) return;
 
-    if (response?.data?.success) {
-      const dispatchedCount = response.data.data?.dispatched_count || selectedItems.items.length;
-      const totalDispatchedQty = response.data.data?.dispatched_quantity || 0;
-      const remainingQty = response.data.data?.remaining_quantity || 0;
-      
-      toast.success(
-        <div>
-          <div className="font-semibold text-green-600">✅ Dispatch Successful!</div>
-          <div className="text-sm mt-1">Dispatched: <span className="font-bold">{dispatchedCount}</span> item(s)</div>
-          <div className="text-sm">Total Qty: <span className="font-bold">{totalDispatchedQty}</span></div>
-          {remainingQty > 0 && (
-            <div className="text-sm text-orange-600">Remaining: {remainingQty} quantity pending</div>
-          )}
-          <div className="text-sm">Chalan: {selectedItems.chalan_no}</div>
-        </div>,
-        { autoClose: 5000 }
-      );
-      
-      fetchData();
-      setSelectedJobNo(null);
-    } else {
-      toast.error(response?.data?.error || "Dispatch failed");
+    const loadingToast = toast.loading(`Dispatching ${selectedItems.items.length} item(s)...`);
+
+    try {
+      const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+        items: selectedItems.items,
+        chalan_no: selectedItems.chalan_no,
+        dispatch_date: selectedItems.dispatch_date,
+      });
+
+      toast.dismiss(loadingToast);
+
+      if (response?.data?.success) {
+        toast.success(response.data.message);
+        await fetchData();
+        setSelectedJO(null);
+      } else {
+        toast.error(response?.data?.error || "Dispatch failed");
+      }
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      console.error("Dispatch error:", error);
+      toast.error(error?.response?.data?.error || "Dispatch failed");
     }
-  } catch (error: any) {
-    toast.dismiss(loadingToast);
-    console.error("Dispatch error:", error);
-    
-    const errorMsg = error?.response?.data?.error || error?.message || "Dispatch failed";
-    
-    toast.error(
-      <div>
-        <div className="font-semibold text-red-600">❌ Dispatch Failed!</div>
-        <div className="text-sm text-red-600 mt-1">{errorMsg}</div>
-      </div>,
-      { autoClose: 5000 }
-    );
-  }
-};
+  };
 
-  // ========== JO-WISE Not OK ==========
-// ========== JO-WISE Not OK with QUANTITY SELECTION ==========
-const handleJoNotOk = async (items: QcRow[]) => {
-  if (!items || items.length === 0) {
-    toast.error("No items to process.");
-    return;
-  }
+  const handleJoNotOk = async (items: QcRow[]) => {
+    if (!items || items.length === 0) {
+      toast.error("No items to process.");
+      return;
+    }
 
-  const firstItem = items[0];
-  const jobType = filterParam;
-  const jobId = firstItem?.job_id || firstItem?.job?.id;
-  
-  if (!jobId) {
-    toast.error("Job ID not found");
-    return;
-  }
-  
-  let displayIdentifier = null;
-  if (jobType === "TSO_SERVICE") {
-    displayIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
-  } else {
-    displayIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
-  }
-  
-  const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
-  
-  const { value: selectedData } = await Swal.fire({
-    title: `Select Items & Quantity to Mark as NOT OK`,
-    html: `
-      <div class="text-left">
-        <div class="bg-red-50 p-3 rounded-lg mb-4">
-          <p class="font-semibold">${jobType === "TSO_SERVICE" ? "TSO" : "JO"}: <span class="text-red-600">${displayIdentifier}</span></p>
-          <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
-        </div>
-        
-        <div class="mb-3">
-          <p class="text-sm font-semibold text-gray-700 mb-2">Select items and quantity to mark as NOT OK:</p>
-          <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-            ${items.map((item, idx) => `
-              <div class="item-row p-3 border-b border-gray-200 hover:bg-gray-100">
-                <div class="flex items-center gap-3 mb-2">
-                  <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" ${idx === 0 ? 'checked' : ''}>
-                  <div class="flex-1">
-                    <span class="font-mono font-medium">${item.serial_no || 'N/A'}</span>
-                    <span class="text-gray-500 ml-2">(Total Qty: ${item.quantity_no || 0})</span>
+    const firstItem = items[0];
+    const jobType = filterParam;
+    const jobId = firstItem?.job_id || firstItem?.job?.id;
+    
+    if (!jobId) {
+      toast.error("Job ID not found");
+      return;
+    }
+    
+    let displayIdentifier = null;
+    if (jobType === "TSO_SERVICE") {
+      displayIdentifier = firstItem?.tso_no || firstItem?.job?.tso_no;
+    } else {
+      displayIdentifier = firstItem?.job?.jo_number || firstItem?.jo_no;
+    }
+    
+    const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+    
+    const { value: selectedData } = await Swal.fire({
+      title: `Select Items & Quantity to Mark as NOT OK`,
+      html: `
+        <div class="text-left">
+          <div class="bg-red-50 p-3 rounded-lg mb-4">
+            <p class="font-semibold">JO: <span class="text-red-600">${displayIdentifier}</span></p>
+            <p class="text-sm text-gray-600">Total Quantity Available: <span class="font-bold">${totalQuantity}</span></p>
+          </div>
+          
+          <div class="mb-3">
+            <p class="text-sm font-semibold text-gray-700 mb-2">Select items and quantity to mark as NOT OK:</p>
+            <div class="max-h-80 overflow-y-auto border rounded-lg p-2 bg-gray-50">
+              ${items.map((item, idx) => `
+                <div class="item-row p-3 border-b border-gray-200 hover:bg-gray-100">
+                  <div class="flex items-center gap-3 mb-2">
+                    <input type="checkbox" class="item-checkbox" data-id="${item.id}" data-max="${item.quantity_no}" data-serial="${item.serial_no}" ${idx === 0 ? 'checked' : ''}>
+                    <div class="flex-1">
+                      <span class="font-mono font-medium">${item.serial_no || 'N/A'}</span>
+                      <span class="text-gray-500 ml-2">(Total Qty: ${item.quantity_no || 0})</span>
+                    </div>
+                  </div>
+                  <div class="ml-7">
+                    <label class="text-xs text-gray-600">Not OK Quantity:</label>
+                    <input type="number" class="notok-qty ml-2 px-2 py-1 border rounded text-sm w-24" data-id="${item.id}" value="${item.quantity_no}" min="1" max="${item.quantity_no}" ${idx === 0 ? '' : 'disabled'}>
                   </div>
                 </div>
-                <div class="ml-7">
-                  <label class="text-xs text-gray-600">Not OK Quantity:</label>
-                  <input type="number" class="notok-qty ml-2 px-2 py-1 border rounded text-sm w-24" data-id="${item.id}" value="${item.quantity_no}" min="1" max="${item.quantity_no}" ${idx === 0 ? '' : 'disabled'}>
-                </div>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Reason <span class="text-red-500">*</span></label>
+            <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason..." required></textarea>
           </div>
         </div>
+      `,
+      width: '650px',
+      showCancelButton: true,
+      confirmButtonText: `Mark as NOT OK`,
+      confirmButtonColor: "#d33",
+      didOpen: () => {
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const qtyInputs = document.querySelectorAll('.notok-qty');
+        checkboxes.forEach((cb, index) => {
+          cb.addEventListener('change', (e) => {
+            const isChecked = (e.target as HTMLInputElement).checked;
+            const qtyInput = qtyInputs[index] as HTMLInputElement;
+            if (qtyInput) {
+              qtyInput.disabled = !isChecked;
+              if (!isChecked) qtyInput.value = '0';
+              else qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+            }
+          });
+        });
+      },
+      preConfirm: () => {
+        const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+        if (checkboxes.length === 0) {
+          Swal.showValidationMessage("Please select at least one item");
+          return false;
+        }
         
-        <div class="mb-3">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Reason <span class="text-red-500">*</span></label>
-          <textarea id="reason" class="swal2-textarea w-full" rows="3" placeholder="Enter reason..." required></textarea>
-        </div>
-      </div>
-    `,
-    width: '650px',
-    showCancelButton: true,
-    confirmButtonText: `Mark as NOT OK`,
-    confirmButtonColor: "#d33",
-    didOpen: () => {
-      const checkboxes = document.querySelectorAll('.item-checkbox');
-      const qtyInputs = document.querySelectorAll('.notok-qty');
-      checkboxes.forEach((cb, index) => {
-        cb.addEventListener('change', (e) => {
-          const isChecked = (e.target as HTMLInputElement).checked;
-          const qtyInput = qtyInputs[index] as HTMLInputElement;
-          if (qtyInput) {
-            qtyInput.disabled = !isChecked;
-            if (!isChecked) qtyInput.value = '0';
-            else qtyInput.value = qtyInput.getAttribute('data-max') || '1';
+        const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
+        if (!reason?.trim()) {
+          Swal.showValidationMessage("Reason is required!");
+          return false;
+        }
+        
+        const selectedItems: any[] = [];
+        checkboxes.forEach((cb) => {
+          const itemId = (cb as HTMLInputElement).getAttribute('data-id');
+          const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
+          const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
+          let notOkQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
+          if (isNaN(notOkQty)) notOkQty = 0;
+          if (notOkQty > maxQty) notOkQty = maxQty;
+          if (notOkQty > 0) {
+            selectedItems.push({ assignment_id: itemId, quantity: notOkQty });
           }
         });
-      });
-    },
-    preConfirm: () => {
-      const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-      if (checkboxes.length === 0) {
-        Swal.showValidationMessage("Please select at least one item");
-        return false;
-      }
-      
-      const reason = (document.getElementById("reason") as HTMLTextAreaElement)?.value;
-      if (!reason?.trim()) {
-        Swal.showValidationMessage("Reason is required!");
-        return false;
-      }
-      
-      const selectedItems: any[] = [];
-      checkboxes.forEach((cb) => {
-        const itemId = (cb as HTMLInputElement).getAttribute('data-id');
-        const maxQty = parseInt((cb as HTMLInputElement).getAttribute('data-max') || '0');
-        const qtyInput = document.querySelector(`.notok-qty[data-id="${itemId}"]`) as HTMLInputElement;
-        let notOkQty = qtyInput ? parseInt(qtyInput.value) : maxQty;
-        if (isNaN(notOkQty)) notOkQty = 0;
-        if (notOkQty > maxQty) notOkQty = maxQty;
-        if (notOkQty > 0) {
-          selectedItems.push({ assignment_id: itemId, quantity: notOkQty });
+        
+        if (selectedItems.length === 0) {
+          Swal.showValidationMessage("Please enter valid quantity for at least one item");
+          return false;
         }
-      });
-      
-      if (selectedItems.length === 0) {
-        Swal.showValidationMessage("Please enter valid quantity for at least one item");
-        return false;
-      }
-      
-      return { items: selectedItems, reason: reason.trim() };
-    },
-  });
-
-  if (!selectedData) return;
-
-  const loadingToast = toast.loading(`Marking items as NOT OK...`);
-  const updated_by = storage.getUserId();
-
-  try {
-    const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
-      items: selectedData.items,
-      reason: selectedData.reason,
-      updated_by: updated_by,
+        
+        return { items: selectedItems, reason: reason.trim() };
+      },
     });
 
-    toast.dismiss(loadingToast);
-    
-    if (response?.data?.success) {
-      toast.warning(response.data.message);
-      fetchData();
-      setSelectedJobNo(null);
-    } else {
-      toast.error(response?.data?.error || "Failed to mark as NOT OK");
-    }
-  } catch (error: any) {
-    toast.dismiss(loadingToast);
-    toast.error(error?.response?.data?.error || "Failed to mark as NOT OK");
-  }
-};
+    if (!selectedData) return;
 
-  // ========== JO-WISE Rework ==========
+    const loadingToast = toast.loading(`Marking items as NOT OK...`);
+    const updated_by = storage.getUserId();
+
+    try {
+      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/${jobId}/not-ok`, {
+        items: selectedData.items,
+        reason: selectedData.reason,
+        updated_by: updated_by,
+      });
+
+      toast.dismiss(loadingToast);
+      
+      if (response?.data?.success) {
+        toast.warning(response.data.message);
+        fetchData();
+        setSelectedJO(null);
+      } else {
+        toast.error(response?.data?.error || "Failed to mark as NOT OK");
+      }
+    } catch (error: any) {
+      toast.dismiss(loadingToast);
+      toast.error(error?.response?.data?.error || "Failed to mark as NOT OK");
+    }
+  };
+
   const handleJoRework = async (items: QcRow[]) => {
     if (!items || items.length === 0) {
       toast.error("No items to process.");
@@ -821,204 +1073,311 @@ const handleJoNotOk = async (items: QcRow[]) => {
 
         <div className="relative overflow-x-auto sm:rounded-lg">
           {selectedJobNo ? (
+            // JO Level View - Show JOs for selected Job with Multi-Select
             <>
               <div className="flex items-center justify-between mb-4">
                 <button
-                  onClick={() => setSelectedJobNo(null)}
+                  onClick={() => {
+                    setSelectedJobNo(null);
+                    setSelectedJOs(new Set());
+                    setIsMultiSelectMode(false);
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
                 >
                   <FaArrowLeft />
                   Back to Jobs
                 </button>
+                
+                {(() => {
+                  const jos = getJOsForJob(selectedJobNo);
+                  return jos.length > 0 && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsMultiSelectMode(!isMultiSelectMode);
+                          if (isMultiSelectMode) {
+                            setSelectedJOs(new Set());
+                          }
+                        }}
+                        className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                          isMultiSelectMode 
+                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        {isMultiSelectMode ? 'Exit Multi-Select' : 'Multi-Select Mode'}
+                      </button>
+                      
+                      {isMultiSelectMode && selectedJOs.size > 0 && (
+                        <button
+                          onClick={() => handleBulkDispatch(Array.from(selectedJOs), selectedJobNo)}
+                          className="px-4 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 flex items-center gap-2"
+                        >
+                          🚚 Dispatch Selected ({selectedJOs.size})
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <h2 className="text-xl font-bold mb-4">
-                {filterParam === "TSO_SERVICE"
-                  ? "TSO"
-                  : filterParam === "KANBAN"
-                  ? "J/O Number"
-                  : "Job"}
-                : {selectedJobNo}
+                Job: {selectedJobNo}
               </h2>
 
-              <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder">
-                    <th className="p-3 border border-tableBorder">JO No</th>
-                    <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                    <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                    <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                    <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                    <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                    <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                    <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                    <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                    <th className="px-2 py-0 border border-tableBorder">Actions</th>
-                  </tr>
-                </thead>
+              {isMultiSelectMode && selectedJOs.size > 0 && (
+                <div className="mb-3 p-2 bg-green-50 rounded-lg flex justify-between items-center">
+                  <span className="text-sm text-green-700">
+                    ✓ {selectedJOs.size} JO(s) selected for dispatch
+                  </span>
+                  <button
+                    onClick={() => {
+                      const jos = getJOsForJob(selectedJobNo);
+                      toggleSelectAllJOs(jos);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    {selectedJOs.size === getJOsForJob(selectedJobNo).length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+              )}
 
-                <tbody>
-                  {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">No JO data found</p>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-[#999999]">
+                    <tr className="border border-tableBorder bg-gray-50">
+                      {isMultiSelectMode && (
+                        <th className="p-3 border border-tableBorder w-10">
+                          <input
+                            type="checkbox"
+                            checked={(() => {
+                              const jos = getJOsForJob(selectedJobNo);
+                              return selectedJOs.size === jos.length && jos.length > 0;
+                            })()}
+                            onChange={() => {
+                              const jos = getJOsForJob(selectedJobNo);
+                              toggleSelectAllJOs(jos);
+                            }}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </th>
+                      )}
+                      <th className="p-3 border border-tableBorder font-semibold">JO Number</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Items</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item No</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item Description</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">MOC</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
                     </tr>
-                  ) : (
-                    Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                      <Fragment key={jo}>
-                        <tr className="border border-tableBorder bg-gray-100">
-                          <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={2}>
-                            JO: {jo}
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
-                            <span className="text-xs text-gray-600">{items.length} item(s)</span>
-                          </td>
-                          <td className="px-2 py-2 border border-tableBorder" colSpan={4}>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleJoOK(items)}
-                                className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                              >
-                                Dispatch JO
-                              </button>
-                              <button
-                                onClick={() => handleJoNotOk(items)}
-                                className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
-                              >
-                                Not OK JO
-                              </button>
-                              <button
-                                onClick={() => handleJoRework(items)}
-                                className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                              >
-                                Rework JO
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
+                  </thead>
 
-                        {items.map((item) => (
-                          <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                            <td className="px-2 py-2 border border-tableBorder"> </td>
-                            <td className="px-2 py-2 border border-tableBorder font-mono">
-                              {item.serial_no || "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {item.item_no ?? "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {item.machine_category || "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {item.machine_size || "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {item.machine_code || "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {item.worker_name || "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder font-semibold">
-                              {item.quantity_no ?? "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              {item.assigning_date || "-"}
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <button
-                                onClick={() => handleSingleItemRework(item)}
-                                className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                title={`Rework: ${item.serial_no || "N/A"}`}
-                              >
-                                Rework
-                              </button>
+                  <tbody>
+                    {(() => {
+                      const jos = getJOsForJob(selectedJobNo);
+                      if (jos.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={isMultiSelectMode ? 10 : 9} className="px-4 py-6 text-center border border-tableBorder">
+                              <p className="text-[#666666] text-base">No JO data found</p>
                             </td>
                           </tr>
-                        ))}
-                      </Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                        );
+                      }
+                      
+                      return jos.map((jo) => {
+                        const isSelected = selectedJOs.has(jo.joNumber);
+                        
+                        return (
+                          <Fragment key={jo.joNumber}>
+                            <tr className={`border border-tableBorder cursor-pointer transition-colors ${
+                              isSelected 
+                                ? 'bg-green-50 hover:bg-green-100' 
+                                : 'bg-white hover:bg-primary-50'
+                            }`}>
+                              {isMultiSelectMode && (
+                                <td className="px-3 py-2 border border-tableBorder text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleJOSelection(jo.joNumber)}
+                                    className="w-4 h-4 cursor-pointer"
+                                  />
+                                </td>
+                              )}
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <p className="text-base leading-normal text-blue-600 font-medium">
+                                  {jo.joNumber}
+                                </p>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <p className="text-[#232323] text-base">{jo.clientName}</p>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                  {jo.items.length}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <span className="font-semibold text-green-600">{jo.totalQty}</span>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.itemNos.map((itemNo, idx) => (
+                                    <div key={idx} className="mb-1">{itemNo}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.itemDescriptions.map((desc, idx) => (
+                                    <div key={idx} className="mb-1">{desc}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.mocList.map((moc, idx) => (
+                                    <div key={idx} className="mb-1">{moc}</div>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <div className="flex items-center gap-2 justify-center flex-wrap">
+                                  <button
+                                    onClick={() => handleJoOK(jo.items)}
+                                    className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
+                                  >
+                                    Dispatch
+                                  </button>
+                                  <button
+                                    onClick={() => handleJoNotOk(jo.items)}
+                                    className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 transition-colors"
+                                  >
+                                    Not OK
+                                  </button>
+                                  <button
+                                    onClick={() => handleJoRework(jo.items)}
+                                    className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                                  >
+                                    Rework
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          </Fragment>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
             </>
           ) : (
+            // Job Level View - Show all Jobs
             <>
-              <h2 className="text-xl font-bold mb-4">
-                {filterParam === "TSO_SERVICE"
-                  ? "TSOs Ready for QC"
-                  : filterParam === "KANBAN"
-                  ? "Kanban Ready for QC"
-                  : "Jobs Ready for QC"}
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">
+                  {filterParam === "TSO_SERVICE"
+                    ? "TSOs Ready for QC"
+                    : filterParam === "KANBAN"
+                    ? "Kanban Ready for QC"
+                    : "Jobs Ready for QC"}
+                </h2>
+              </div>
 
-              <table className="w-full text-sm text-left text-gray-500">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder">
-                    <th className="p-3 border border-tableBorder">
-                      {filterParam === "TSO_SERVICE"
-                        ? "TSO No"
-                        : filterParam === "KANBAN"
-                        ? "J/O Number"
-                        : "Job No"}
-                    </th>
-                    <th className="px-2 py-0 border border-tableBorder">Job Category</th>
-                    <th className="px-2 py-0 border border-tableBorder">Total JO</th>
-                    <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                    <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">Loading...</p>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-[#999999]">
+                    <tr className="border border-tableBorder bg-gray-50">
+                      <th className="p-3 border border-tableBorder font-semibold">Job No</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Job Category</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Product Description</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total JOs</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
                     </tr>
-                  ) : jobIdentifiers.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">No data found</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    jobIdentifiers.map((identifier) => {
-                      const summary = jobSummary[identifier];
+                  </thead>
 
-                      return (
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                          <div className="flex justify-center items-center gap-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
+                            <p className="text-[#666666] text-base">Loading...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : jobsGrouped.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                          <p className="text-[#666666] text-base">No data found</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      jobsGrouped.map((job) => (
                         <tr
-                          key={identifier}
-                          className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
-                          onClick={() => setSelectedJobNo(identifier)}
+                          key={job.jobNo}
+                          className="border border-tableBorder cursor-pointer bg-white hover:bg-primary-50 transition-colors"
+                          onClick={() => setSelectedJobNo(job.jobNo)}
                         >
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-blue-600 text-base leading-normal">{identifier}</p>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-base leading-normal text-blue-600 font-medium">
+                              {job.jobNo}
+                            </p>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{summary.jobCategory}</p>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">{job.jobCategory}</p>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">{job.clientName}</p>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{summary.totalQty}</p>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-base">{job.productDesc}</p>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                          <td className="px-3 py-2 border border-tableBorder text-center">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                              {job.uniqueJOs.size}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 border border-tableBorder text-center">
+                            <span className="font-semibold text-green-600">{job.totalQty}</span>
+                          </td>
+                          <td className="px-3 py-2 border border-tableBorder text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedJobNo(job.jobNo);
+                              }}
+                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+                            >
+                              View JOs
+                            </button>
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </div>
 
-        <div className="text-xs text-gray-500 mt-3 px-2">
-          Total {filterParam === "TSO_SERVICE" ? "TSOs" : filterParam === "KANBAN" ? "J/O Numbers" : "Jobs"}: {jobIdentifiers.length} | Total Items: {filteredData.length}
+        <div className="text-xs text-gray-500 mt-4 px-2 flex justify-between items-center">
+          <div>
+            {selectedJobNo ? (
+              <>Total JOs: <span className="font-semibold">{getJOsForJob(selectedJobNo).length}</span> | Total Items: <span className="font-semibold">{filteredData.filter(item => item.job?.job_no === selectedJobNo).length}</span></>
+            ) : (
+              <>Total Jobs: <span className="font-semibold">{jobsGrouped.length}</span> | Total Items: <span className="font-semibold">{filteredData.length}</span></>
+            )}
+          </div>
+          <div className="text-gray-400">
+            💡 Click on any row to view details
+          </div>
         </div>
       </div>
     </div>
