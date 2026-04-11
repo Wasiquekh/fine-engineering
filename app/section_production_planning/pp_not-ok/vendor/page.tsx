@@ -35,6 +35,7 @@ type Row = {
   job_type?: string | null;
   tso_no?: string | null;
   job_no?: string | null;
+  original_tab?: string | null;
   job?: {
     id?: string | null;
     job_no?: string | null;
@@ -42,6 +43,9 @@ type Row = {
     job_category?: string | null;
     client_name?: string | null;
     job_type?: string | null;
+    reason?: string | null;
+    item_description?: string | null;
+    moc?: string | null;
   } | null;
 };
 
@@ -86,22 +90,9 @@ export default function NotOkVendorPage() {
     }
   };
 
-  const buildQS = () => {
-    const q = new URLSearchParams();
-    q.set("filter", filterParam);
-    if (client) q.set("client", client);
-    q.set("review_for", REVIEW_FOR);
-    return q.toString();
-  };
-
-  const goQcVendorPage = () => {
-    router.push(`/qc/vendor?${buildQS()}`);
-  };
-
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch ALL job types
       const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
       let allData: Row[] = [];
 
@@ -178,12 +169,22 @@ export default function NotOkVendorPage() {
     }
   };
 
+  // Auto-detect - No tab parameter needed, backend will handle
   const handleJobBackToQC = async (item: Row) => {
-    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC Vendor.", "Yes, Send to QC"))) return;
-    await postAction(item, "backToQc", "Serial sent back to QC Vendor successfully", { review_for: REVIEW_FOR });
+    const tabDisplay = item.original_tab === "incoming" ? "Incoming" : "Outgoing";
+    
+    if (!(await actionConfirm(
+      "Send back to QC?", 
+      `This serial will automatically move back to ${tabDisplay} QC Vendor.`, 
+      "Yes, Send to QC"
+    ))) return;
+    
+    await postAction(item, "backToQc", `Serial sent back to ${tabDisplay} QC Vendor successfully`, { 
+      review_for: REVIEW_FOR
+      // No tab parameter - backend will auto-detect from original_tab
+    });
   };
 
-  // UPDATED: Changed from "rework" to use reject endpoint
   const handleRework = async (item: Row) => {
     if (!item) return;
 
@@ -218,7 +219,6 @@ export default function NotOkVendorPage() {
     await postAction(item, "reject-not-ok", "Serial rejected successfully", { review_for: REVIEW_FOR });
   };
 
-  // Filter by job type
   const filteredData = useMemo(() => {
     if (jobServiceCategoryFilter === "ALL") return data;
 
@@ -228,7 +228,6 @@ export default function NotOkVendorPage() {
     });
   }, [data, jobServiceCategoryFilter]);
 
-  // Get unique identifiers based on job type
   const jobIdentifiers = useMemo(() => {
     const ids = new Set<string>();
     
@@ -272,7 +271,19 @@ export default function NotOkVendorPage() {
     const groups: Record<string, Row[]> = {};
 
     items.forEach((item) => {
-      const jo = item.jo_no || "Unknown";
+      let jo = item.jo_no;
+      
+      if (!jo && item.serial_no) {
+        const match = item.serial_no.match(/^([^-]+-[^-]+-[^/]+\/[^/]+\/[^/]+)/);
+        if (match) {
+          jo = match[1];
+        } else {
+          jo = item.serial_no.substring(0, 20);
+        }
+      }
+      
+      if (!jo) jo = "Unknown";
+      
       if (!groups[jo]) groups[jo] = [];
       groups[jo].push(item);
     });
@@ -289,6 +300,7 @@ export default function NotOkVendorPage() {
         jobCategory: string;
         assigningDate: string;
         jobType: string;
+        reason: string;
       }
     > = {};
 
@@ -313,12 +325,15 @@ export default function NotOkVendorPage() {
         ? (items[0].job_type || items[0].job?.job_type || "JOB_SERVICE")
         : "JOB_SERVICE";
 
+      const reason = items.length > 0 ? (items[0].job?.reason || "-") : "-";
+
       summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
         jobType,
+        reason,
       };
     });
 
@@ -327,7 +342,6 @@ export default function NotOkVendorPage() {
 
   const uniqueCategories = useMemo(() => categories, [categories]);
 
-  // Get display name for identifier
   const getIdentifierDisplayName = (identifier: string) => {
     const [type, actualId] = identifier.split(':');
     if (type === "TSO") {
@@ -338,7 +352,6 @@ export default function NotOkVendorPage() {
     return actualId;
   };
 
-  // Get job type badge color
   const getJobTypeBadge = (jobType: string) => {
     switch(jobType) {
       case "TSO_SERVICE":
@@ -350,7 +363,13 @@ export default function NotOkVendorPage() {
     }
   };
 
-  // Count by job type
+  const getOriginalTabBadge = (originalTab: string | null | undefined) => {
+    if (originalTab === "incoming") {
+      return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Incoming</span>;
+    }
+    return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Outgoing</span>;
+  };
+
   const countsByType = useMemo(() => {
     const counts = {
       JOB_SERVICE: 0,
@@ -452,15 +471,15 @@ export default function NotOkVendorPage() {
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
                       <th className="px-2 py-0 border border-tableBorder">Type</th>
+                      <th className="px-2 py-0 border border-tableBorder">Original Tab</th>
                       <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Item No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Item Description</th>
+                      <th className="px-2 py-0 border border-tableBorder">MOC</th>
                       <th className="px-2 py-0 border border-tableBorder">Vendor Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
                       <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
@@ -474,49 +493,50 @@ export default function NotOkVendorPage() {
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => (
                         <Fragment key={jo}>
-                          {/* JO Group Header */}
                           <tr className="border border-tableBorder bg-gray-100">
                             <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={12}>
-                              JO: {jo}
+                              JO: {jo} ({items.length} item(s))
                             </td>
                           </tr>
                           
-                          {/* Individual Items with Actions */}
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">{jo}</td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
                               </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getOriginalTabBadge(item.original_tab)}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.item_description || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.moc || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.vendor_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-1 flex-wrap">
+                                <span className="text-red-600 text-xs font-medium">
+                                  {item.job?.reason || "-"}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <div className="flex flex-col gap-1">
                                   <button
                                     onClick={() => handleJobBackToQC(item)}
                                     className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
-                                    title="Send back to QC"
                                   >
-                                    QC
+                                    Back to QC
                                   </button>
                                   <button
                                     onClick={() => handleRework(item)}
                                     className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                    title="Send for rework"
                                   >
                                     Rework
                                   </button>
                                   <button
                                     onClick={() => handleJobRejected(item)}
-                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Reject this serial"
+                                    className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
                                   >
                                     Reject
                                   </button>
@@ -543,19 +563,20 @@ export default function NotOkVendorPage() {
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
@@ -589,6 +610,9 @@ export default function NotOkVendorPage() {
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
                             </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-red-600 text-xs font-medium">{summary.reason}</p>
+                            </td>
                           </tr>
                         );
                       })
@@ -604,7 +628,7 @@ export default function NotOkVendorPage() {
               Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
             </div>
             <div className="text-xs text-gray-400">
-              Actions are per serial number
+              ⚡ Items automatically go back to their original tab (Outgoing/Incoming)
             </div>
           </div>
         </div>

@@ -128,8 +128,7 @@ export default function Home() {
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
-      // This component always fetches jobs. Categories are for filter tabs only.
-      const endpoint = "/fineengg_erp/system/jobs";
+      const endpoint = "/fineengg_erp/system/categories";
       const params = new URLSearchParams();
 
       if (clientParam) {
@@ -141,8 +140,6 @@ export default function Home() {
       if (urgentParam === "true") {
         params.append("is_urgent", "true");
       }
-
-      params.append("job_type", "JOB_SERVICE");
 
       const queryString = params.toString();
       const url = queryString ? `${endpoint}?${queryString}` : endpoint;
@@ -214,27 +211,7 @@ export default function Home() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          J/O Number
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
-                    >
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job Type
-                        </div>
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
@@ -244,27 +221,27 @@ export default function Home() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item Description
+                          Description
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item No
+                          Material Type
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
@@ -274,21 +251,31 @@ export default function Home() {
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          MOC
+                          Bar
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-firstBlack text-base leading-normal">
-                          Bin Location
+                          Temperature
+                        </div>
+                      </div>
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-2 py-0 border border-tableBorder"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-firstBlack text-base leading-normal">
+                          Due Date
                         </div>
                       </div>
                     </th>
@@ -308,7 +295,7 @@ export default function Home() {
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={9}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -331,8 +318,8 @@ export default function Home() {
                                 )
                               }
                               className={`text-base leading-normal cursor-pointer underline ${
-                                item.urgent
-                                  ? "text-red-600 hover:text-red-700"
+                                item.is_urgent
+                                  ? "text-red-600 hover:text-red-800"
                                   : "text-blue-600 hover:text-blue-800"
                               }`}
                             >
@@ -342,55 +329,36 @@ export default function Home() {
                             <p className="text-[#232323] text-base leading-normal">N/A</p>
                           )}
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.jo_number || "N/A"}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.job_category || "N/A"}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.job_type}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.description}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.job_category || "N/A"}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.material_type}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.item_description}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.qty}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.item_no}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.bar}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.qty}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.tempp}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.moc}
-                          </p>
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
-                            {item.bin_location}
-                          </p>
+                        <td className="px-2 py-2 border border-tableBorder">
+                          <p className="text-[#232323] text-base leading-normal">{item.urgent_due_date || "-"}</p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <span
                             className={`px-2 py-1 rounded text-sm ${
-                              item.urgent
+                              item.is_urgent
                                 ? "bg-red-100 text-red-600"
                                 : "bg-green-100 text-green-600"
                             }`}
                           >
-                            {item.urgent ? "Urgent" : "Normal"}
+                            {item.is_urgent ? "Urgent" : "Normal"}
                           </span>
                         </td>
                       </tr>

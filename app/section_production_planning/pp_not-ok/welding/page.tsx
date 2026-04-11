@@ -26,6 +26,7 @@ type Row = {
   quantity_no?: number | null;
   assigning_date?: string | null;
   serial_no?: string | null;
+  vendor_name?: string | null;
   job_id?: string | null;
   jobId?: string | null;
   job_category?: string | null;
@@ -33,6 +34,8 @@ type Row = {
   status?: string | null;
   job_type?: string | null;
   tso_no?: string | null;
+  job_no?: string | null;
+  original_tab?: string | null;  // ✅ Added original_tab
   job?: {
     id?: string | null;
     job_no?: string | null;
@@ -40,6 +43,9 @@ type Row = {
     job_category?: string | null;
     client_name?: string | null;
     job_type?: string | null;
+    reason?: string | null;
+    item_description?: string | null;
+    moc?: string | null;
   } | null;
 };
 
@@ -84,22 +90,9 @@ export default function NotOkWeldingPage() {
     }
   };
 
-  const buildQS = () => {
-    const q = new URLSearchParams();
-    q.set("filter", filterParam);
-    if (client) q.set("client", client);
-    q.set("review_for", REVIEW_FOR);
-    return q.toString();
-  };
-
-  const goQcWeldingPage = () => {
-    router.push(`/qc/welding?${buildQS()}`);
-  };
-
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch ALL job types for not-ok welding
       const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
       let allData: Row[] = [];
 
@@ -115,7 +108,6 @@ export default function NotOkWeldingPage() {
 
         const fetchedData = Array.isArray(response?.data?.data) ? response.data.data : [];
         
-        // Add job_type to each item
         const dataWithJobType = fetchedData.map((item: any) => ({
           ...item,
           job_type: jobType
@@ -124,7 +116,7 @@ export default function NotOkWeldingPage() {
         allData = [...allData, ...dataWithJobType];
       }
 
-      console.log(`Fetched ${allData.length} not-ok welding items`);
+      console.log("Fetched data:", allData);
       setData(allData);
     } catch (error: any) {
       console.error("Error fetching not-ok welding data:", error);
@@ -142,60 +134,7 @@ export default function NotOkWeldingPage() {
   useEffect(() => {
     setSelectedIdentifier(null);
     fetchData();
-  }, [client]);
-
-  const filteredData = useMemo(() => {
-    if (jobServiceCategoryFilter === "ALL") return data;
-
-    return data.filter((item) => {
-      const category = item.job_category || item.job?.job_category || "";
-      return category === jobServiceCategoryFilter;
-    });
-  }, [data, jobServiceCategoryFilter]);
-
-  // Get unique identifiers based on job type
-  const jobIdentifiers = useMemo(() => {
-    const ids = new Set<string>();
-    
-    filteredData.forEach((item) => {
-      const jobType = item.job_type || item.job?.job_type;
-      
-      if (jobType === "TSO_SERVICE") {
-        const tsoNo = item.tso_no || item.job?.tso_no;
-        if (tsoNo) ids.add(`TSO:${tsoNo}`);
-      } else {
-        const jobNo = item.job?.job_no;
-        if (jobNo) ids.add(`JOB:${jobNo}`);
-      }
-    });
-    
-    return Array.from(ids);
-  }, [filteredData]);
-
-  const getJoGroupsForIdentifier = (identifier: string) => {
-    const [type, actualId] = identifier.split(':');
-    
-    const items = filteredData.filter((item) => {
-      const jobType = item.job_type || item.job?.job_type;
-      
-      if (type === "TSO" && jobType === "TSO_SERVICE") {
-        return (item.tso_no || item.job?.tso_no) === actualId;
-      } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
-        return item.job?.job_no === actualId;
-      }
-      return false;
-    });
-    
-    const groups: Record<string, Row[]> = {};
-
-    items.forEach((item) => {
-      const jo = item.jo_no || "Unknown";
-      if (!groups[jo]) groups[jo] = [];
-      groups[jo].push(item);
-    });
-
-    return groups;
-  };
+  }, [filterParam, client]);
 
   const getJobId = (item: Row) => item.jobId || item.job_id || item.job?.id;
 
@@ -231,12 +170,22 @@ export default function NotOkWeldingPage() {
     }
   };
 
+  // ✅ Auto-detect - Single button, no tab parameter needed
   const handleJobBackToQC = async (item: Row) => {
-    if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC Welding.", "Yes, Send to QC"))) return;
-    await postAction(item, "backToQc", "Serial sent back to QC Welding successfully", { review_for: REVIEW_FOR });
+    const tabDisplay = item.original_tab === "incoming" ? "Incoming" : "Outgoing";
+    
+    if (!(await actionConfirm(
+      "Send back to QC?", 
+      `This serial will automatically move back to ${tabDisplay} QC Welding.`, 
+      "Yes, Send to QC"
+    ))) return;
+    
+    await postAction(item, "backToQc", `Serial sent back to ${tabDisplay} QC Welding successfully`, { 
+      review_for: REVIEW_FOR
+      // No tab parameter - backend will auto-detect from original_tab
+    });
   };
 
-  // UPDATED: Changed from using postAction to direct API call with reject endpoint
   const handleRework = async (item: Row) => {
     if (!item) return;
 
@@ -271,7 +220,74 @@ export default function NotOkWeldingPage() {
     await postAction(item, "reject-not-ok", "Serial rejected successfully", { review_for: REVIEW_FOR });
   };
 
-  const jobSummary = useMemo(() => {
+  const filteredData = useMemo(() => {
+    if (jobServiceCategoryFilter === "ALL") return data;
+
+    return data.filter((item) => {
+      const category = item.job_category || item.job?.job_category || "";
+      return category === jobServiceCategoryFilter;
+    });
+  }, [data, jobServiceCategoryFilter]);
+
+  const jobIdentifiers = useMemo(() => {
+    const ids = new Set<string>();
+    
+    filteredData.forEach((item) => {
+      const jobType = item.job_type || item.job?.job_type;
+      
+      if (jobType === "TSO_SERVICE") {
+        const tsoNo = item.tso_no || item.job?.tso_no;
+        if (tsoNo) ids.add(`TSO:${tsoNo}`);
+      } else {
+        const jobNo = item.job?.job_no;
+        if (jobNo) ids.add(`JOB:${jobNo}`);
+      }
+    });
+    
+    return Array.from(ids);
+  }, [filteredData]);
+
+  const getItemsForIdentifier = (identifier: string) => {
+    const [type, actualId] = identifier.split(':');
+    
+    return filteredData.filter((item) => {
+      const jobType = item.job_type || item.job?.job_type;
+      
+      if (type === "TSO" && jobType === "TSO_SERVICE") {
+        return (item.tso_no || item.job?.tso_no) === actualId;
+      } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
+        return item.job?.job_no === actualId;
+      }
+      return false;
+    });
+  };
+
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    const groups: Record<string, Row[]> = {};
+
+    items.forEach((item) => {
+      let jo = item.jo_no;
+      
+      if (!jo && item.serial_no) {
+        const match = item.serial_no.match(/^([^-]+-[^-]+-[^/]+\/[^/]+\/[^/]+)/);
+        if (match) {
+          jo = match[1];
+        } else {
+          jo = item.serial_no.substring(0, 20);
+        }
+      }
+      
+      if (!jo) jo = "Unknown";
+      
+      if (!groups[jo]) groups[jo] = [];
+      groups[jo].push(item);
+    });
+
+    return groups;
+  };
+
+  const identifierSummary = useMemo(() => {
     const summary: Record<
       string,
       {
@@ -280,22 +296,12 @@ export default function NotOkWeldingPage() {
         jobCategory: string;
         assigningDate: string;
         jobType: string;
+        reason: string;
       }
     > = {};
 
     jobIdentifiers.forEach((identifier) => {
-      const [type, actualId] = identifier.split(':');
-      
-      const items = filteredData.filter((item) => {
-        const jobType = item.job_type || item.job?.job_type;
-        
-        if (type === "TSO" && jobType === "TSO_SERVICE") {
-          return (item.tso_no || item.job?.tso_no) === actualId;
-        } else if (type === "JOB" && (jobType === "JOB_SERVICE" || jobType === "KANBAN")) {
-          return item.job?.job_no === actualId;
-        }
-        return false;
-      });
+      const items = getItemsForIdentifier(identifier);
 
       const totalQty = items.reduce(
         (sum, item) => sum + (Number(item.quantity_no) || 0),
@@ -315,12 +321,15 @@ export default function NotOkWeldingPage() {
         ? (items[0].job_type || items[0].job?.job_type || "JOB_SERVICE")
         : "JOB_SERVICE";
 
+      const reason = items.length > 0 ? (items[0].job?.reason || "-") : "-";
+
       summary[identifier] = {
         totalQty,
         uniqueJoCount,
         jobCategory,
         assigningDate,
         jobType,
+        reason,
       };
     });
 
@@ -329,7 +338,6 @@ export default function NotOkWeldingPage() {
 
   const uniqueCategories = useMemo(() => categories, [categories]);
 
-  // Get display name for identifier
   const getIdentifierDisplayName = (identifier: string) => {
     const [type, actualId] = identifier.split(':');
     if (type === "TSO") {
@@ -338,7 +346,6 @@ export default function NotOkWeldingPage() {
     return actualId;
   };
 
-  // Get job type badge
   const getJobTypeBadge = (jobType: string) => {
     switch(jobType) {
       case "TSO_SERVICE":
@@ -350,7 +357,14 @@ export default function NotOkWeldingPage() {
     }
   };
 
-  // Count by job type
+  // ✅ Added original tab badge
+  const getOriginalTabBadge = (originalTab: string | null | undefined) => {
+    if (originalTab === "incoming") {
+      return <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">Incoming</span>;
+    }
+    return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">Outgoing</span>;
+  };
+
   const countsByType = useMemo(() => {
     const counts = {
       JOB_SERVICE: 0,
@@ -444,73 +458,81 @@ export default function NotOkWeldingPage() {
                 </button>
 
                 <h2 className="text-xl font-bold mb-4">
-                  {selectedIdentifier.startsWith('TSO:') ? 'TSO' : 'Job'}: {selectedIdentifier.split(':')[1] || selectedIdentifier}
+                  {getIdentifierDisplayName(selectedIdentifier)}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Type</th>
+                      <th className="px-2 py-0 border border-tableBorder">Original Tab</th>
                       <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
+                      <th className="px-2 py-0 border border-tableBorder">Item Description</th>
+                      <th className="px-2 py-0 border border-tableBorder">MOC</th>
                       <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
                       <th className="px-2 py-0 border border-tableBorder">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={12} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No JO data found</p>
                         </td>
                       </tr>
                     ) : (
                       Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => (
                         <Fragment key={jo}>
-                          {/* JO Group Header */}
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
-                              JO: {jo}
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={12}>
+                              JO: {jo} ({items.length} item(s))
                             </td>
                           </tr>
                           
-                          {/* Individual Items with Actions */}
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
+                              <td className="px-2 py-2 border border-tableBorder">{jo}</td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                {getOriginalTabBadge(item.original_tab)}
+                              </td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.item_description || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.moc || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-1 flex-wrap">
+                                <span className="text-red-600 text-xs font-medium">
+                                  {item.job?.reason || "-"}
+                                </span>
+                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">
+                                <div className="flex flex-col gap-1">
+                                  {/* ✅ Single "Back to QC" button - auto detects tab */}
                                   <button
                                     onClick={() => handleJobBackToQC(item)}
                                     className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
-                                    title="Send back to QC"
                                   >
-                                    QC
+                                    Back to QC
                                   </button>
                                   <button
                                     onClick={() => handleRework(item)}
                                     className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                    title="Send for rework"
                                   >
                                     Rework
                                   </button>
                                   <button
                                     onClick={() => handleJobRejected(item)}
-                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Reject this serial"
+                                    className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
                                   >
                                     Reject
                                   </button>
@@ -537,25 +559,26 @@ export default function NotOkWeldingPage() {
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No not-ok welding data found</p>
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                          <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
                     ) : (
                       jobIdentifiers.map((identifier) => {
-                        const summary = jobSummary[identifier];
+                        const summary = identifierSummary[identifier];
 
                         return (
                           <tr
@@ -583,6 +606,9 @@ export default function NotOkWeldingPage() {
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
                             </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-red-600 text-xs font-medium">{summary.reason}</p>
+                            </td>
                           </tr>
                         );
                       })
@@ -598,7 +624,7 @@ export default function NotOkWeldingPage() {
               Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
             </div>
             <div className="text-xs text-gray-400">
-              Actions are per serial number
+              ⚡ Items automatically go back to their original tab (Outgoing/Incoming)
             </div>
           </div>
         </div>
