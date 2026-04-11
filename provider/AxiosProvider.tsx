@@ -9,7 +9,7 @@ import { appCheck } from "../app/firebase-config";
 import StorageManager from "./StorageManager";
 
 const isServer = typeof window === "undefined";
-const defaultBaseURL = "https://fine-eng-prod-backend.dynsimulation.com//api/v1";
+const defaultBaseURL = "https://fine-eng-prod-backend.dynsimulation.com/api/v1";
 
 export default class AxiosProvider {
   private instance: AxiosInstance;
