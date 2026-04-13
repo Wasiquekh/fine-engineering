@@ -99,7 +99,7 @@ export default function VendorOutgoingPage() {
         const params: any = { job_type: jobType };
         if (client) params.client_name = client;
         
-        const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-vendor", { params });
+        const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-vendor", { params, headers: {} as any, });
         const fetchedData = response?.data?.data || [];
         
         const dataWithType = fetchedData.map((item: any) => ({
