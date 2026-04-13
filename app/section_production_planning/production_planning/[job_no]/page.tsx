@@ -524,10 +524,10 @@ export default function JobDetailsPage() {
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Desc</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Qty</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Desc</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign Date</th>
@@ -569,10 +569,10 @@ export default function JobDetailsPage() {
                             <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
                                 <td className="px-4 py-3 border border-tableBorder">
                                   {isFirst && (assignments[item.id]?.assignTo === "Others" ? (
@@ -713,6 +713,9 @@ export default function JobDetailsPage() {
                         Job No
                       </th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        Description
+                      </th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Item No
                       </th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
@@ -723,9 +726,6 @@ export default function JobDetailsPage() {
                       </th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Quantity
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Description
                       </th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Status
@@ -755,6 +755,9 @@ export default function JobDetailsPage() {
                             {item.job_no}
                           </td>
                           <td className="px-4 py-3 border border-tableBorder">
+                            {item.description}
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.item_no}
                           </td>
                           <td className="px-4 py-3 border border-tableBorder">
@@ -765,9 +768,6 @@ export default function JobDetailsPage() {
                           </td>
                           <td className="px-4 py-3 border border-tableBorder">
                             {item.qty}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.description}
                           </td>
                           <td className="px-4 py-3 border border-tableBorder">
                             <span
