@@ -1005,7 +1005,7 @@ export default function QcMainPage() {
 
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-xl font-semibold text-firstBlack">
+          <h1 className="text-2xl font-semibold text-firstBlack">
             QC • {filterParam.replace("_", " ")}
             {client && ` • ${client}`}
           </h1>
@@ -1207,12 +1207,12 @@ export default function QcMainPage() {
                                 </td>
                               )}
                               <td className="px-3 py-2 border border-tableBorder">
-                                <p className="text-base leading-normal text-blue-600 font-medium">
+                                <p className="text-sm leading-normal text-blue-600 font-medium">
                                   {jo.joNumber}
                                 </p>
                               </td>
                               <td className="px-3 py-2 border border-tableBorder">
-                                <p className="text-[#232323] text-base">{jo.clientName}</p>
+                                <p className="text-[#232323] text-sm">{jo.clientName}</p>
                               </td>
                               <td className="px-3 py-2 border border-tableBorder text-center">
                                 <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
@@ -1325,18 +1325,18 @@ export default function QcMainPage() {
                           onClick={() => setSelectedJobNo(job.jobNo)}
                         >
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-base leading-normal text-blue-600 font-medium">
+                            <p className="text-sm leading-normal text-blue-600 font-medium">
                               {job.jobNo}
                             </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{job.jobCategory}</p>
+                            <p className="text-[#232323] text-sm">{job.jobCategory}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{job.clientName}</p>
+                            <p className="text-[#232323] text-sm">{job.clientName}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{job.productDesc}</p>
+                            <p className="text-[#232323] text-sm">{job.productDesc}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder text-center">
                             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">

@@ -158,7 +158,7 @@ export default function VendorPage() {
 
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-xl font-semibold text-firstBlack">
+          <h1 className="text-2xl font-semibold text-firstBlack">
             Vendor • In-Vendor Status
             {client && ` • ${client}`}
           </h1>
@@ -215,21 +215,21 @@ export default function VendorPage() {
                       return items.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-50">
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-base font-mono text-blue-600">
+                            <p className="text-sm font-mono text-blue-600">
                               {item.serial_no || "N/A"}
                             </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.item_no || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.item_no || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.job?.item_description || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.job?.item_description || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.job?.moc || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.job?.moc || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.vendor_name || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.vendor_name || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder text-center">
                             <span className="font-semibold text-green-600">{item.quantity_no || 0}</span>
@@ -295,18 +295,18 @@ export default function VendorPage() {
                           onClick={() => setSelectedJO(jo.joNumber)}
                         >
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-base leading-normal text-blue-600 font-medium">
+                            <p className="text-sm leading-normal text-blue-600 font-medium">
                               {jo.joNumber}
                             </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{jo.jobNo}</p>
+                            <p className="text-[#232323] text-sm">{jo.jobNo}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{jo.clientName}</p>
+                            <p className="text-[#232323] text-sm">{jo.clientName}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{jo.vendorName}</p>
+                            <p className="text-[#232323] text-sm">{jo.vendorName}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
                             <div className="text-sm max-w-[200px]">

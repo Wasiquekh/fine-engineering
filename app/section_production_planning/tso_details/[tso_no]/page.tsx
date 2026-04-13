@@ -232,10 +232,10 @@ export default function JobDetailsPage() {
           <div className="flex flex-col gap-8">
             {/* Left Side: Assignment Form */}
             <div className="w-full">
-              <h2 className="text-xl font-bold mb-4">Material Recieved From Amar</h2>
+              <h2 className="text-2xl font-semibold mb-4">Material Recieved From Amar</h2>
               <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1600px]">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Type</th>

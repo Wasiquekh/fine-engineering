@@ -605,7 +605,7 @@ export default function Home() {
                     className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 text-white group hover:bg-primary-500"
                   >
                     <FiFilter className="w-4 h-4 text-white" />
-                    <p className="text-base font-medium">Add Pending</p>
+                    <p className="text-sm font-medium">Add Pending</p>
                   </button>
                 )}
               </div>
@@ -620,70 +620,70 @@ export default function Home() {
                       <>
                         <th scope="col" className="p-3 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Job No
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Job Category
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Description
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Material Type
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Quantity
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Bar
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Temperature
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Due Date
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Status
                             </div>
                           </div>
                         </th>
                         <th scope="col" className="px-2 py-0 border border-tableBorder">
                           <div className="flex items-center gap-2">
-                            <div className="font-medium text-firstBlack text-base leading-normal">
+                            <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                               Actions
                             </div>
                           </div>
@@ -693,7 +693,7 @@ export default function Home() {
                       <>
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           {activeFilter === "TSO_SERVICE"
                             ? "TSO No"
                             : activeFilter === "KANBAN"
@@ -708,7 +708,7 @@ export default function Home() {
                         className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="font-medium text-firstBlack text-base leading-normal">
+                          <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                             J/O Number
                           </div>
                         </div>
@@ -719,7 +719,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job Type
                         </div>
                       </div>
@@ -729,7 +729,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job Category
                         </div>
                       </div>
@@ -739,7 +739,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Item Description
                         </div>
                       </div>
@@ -749,7 +749,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Item No
                         </div>
                       </div>
@@ -759,7 +759,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Quantity
                         </div>
                       </div>
@@ -769,7 +769,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           MOC
                         </div>
                       </div>
@@ -779,7 +779,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Bin Location
                         </div>
                       </div>
@@ -789,7 +789,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Status
                         </div>
                       </div>
@@ -799,7 +799,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Actions
                         </div>
                       </div>
@@ -819,7 +819,7 @@ export default function Home() {
                         }
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
-                        <p className="text-[#666666] text-base">
+                        <p className="text-[#666666] text-sm">
                           No data found
                         </p>
                       </td>
@@ -838,7 +838,7 @@ export default function Home() {
                                   `/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
                                 )
                               }
-                              className={`text-base leading-normal cursor-pointer underline ${
+                              className={`text-sm leading-normal cursor-pointer underline ${
                                 item.urgent || item.is_urgent
                                   ? "text-red-600 hover:text-red-800"
                                   : "text-blue-600 hover:text-blue-800"
@@ -848,25 +848,25 @@ export default function Home() {
                             </p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.job_category}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.job_category}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.description}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.description}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.material_type}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.material_type}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.qty}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.qty}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.bar}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.bar}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.tempp}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.tempp}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base leading-normal">{item.urgent_due_date || "-"}</p>
+                            <p className="text-[#232323] text-sm leading-normal">{item.urgent_due_date || "-"}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <span
@@ -900,7 +900,7 @@ export default function Home() {
                             item.jo_number ? (
                               <p
                                 onClick={() => router.push(`/section_production_planning/kanban_details/${item.jo_number}`)}
-                                className={`text-base leading-normal cursor-pointer underline ${
+                                className={`text-sm leading-normal cursor-pointer underline ${
                                   item.urgent
                                     ? "text-red-600 hover:text-red-700"
                                     : "text-blue-600 hover:text-blue-800"
@@ -909,12 +909,12 @@ export default function Home() {
                                 {item.jo_number}
                               </p>
                             ) : (
-                              <p className="text-[#232323] text-base leading-normal">N/A</p>
+                              <p className="text-[#232323] text-sm leading-normal">N/A</p>
                             )
                           ) : activeFilter === "TSO_SERVICE" ? (
                             <p
                               onClick={() => router.push(`/section_production_planning/tso_details/${item.tso_no}`)}
-                              className={`text-base leading-normal cursor-pointer underline ${
+                              className={`text-sm leading-normal cursor-pointer underline ${
                                 item.urgent
                                   ? "text-red-600 hover:text-red-700"
                                   : "text-blue-600 hover:text-blue-800"
@@ -929,7 +929,7 @@ export default function Home() {
                                   `/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`
                                 )
                               }
-                              className={`text-base leading-normal cursor-pointer underline ${
+                              className={`text-sm leading-normal cursor-pointer underline ${
                                 item.urgent
                                   ? "text-red-600 hover:text-red-700"
                                   : "text-blue-600 hover:text-blue-800"
@@ -938,48 +938,48 @@ export default function Home() {
                               {item.job_no}
                             </p>
                           ) : (
-                            <p className="text-[#232323] text-base leading-normal">N/A</p>
+                            <p className="text-[#232323] text-sm leading-normal">N/A</p>
                           )}
                         </td>
                         {activeFilter !== "KANBAN" && (
                           <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                            <p className="text-[#232323] text-base leading-normal">
+                            <p className="text-[#232323] text-sm leading-normal">
                               {item.jo_number || "N/A"}
                             </p>
                           </td>
                         )}
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_type}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_category || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.item_description}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.item_no}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.qty}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.moc}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.bin_location}
                           </p>
                         </td>
@@ -1050,7 +1050,7 @@ export default function Home() {
           <div className="w-full min-h-auto">
             {/* Header */}
             <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
-              <p className="text-primary-600 text-[22px] sm:text-[24px] md:text-[26px] font-bold leading-8 sm:leading-9">
+              <p className="text-primary-600 text-2xl font-semibold leading-8 sm:leading-9">
                 {getFlyoutTitle()}
               </p>
               <IoCloseOutline
@@ -1084,7 +1084,7 @@ export default function Home() {
 
                       {/* Job No - Only for JOB_SERVICE */}
                         <div className="w-full mb-4">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                             Job No
                           </p>
                           <input
@@ -1094,7 +1094,7 @@ export default function Home() {
                             onChange={(e) =>
                               setFieldValue("job_no", e.target.value)
                             }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                             placeholder="Enter Job No"
                           />
                           <ErrorMessage
@@ -1132,7 +1132,7 @@ export default function Home() {
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                       <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                           Item No
                                         </p>
                                         <input
@@ -1142,7 +1142,7 @@ export default function Home() {
                                           onChange={(e) =>
                                             setFieldValue(`pending_items.${index}.item_no`, e.target.value)
                                           }
-                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                           placeholder="Enter Item No"
                                         />
                                         <ErrorMessage
@@ -1152,7 +1152,7 @@ export default function Home() {
                                         />
                                       </div>
                                       <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                           Size
                                         </p>
                                         <input
@@ -1162,7 +1162,7 @@ export default function Home() {
                                           onChange={(e) =>
                                             setFieldValue(`pending_items.${index}.size`, e.target.value)
                                           }
-                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                           placeholder="Enter Size"
                                         />
                                         <ErrorMessage
@@ -1172,7 +1172,7 @@ export default function Home() {
                                         />
                                       </div>
                                       <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                           MOC
                                         </p>
                                         <input
@@ -1182,7 +1182,7 @@ export default function Home() {
                                           onChange={(e) =>
                                             setFieldValue(`pending_items.${index}.moc`, e.target.value)
                                           }
-                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                           placeholder="Enter MOC"
                                         />
                                         <ErrorMessage
@@ -1192,8 +1192,8 @@ export default function Home() {
                                         />
                                       </div>
                                       <div className="w-full">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                                          Quantityy
+                                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                          Quantity
                                         </p>
 
                                         <input
@@ -1231,7 +1231,7 @@ export default function Home() {
                                           }}
                                           inputMode="numeric"
                                           pattern="[0-9]*"
-                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                           placeholder="Enter Quantity"
                                         />
 
@@ -1242,7 +1242,7 @@ export default function Home() {
                                         />
                                       </div>
                                       <div className="w-full md:col-span-2">
-                                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                           Description
                                         </p>
                                         <textarea
@@ -1251,7 +1251,7 @@ export default function Home() {
                                           onChange={(e) =>
                                             setFieldValue(`pending_items.${index}.item_description`, e.target.value)
                                           }
-                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999] min-h-[100px]"
                                           placeholder="Enter Description"
                                         />
                                         <ErrorMessage
@@ -1286,7 +1286,7 @@ export default function Home() {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-sm font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting ? "Submitting..." : getSubmitButtonText()}
                       </button>
