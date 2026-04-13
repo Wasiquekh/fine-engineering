@@ -1562,6 +1562,16 @@ const LeftSideBar: React.FC = () => {
                             </Link>
                           </div>
                         )}
+                        {hasWeldingView && (
+                  
+                  <Link href="/section_production_planning/welding?client=Amar%20Biosystem">
+                    <div className={itemCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>
+                      <MdPrecisionManufacturing className={iconCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")} />
+                      <p className={textCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>Welding</p>
+                    </div>
+                  </Link>
+               
+              )}
 
                         {/* Not-Ok */}
                         {hasNotOkView && (
@@ -1616,16 +1626,7 @@ const LeftSideBar: React.FC = () => {
                             </Link>
                           </div>
                         )}
-                           {hasWeldingView && (
-                  
-                    <Link href="/section_production_planning/welding?client=Amar%20Biosystem">
-                      <div className={itemCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>
-                        <MdPrecisionManufacturing className={iconCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")} />
-                        <p className={textCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>Welding</p>
-                      </div>
-                    </Link>
-                 
-                )}
+                           
                         
                       </div>
                     )}
