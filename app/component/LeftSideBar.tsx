@@ -1005,12 +1005,8 @@ const LeftSideBar: React.FC = () => {
 
   // NEW: Vendor dropdown states
   const [isVendorOpen, setIsVendorOpen] = useState<boolean>(
-    pathname.includes("/section_production_planning/vendor/outgoing") || 
-    pathname.includes("/section_production_planning/vendor/incoming")
-  );
-  const [isVendorBioOpen, setIsVendorBioOpen] = useState<boolean>(
-    (pathname.includes("/section_production_planning/vendor/outgoing") && client === "Amar Biosystem") || 
-    (pathname.includes("/section_production_planning/vendor/incoming") && client === "Amar Biosystem")
+    pathname.includes("/section_production_planning/vendors/outgoing") || 
+    pathname.includes("/section_production_planning/vendors/incoming")
   );
 
   // Keep dropdowns open when on related pages
@@ -1090,7 +1086,7 @@ const LeftSideBar: React.FC = () => {
     // Keep vendor dropdowns open
     if (pathname.includes("/section_production_planning/vendor")) {
       if (client === "Amar Equipment") setIsVendorOpen(true);
-      if (client === "Amar Biosystem") setIsVendorBioOpen(true);
+      // if (client === "Amar Biosystem") setIsVendorBioOpen(true);
     }
   }, [pathname, client]);
 
@@ -1259,12 +1255,67 @@ const LeftSideBar: React.FC = () => {
 
                 {/* Vendors */}
                 {hasVendorsView && (
-                  <Link href="/section_production_planning/vendors">
-                    <div className={itemCls(pathname === "/section_production_planning/vendors")}>
-                      <MdBusiness className={iconCls(pathname === "/section_production_planning/vendors")} />
-                      <p className={textCls(pathname === "/section_production_planning/vendors")}>Vendors</p>
+                  <>
+                    {/* Vendor for Amar Equipment */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsVendorOpen(!isVendorOpen);
+                      }}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isVendorOpen ? "bg-sideBarHoverbg" : ""}`}
+                    >
+                      <MdBusiness className={`w-5 h-5 ${isVendorOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
+                      <p className={`text-base font-medium ${isVendorOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendor</p>
+                      <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isVendorOpen ? "rotate-180" : ""}`} />
                     </div>
-                  </Link>
+
+                    {isVendorOpen && (
+                      <div className="pl-4 flex flex-col gap-1">
+                        <Link href="/section_production_planning/vendors/outgoing">
+                          <div className={itemCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Equipment")}>
+                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Equipment")} />
+                            <p className={textCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Equipment")}>Outgoing</p>
+                          </div>
+                        </Link>
+                        <Link href="/section_production_planning/vendors/incoming">
+                          <div className={itemCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Equipment")}>
+                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Equipment")} />
+                            <p className={textCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Equipment")}>Incoming</p>
+                          </div>
+                        </Link>
+                      </div>
+                    )}
+
+                    {/* Vendor for Amar Bio */}
+                    {/* <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsVendorBioOpen(!isVendorBioOpen);
+                      }}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isVendorBioOpen ? "bg-sideBarHoverbg" : ""}`}
+                    >
+                      <MdBusiness className={`w-5 h-5 ${isVendorBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
+                      <p className={`text-base font-medium ${isVendorBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendor</p>
+                      <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isVendorBioOpen ? "rotate-180" : ""}`} />
+                    </div> */}
+
+                    {/* {isVendorBioOpen && (
+                      <div className="pl-4 flex flex-col gap-1">
+                        <Link href="/section_production_planning/vendor/outgoing?client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Biosystem")}>
+                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Biosystem")} />
+                            <p className={textCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Biosystem")}>Outgoing</p>
+                          </div>
+                        </Link>
+                        <Link href="/section_production_planning/vendor/incoming?client=Amar%20Biosystem">
+                          <div className={itemCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Biosystem")}>
+                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Biosystem")} />
+                            <p className={textCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Biosystem")}>Incoming</p>
+                          </div>
+                        </Link>
+                      </div>
+                    )} */}
+                  </>
                 )}
 
                 {/* Outsource */}
@@ -1365,6 +1416,15 @@ const LeftSideBar: React.FC = () => {
                             </Link>
                           </div>
                         )}
+                        {hasWeldingView && (
+                
+                    <Link href="/section_production_planning/welding?client=Amar%20Equipment">
+                      <div className={itemCls(pathname === "/section_production_planning/welding" && client === "Amar Equipment")}>
+                        <MdPrecisionManufacturing className={iconCls(pathname === "/section_production_planning/welding" && client === "Amar Equipment")} />
+                        <p className={textCls(pathname === "/section_production_planning/welding" && client === "Amar Equipment")}>Welding</p>
+                      </div>
+                    </Link>
+                    )}
 
                         {/* Not-Ok */}
                         {hasNotOkView && (
@@ -1502,6 +1562,16 @@ const LeftSideBar: React.FC = () => {
                             </Link>
                           </div>
                         )}
+                        {hasWeldingView && (
+                  
+                  <Link href="/section_production_planning/welding?client=Amar%20Biosystem">
+                    <div className={itemCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>
+                      <MdPrecisionManufacturing className={iconCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")} />
+                      <p className={textCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>Welding</p>
+                    </div>
+                  </Link>
+               
+              )}
 
                         {/* Not-Ok */}
                         {hasNotOkView && (
@@ -1556,6 +1626,8 @@ const LeftSideBar: React.FC = () => {
                             </Link>
                           </div>
                         )}
+                           
+                        
                       </div>
                     )}
                   </>
@@ -1564,89 +1636,12 @@ const LeftSideBar: React.FC = () => {
                 {/* ============================================ */}
                 {/* NEW - WELDING SECTION */}
                 {/* ============================================ */}
-                {hasWeldingView && (
-                  <>
-                    <Link href="/section_production_planning/welding?client=Amar%20Equipment">
-                      <div className={itemCls(pathname === "/section_production_planning/welding" && client === "Amar Equipment")}>
-                        <MdPrecisionManufacturing className={iconCls(pathname === "/section_production_planning/welding" && client === "Amar Equipment")} />
-                        <p className={textCls(pathname === "/section_production_planning/welding" && client === "Amar Equipment")}>Welding</p>
-                      </div>
-                    </Link>
-                    <Link href="/section_production_planning/welding?client=Amar%20Biosystem">
-                      <div className={itemCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>
-                        <MdPrecisionManufacturing className={iconCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")} />
-                        <p className={textCls(pathname === "/section_production_planning/welding" && client === "Amar Biosystem")}>Welding</p>
-                      </div>
-                    </Link>
-                  </>
-                )}
+               
 
                 {/* ============================================ */}
                 {/* NEW - VENDOR SECTION WITH OUTGOING/INCOMING */}
                 {/* ============================================ */}
-                {hasVendorsView && (
-                  <>
-                    {/* Vendor for Amar Equipment */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsVendorOpen(!isVendorOpen);
-                      }}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isVendorOpen ? "bg-sideBarHoverbg" : ""}`}
-                    >
-                      <MdBusiness className={`w-5 h-5 ${isVendorOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                      <p className={`text-base font-medium ${isVendorOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendor</p>
-                      <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isVendorOpen ? "rotate-180" : ""}`} />
-                    </div>
-
-                    {isVendorOpen && (
-                      <div className="pl-4 flex flex-col gap-1">
-                        <Link href="/section_production_planning/vendor/outgoing?client=Amar%20Equipment">
-                          <div className={itemCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Equipment")}>
-                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Equipment")} />
-                            <p className={textCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Equipment")}>Outgoing</p>
-                          </div>
-                        </Link>
-                        <Link href="/section_production_planning/vendor/incoming?client=Amar%20Equipment">
-                          <div className={itemCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Equipment")}>
-                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Equipment")} />
-                            <p className={textCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Equipment")}>Incoming</p>
-                          </div>
-                        </Link>
-                      </div>
-                    )}
-
-                    {/* Vendor for Amar Bio */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsVendorBioOpen(!isVendorBioOpen);
-                      }}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isVendorBioOpen ? "bg-sideBarHoverbg" : ""}`}
-                    >
-                      <MdBusiness className={`w-5 h-5 ${isVendorBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                      <p className={`text-base font-medium ${isVendorBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendor</p>
-                      <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isVendorBioOpen ? "rotate-180" : ""}`} />
-                    </div>
-
-                    {isVendorBioOpen && (
-                      <div className="pl-4 flex flex-col gap-1">
-                        <Link href="/section_production_planning/vendor/outgoing?client=Amar%20Biosystem">
-                          <div className={itemCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Biosystem")}>
-                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Biosystem")} />
-                            <p className={textCls(pathname === "/section_production_planning/vendor/outgoing" && client === "Amar Biosystem")}>Outgoing</p>
-                          </div>
-                        </Link>
-                        <Link href="/section_production_planning/vendor/incoming?client=Amar%20Biosystem">
-                          <div className={itemCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Biosystem")}>
-                            <MdOutlineSwapHoriz className={iconCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Biosystem")} />
-                            <p className={textCls(pathname === "/section_production_planning/vendor/incoming" && client === "Amar Biosystem")}>Incoming</p>
-                          </div>
-                        </Link>
-                      </div>
-                    )}
-                  </>
-                )}
+                
               </div>
             )}
           </>
