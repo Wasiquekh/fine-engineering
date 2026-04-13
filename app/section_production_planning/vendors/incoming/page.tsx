@@ -98,7 +98,10 @@ export default function VendorIncomingPage() {
         const params: any = { job_type: jobType };
         if (client) params.client_name = client;
         
-        const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-review/vendor", { params });
+        const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-review/vendor", {
+            params,
+            headers: undefined
+        });
         const fetchedData = response?.data?.data || [];
         
         const dataWithType = fetchedData.map((item: any) => ({
@@ -383,7 +386,7 @@ export default function VendorIncomingPage() {
                               <td className="p-3 border text-center">{qcDate}</td>
                               <td className="p-3 border text-center">{gatepassNo}</td>
                               <td className="p-3 border text-center"><button className="px-3 py-1 bg-primary-600 text-white rounded text-sm">View Items</button></td>
-                            </td>
+                            </tr>
                           );
                         })}
                       </tbody>
