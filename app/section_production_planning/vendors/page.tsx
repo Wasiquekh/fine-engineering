@@ -130,7 +130,7 @@ export default function Home() {
                   <tr className="border border-tableBorder">
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job No
                         </div>
                       </div>
@@ -140,7 +140,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           J/O Number
                         </div>
                       </div>
@@ -150,7 +150,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job Type
                         </div>
                       </div>
@@ -160,7 +160,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job Category
                         </div>
                       </div>
@@ -170,7 +170,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Item Description
                         </div>
                       </div>
@@ -180,7 +180,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Item No
                         </div>
                       </div>
@@ -190,7 +190,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Quantity
                         </div>
                       </div>
@@ -200,7 +200,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           MOC
                         </div>
                       </div>
@@ -210,7 +210,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Bin Location
                         </div>
                       </div>
@@ -220,7 +220,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Status
                         </div>
                       </div>
@@ -234,7 +234,7 @@ export default function Home() {
                         colSpan={10}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
-                        <p className="text-[#666666] text-base">
+                        <p className="text-[#666666] text-sm">
                           No data found
                         </p>
                       </td>
@@ -246,47 +246,47 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_no || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.jo_number || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_type}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_category || "N/A"}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.item_description}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.item_no}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.qty}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.moc}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.bin_location}
                           </p>
                         </td>

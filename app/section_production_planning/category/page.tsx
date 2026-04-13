@@ -281,7 +281,7 @@ export default function Home() {
                     }}
                   >
                     <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                    <p className="text-white text-base font-medium group-hover:text-white">
+                  <p className="text-white text-sm font-medium group-hover:text-white">
                       Add Category
                     </p>
                   </div>
@@ -293,7 +293,7 @@ export default function Home() {
                   <tr className="border border-tableBorder">
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job No
                         </div>
                       </div>
@@ -303,7 +303,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Job Category
                         </div>
                       </div>
@@ -313,7 +313,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Client Name
                         </div>
                       </div>
@@ -323,7 +323,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Drawing Rec. Date
                         </div>
                       </div>
@@ -333,7 +333,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Description
                         </div>
                       </div>
@@ -343,7 +343,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Material Type
                         </div>
                       </div>
@@ -353,7 +353,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Quantity
                         </div>
                       </div>
@@ -363,7 +363,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Bar
                         </div>
                       </div>
@@ -373,7 +373,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Temperature
                         </div>
                       </div>
@@ -383,7 +383,7 @@ export default function Home() {
                       className="px-2 py-0 border border-tableBorder"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
                           Actions
                         </div>
                       </div>
@@ -397,7 +397,7 @@ export default function Home() {
                         colSpan={8}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
-                        <p className="text-[#666666] text-base">
+                        <p className="text-[#666666] text-sm">
                           No data found
                         </p>
                       </td>
@@ -409,43 +409,43 @@ export default function Home() {
                         key={item.id}
                       >
                         <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_no}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.job_category}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.client_name}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.drawing_recieved_date}</p>
+                          <p className="text-[#232323] text-sm leading-normal">{item.drawing_recieved_date}</p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.description}</p>
+                          <p className="text-[#232323] text-sm leading-normal">{item.description}</p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.material_type}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.qty}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.bar}
                           </p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {item.tempp}
                           </p>
                         </td>
@@ -498,7 +498,7 @@ export default function Home() {
           <div className="w-full min-h-auto">
             {/* Header */}
             <div className="flex justify-between mb-4 sm:mb-6 md:mb-8">
-              <p className="text-primary-600 text-[22px] sm:text-[24px] md:text-[26px] font-bold leading-8 sm:leading-9">
+              <p className="text-primary-600 text-2xl font-semibold leading-8 sm:leading-9">
                 {isEditMode ? "Edit Category" : "Add Category"}
               </p>
               <IoCloseOutline
@@ -519,13 +519,13 @@ export default function Home() {
               enableReinitialize={true}
             >
               {({ values, setFieldValue, handleSubmit, isSubmitting }) => (
-                <Form onSubmit={handleSubmit}>
+                <Form onSubmit={handleSubmit} autoComplete="off">
                   <div className="w-full">
                     {/* Grid container for form fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                       {/* Job No */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Job No
                         </p>
                         <input
@@ -535,7 +535,7 @@ export default function Home() {
                           onChange={(e) =>
                             setFieldValue("job_no", e.target.value)
                           }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                           placeholder="Enter Job No"
                         />
                         <ErrorMessage
@@ -547,7 +547,7 @@ export default function Home() {
 
                       {/* Job Category */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Job Category
                         </p>
                         <SelectInput
@@ -566,7 +566,7 @@ export default function Home() {
 
                       {/* Client Name */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Client Name
                         </p>
 
@@ -587,7 +587,7 @@ export default function Home() {
 
                       {/* Drawing Received Date */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Drawing Received Date
                         </p>
                         <DatePickerInput
@@ -605,7 +605,7 @@ export default function Home() {
 
                       {/* Description */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Description
                         </p>
                         <input
@@ -615,7 +615,7 @@ export default function Home() {
                           onChange={(e) =>
                             setFieldValue("description", e.target.value)
                           }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                           placeholder="Enter description"
                         />
                         <ErrorMessage
@@ -627,7 +627,7 @@ export default function Home() {
 
                       {/* Material Type */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Material Type
                         </p>                        
                         <input
@@ -637,7 +637,7 @@ export default function Home() {
                           onChange={(e) =>
                             setFieldValue("material_type", e.target.value)
                           }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                           placeholder="Enter description"
                         />
                         <ErrorMessage
@@ -649,7 +649,7 @@ export default function Home() {
 
                       {/* Quantity */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Quantity
                         </p>
                         <input
@@ -657,7 +657,7 @@ export default function Home() {
                           name="qty"
                           value={values.qty}
                           onChange={(e) => setFieldValue("qty", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                           placeholder="Enter quantity"
                         />
                         <ErrorMessage
@@ -669,7 +669,7 @@ export default function Home() {
 
                       {/* Bar */}
                       <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Bar
                         </p>
                         <input
@@ -677,7 +677,7 @@ export default function Home() {
                           name="bar"
                           value={values.bar}
                           onChange={(e) => setFieldValue("bar", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                           placeholder="Enter bar"
                         />
                         <ErrorMessage
@@ -689,7 +689,7 @@ export default function Home() {
 
                       {/* Temperature */}
                       <div className="w-full md:col-span-2">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Temperature
                         </p>
                         <input
@@ -699,7 +699,7 @@ export default function Home() {
                           onChange={(e) =>
                             setFieldValue("tempp", e.target.value)
                           }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                           placeholder="Enter temperature (e.g., Room Temperature)"
                         />
                         <ErrorMessage
@@ -711,7 +711,7 @@ export default function Home() {
 
                       {/* Remark */}
                       <div className="w-full md:col-span-2">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                        <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                           Remark
                         </p>
                         <textarea
@@ -720,7 +720,7 @@ export default function Home() {
                           onChange={(e) =>
                             setFieldValue("remark", e.target.value)
                           }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999] min-h-[100px]"
                           placeholder="Enter remark (optional)"
                         />
                         <ErrorMessage
@@ -736,7 +736,7 @@ export default function Home() {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-sm font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isSubmitting
                           ? "Submitting..."

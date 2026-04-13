@@ -277,7 +277,7 @@ export default function JobDetailsPage() {
 
           {/* Job Details Section */}
           {/* <div className="mb-12">
-            <h1 className="text-2xl font-bold mb-6">
+            <h1 className="text-xl font-bold mb-6">
               Job Details for Job No: {job_no}
             </h1>
             <div className="relative overflow-x-auto sm:rounded-lg">
@@ -385,7 +385,7 @@ export default function JobDetailsPage() {
 
           {/* Job Details Section */}
           <div className="mb-12">
-            <h1 className="text-2xl font-bold mb-6">
+            <h1 className="text-xl font-semibold mb-6">
               Job Details for Job No: {job_no}
             </h1>
 
@@ -422,7 +422,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Client Name
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.client_name || "-"}
                         </span>
                       </div>
@@ -431,7 +431,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Job Category
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.job_category || "N/A"}
                         </span>
                       </div>
@@ -440,7 +440,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Drawing Rec. Date
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.drawing_recieved_date || "-"}
                         </span>
                       </div>
@@ -449,7 +449,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Material Type
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.material_type || "-"}
                         </span>
                       </div>
@@ -461,7 +461,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Quantity
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.qty || "-"}
                         </span>
                       </div>
@@ -470,7 +470,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Pressure [Bar]
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.bar || "-"}
                         </span>
                       </div>
@@ -479,7 +479,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Temperature
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.tempp || "-"}
                         </span>
                       </div>
@@ -488,7 +488,7 @@ export default function JobDetailsPage() {
                         <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
                           Due Date
                         </span>
-                        <span className="text-base font-semibold text-gray-900">
+                        <span className="text-sm font-semibold text-gray-900">
                           {item.urgent_due_date || "-"}
                         </span>
                       </div>
@@ -499,7 +499,7 @@ export default function JobDetailsPage() {
                       <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-2">
                         Description
                       </span>
-                      <p className="text-base text-gray-900 font-medium leading-relaxed">
+                      <p className="text-sm text-gray-900 font-medium leading-relaxed">
                         {item.description || "-"}
                       </p>
                     </div>
@@ -513,10 +513,10 @@ export default function JobDetailsPage() {
           <div className="flex flex-col gap-8">
             {/* Left Side: Assignment Form */}
             <div className="w-full">
-              <h2 className="text-xl font-bold mb-4">Material Recieved From Amar</h2>
+              <h2 className="text-xl font-semibold mb-4">Material Recieved From Amar</h2>
               <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1600px]">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Type</th>
@@ -702,12 +702,12 @@ export default function JobDetailsPage() {
 
             {/* Right Side: Pending Materials */}
             <div className="w-full">
-              <h1 className="text-2xl font-bold mb-6">
+              <h1 className="text-xl font-semibold mb-6">
                 Pending Materials for Job No: {job_no}
               </h1>
               <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1000px]">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                         Job No

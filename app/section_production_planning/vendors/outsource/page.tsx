@@ -289,7 +289,7 @@ export default function VendorOutsourcePage() {
 
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
-            <h1 className="text-xl font-semibold text-firstBlack">
+            <h1 className="text-2xl font-semibold text-firstBlack">
               Vendor Outsource • All Services
               {client && ` • ${client}`}
             </h1>
@@ -344,7 +344,7 @@ export default function VendorOutsourcePage() {
                   Back to Jobs
                 </button>
 
-                <h2 className="text-xl font-bold mb-4">
+                <h2 className="text-2xl font-semibold mb-4">
                   {getIdentifierDisplayName(selectedJobNo)}
                 </h2>
 
@@ -369,7 +369,7 @@ export default function VendorOutsourcePage() {
                       {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                         <tr>
                           <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
-                            <p className="text-[#666666] text-base">No JO data found</p>
+                            <p className="text-[#666666] text-sm">No JO data found</p>
                           </td>
                         </tr>
                       ) : (
@@ -446,7 +446,7 @@ export default function VendorOutsourcePage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Vendor Outsource - All Services</h2>
+                <h2 className="text-2xl font-semibold mb-4">Vendor Outsource - All Services</h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
@@ -464,13 +464,13 @@ export default function VendorOutsourcePage() {
                     {loading ? (
                       <tr>
                         <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">Loading...</p>
+                          <p className="text-[#666666] text-sm">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No vendor outsource data found</p>
+                          <p className="text-[#666666] text-sm">No vendor outsource data found</p>
                         </td>
                       </tr>
                     ) : (
@@ -485,7 +485,7 @@ export default function VendorOutsourcePage() {
                             onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">
+                              <p className="text-blue-600 text-sm leading-normal">
                                 {getIdentifierDisplayName(identifier)}
                               </p>
                             </td>
@@ -493,16 +493,16 @@ export default function VendorOutsourcePage() {
                               {getJobTypeBadge(summary.jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
+                              <p className="text-[#232323] text-sm">{summary.jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
+                              <p className="text-[#232323] text-sm">{summary.uniqueJoCount}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
+                              <p className="text-[#232323] text-sm">{summary.totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
                             </td>
                           </tr>
                         );

@@ -156,7 +156,7 @@ export default function WeldingPage() {
 
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-xl font-semibold text-firstBlack">
+          <h1 className="text-2xl font-semibold text-firstBlack">
             Welding • In-Welding Status
             {client && ` • ${client}`}
           </h1>
@@ -179,7 +179,7 @@ export default function WeldingPage() {
                 </button>
               </div>
 
-              <h2 className="text-xl font-bold mb-4">
+              <h2 className="text-2xl font-semibold mb-4">
                 JO: {selectedJO}
               </h2>
 
@@ -205,7 +205,7 @@ export default function WeldingPage() {
                         return (
                           <tr>
                             <td colSpan={9} className="px-4 py-6 text-center border border-tableBorder">
-                              <p className="text-[#666666] text-base">No items found</p>
+                              <p className="text-[#666666] text-sm">No items found</p>
                             </td>
                           </tr>
                         );
@@ -214,21 +214,21 @@ export default function WeldingPage() {
                       return items.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-50">
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-base font-mono text-blue-600">
+                            <p className="text-sm font-mono text-blue-600">
                               {item.serial_no || "N/A"}
                             </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.item_no || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.item_no || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.job?.item_description || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.job?.item_description || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{item.job?.moc || "N/A"}</p>
+                            <p className="text-[#232323] text-sm">{item.job?.moc || "N/A"}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">
+                            <p className="text-[#232323] text-sm">
                               {item.machine_code} ({item.machine_category})
                             </p>
                           </td>
@@ -252,7 +252,7 @@ export default function WeldingPage() {
             // JO Level View - Show all JOs (like QC page)
             <>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-2xl font-semibold">
                   JO Groups in Welding
                 </h2>
               </div>
@@ -280,14 +280,14 @@ export default function WeldingPage() {
                         <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                           <div className="flex justify-center items-center gap-2">
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                            <p className="text-[#666666] text-base">Loading...</p>
+                            <p className="text-[#666666] text-sm">Loading...</p>
                           </div>
                         </td>
                       </tr>
                     ) : josGrouped().length === 0 ? (
                       <tr>
                         <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No welding assignments found</p>
+                          <p className="text-[#666666] text-sm">No welding assignments found</p>
                         </td>
                       </tr>
                     ) : (
@@ -298,15 +298,15 @@ export default function WeldingPage() {
                           onClick={() => setSelectedJO(jo.joNumber)}
                         >
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-base leading-normal text-blue-600 font-medium">
+                            <p className="text-sm leading-normal text-blue-600 font-medium">
                               {jo.joNumber}
                             </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{jo.jobNo}</p>
+                            <p className="text-[#232323] text-sm">{jo.jobNo}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-base">{jo.clientName}</p>
+                            <p className="text-[#232323] text-sm">{jo.clientName}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
                             <div className="text-sm max-w-[200px]">

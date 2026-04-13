@@ -406,7 +406,7 @@ export default function NotOkVendorPage() {
 
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
-            <h1 className="text-xl font-semibold text-firstBlack">
+            <h1 className="text-2xl font-semibold text-firstBlack">
               Not OK • Vendor • All Services
               {client && ` • ${client}`}
             </h1>
@@ -462,12 +462,12 @@ export default function NotOkVendorPage() {
                   Back to Jobs
                 </button>
 
-                <h2 className="text-xl font-bold mb-4">
+                <h2 className="text-2xl font-semibold mb-4">
                   {getIdentifierDisplayName(selectedIdentifier)}
                 </h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
+                  <thead className="text-xs text-[#999999] uppercase font-semibold">
                     <tr className="border border-tableBorder">
                       <th className="p-3 border border-tableBorder">JO No</th>
                       <th className="px-2 py-0 border border-tableBorder">Type</th>
@@ -487,7 +487,7 @@ export default function NotOkVendorPage() {
                     {Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).length === 0 ? (
                       <tr>
                         <td colSpan={12} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No JO data found</p>
+                          <p className="text-[#666666] text-sm">No JO data found</p>
                         </td>
                       </tr>
                     ) : (
@@ -552,7 +552,7 @@ export default function NotOkVendorPage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Not OK Vendor - All Services</h2>
+                <h2 className="text-2xl font-semibold mb-4">Not OK Vendor - All Services</h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
@@ -571,13 +571,13 @@ export default function NotOkVendorPage() {
                     {loading ? (
                       <tr>
                         <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">Loading...</p>
+                          <p className="text-[#666666] text-sm">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No data found</p>
+                          <p className="text-[#666666] text-sm">No data found</p>
                         </td>
                       </tr>
                     ) : (
@@ -591,7 +591,7 @@ export default function NotOkVendorPage() {
                             onClick={() => setSelectedIdentifier(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">
+                              <p className="text-blue-600 text-sm leading-normal">
                                 {getIdentifierDisplayName(identifier)}
                               </p>
                             </td>
@@ -599,16 +599,16 @@ export default function NotOkVendorPage() {
                               {getJobTypeBadge(summary.jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
+                              <p className="text-[#232323] text-sm">{summary.jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
+                              <p className="text-[#232323] text-sm">{summary.uniqueJoCount}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
+                              <p className="text-[#232323] text-sm">{summary.totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
+                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-red-600 text-xs font-medium">{summary.reason}</p>

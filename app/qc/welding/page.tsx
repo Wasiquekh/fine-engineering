@@ -780,7 +780,7 @@ export default function QcWeldingPage() {
           <div className="mb-4 px-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-xl font-semibold text-firstBlack">
+                <h1 className="text-2xl font-semibold text-firstBlack">
                   QC • Welding
                   {client && ` • ${client}`}
                 </h1>
@@ -890,10 +890,10 @@ export default function QcWeldingPage() {
                         Serial No
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">
-                        Item No
+                        Item Description
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">
-                        Item Description
+                        Item No
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">
                         MOC
@@ -974,10 +974,10 @@ export default function QcWeldingPage() {
                                 {item.serial_no || "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                {item.item_no ?? "-"}
+                                {item.job?.item_description || "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                {item.job?.item_description || "-"}
+                                {item.item_no ?? "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 {item.job?.moc || "-"}
@@ -1091,7 +1091,7 @@ export default function QcWeldingPage() {
                             onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">
+                              <p className="text-blue-600 text-sm leading-normal">
                                 {identifier}
                               </p>
                             </td>
@@ -1099,23 +1099,23 @@ export default function QcWeldingPage() {
                               {getJobTypeBadge(summary.jobType)}
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">
+                              <p className="text-[#232323] text-sm">
                                 {summary.jobCategory}
                               </p>
                             </td>
 
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">
+                              <p className="text-[#232323] text-sm">
                                 {summary.uniqueJoCount}
                               </p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">
+                              <p className="text-[#232323] text-sm">
                                 {summary.totalQty}
                               </p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">
+                              <p className="text-[#232323] text-sm">
                                 {summary.assigningDate}
                               </p>
                             </td>
