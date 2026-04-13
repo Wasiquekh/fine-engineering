@@ -48,113 +48,35 @@ const kanbanCategory = [
 // Validation Schema for Jobs form
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
-  job_category: Yup.string().when("job_type", {
-    is: (job_type: string) =>
-      job_type === "TSO_SERVICE" || job_type === "KANBAN",
-    then: (schema) => schema.required("Job Category is required"),
-    otherwise: (schema) => schema,
-  }),
-  job_no: Yup.string().when("job_type", {
-    is: (val: string) => val === "JOB_SERVICE" || val === "PENDING_MATERIAL",
-    then: (schema) => schema.required("Job No is required"),
-    otherwise: (schema) => schema,
-  }),
-  job_order_date: Yup.date().when("job_type", {
-    is: (val: string) => val !== "PENDING_MATERIAL",
-    then: (schema) => schema.required("Job Order Date is required"),
-  }),
-  mtl_rcd_date: Yup.date().when("job_type", {
-    is: (val: string) => val !== "PENDING_MATERIAL",
-    then: (schema) => schema.required("Material Received Date is required"),
-  }),
-  mtl_challan_no: Yup.number().when("job_type", {
-    is: (val: string) => val !== "PENDING_MATERIAL",
-    then: (schema) =>
-      schema
-        .required("Material Challan No is required")
-        .typeError("Material Challan No must be a number")
-        .positive("Material Challan No must be positive")
-        .integer("Material Challan No must be an integer"),
-  }),
-  item_description: Yup.string().when("job_type", {
-    is: "PENDING_MATERIAL",
-    then: (schema) => schema.notRequired(),
-    otherwise: (schema) => schema.required("Item Description is required"),
-  }),
-  item_no: Yup.string().when("job_type", {
-    is: "PENDING_MATERIAL",
-    then: (schema) => schema.notRequired().nullable(),
-    otherwise: (schema) => schema.required("Item No is required"),
-  }),
-  qty: Yup.number().when("job_type", {
-    is: "PENDING_MATERIAL",
-    then: (schema) => schema.notRequired(),
-    otherwise: (schema) =>
-      schema
-        .required("Quantity is required")
-        .typeError("Quantity must be a number")
-        .positive("Quantity must be positive"),
-  }),
-  size: Yup.string().notRequired(),
-  moc: Yup.string().when("job_type", {
-    is: "PENDING_MATERIAL",
-    then: (schema) => schema.notRequired(),
-    otherwise: (schema) => schema.required("MOC is required"),
-  }),
-  remark: Yup.string(),
-  bin_location: Yup.string().when("job_type", {
-    is: (val: string) => val !== "PENDING_MATERIAL",
-    then: (schema) => schema.required("Bin Location is required"),
-  }),
-  material_remark: Yup.string(),
-  pending_items: Yup.array().when("job_type", {
-    is: "PENDING_MATERIAL",
-    then: (schema) =>
-      schema
-        .of(
-          Yup.object().shape({
-            item_description: Yup.string().required("Item Description is required"),
-            item_no: Yup.string().required("Item No is required"),
-            qty: Yup.number()
-              .required("Quantity is required")
-              .typeError("Quantity must be a number")
-              .integer("Quantity must be a whole number")
-              .positive("Quantity must be positive"),
-            size: Yup.string().required("Size is required"),
-            moc: Yup.string().required("MOC is required"),
-          })
-        )
-        .min(1, "At least one item is required."),
-    otherwise: (schema) => schema.notRequired(),
-  }),
+  job_no: Yup.string().required("Job No is required"),
+  pending_items: Yup.array()
+    .of(
+      Yup.object().shape({
+        item_description: Yup.string().required("Item Description is required"),
+        item_no: Yup.string().required("Item No is required"),
+        qty: Yup.number()
+          .required("Quantity is required")
+          .typeError("Quantity must be a number")
+          .integer("Quantity must be a whole number")
+          .positive("Quantity must be positive"),
+        size: Yup.string().required("Size is required"),
+        moc: Yup.string().required("MOC is required"),
+      })
+    )
+    .min(1, "At least one item is required."),
 });
 
 // Initial form values for Jobs
 const initialValues = {
-  job_type: "",
+  job_type: "PENDING_MATERIAL",
   client_name: "",
-  job_category: "",
   job_no: "",
-  // serial_no: "",
-  job_order_date: "",
-  mtl_rcd_date: "",
-  mtl_challan_no: "",
-  item_description: "",
-  item_no: "",
-  qty: "",
-  size: "",
-  moc: "",
-  remark: "",
-  bin_location: "",
-  material_remark: "",
   pending_items: [],
 };
 
 export default function Home() {
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
-  const [flyoutType, setFlyoutType] = useState<
-    "JOB_SERVICE" | "TSO_SERVICE" | "KANBAN" | "PENDING_MATERIAL"
-  >("JOB_SERVICE");
+  const [flyoutType, setFlyoutType] = useState<"PENDING_MATERIAL">("PENDING_MATERIAL");
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [currentDataset, setCurrentDataset] = useState<"JOBS" | "CATEGORIES">("JOBS");
@@ -267,90 +189,30 @@ export default function Home() {
       return `${year}-${month}-${day}`;
     };
 
-    let payload: any = {};
-
-    if (values.job_type === "PENDING_MATERIAL") {
-      const bulkPayload = {
-        common_data: {
-          job_no: values.job_no,
-          client_name: clientParam || values.client_name || "",
-        },
-        items: values.pending_items.map((item: any) => ({
-          item_no: item.item_no,
-          description: item.item_description,
-          size: item.size,
-          moc: item.moc,
-          qty: Number(item.qty),
-        })),
-      };
-
-      try {
-        await axiosProvider.post("/fineengg_erp/system/pending-materials/bulk", bulkPayload);
-        toast.success("Pending Materials added successfully");
-        fetchData();
-        setFlyoutOpen(false);
-      } catch (error: any) {
-        console.error("Error saving pending materials:", error);
-        toast.error("Failed to add Pending Materials");
-      }
-      return;
-    }
-
-    // Create payload based on job type
-    payload = {
-      job_type: values.job_type,
-      item_no: values.item_no,
-      qty: Number(values.qty),
-      moc: values.moc,
-      remark: values.remark || "",
-      job_order_date: formatDate(values.job_order_date),
-      mtl_rcd_date: formatDate(values.mtl_rcd_date),
-      mtl_challan_no: Number(values.mtl_challan_no),
-      item_description: values.item_description,
-      bin_location: values.bin_location,
-      material_remark: values.material_remark || "",
-      ...(clientParam && { client_name: clientParam }),
+    const bulkPayload = {
+      common_data: {
+        job_no: values.job_no,
+        client_name: clientParam || values.client_name || "",
+      },
+      items: values.pending_items.map((item: any) => ({
+        item_no: item.item_no,
+        description: item.item_description,
+        size: item.size,
+        moc: item.moc,
+        qty: Number(item.qty),
+      })),
     };
 
-    // Add conditional fields
-    if (values.job_type === "JOB_SERVICE") {
-      payload.job_no = values.job_no;
-    } else if (values.job_type === "TSO_SERVICE") {
-      payload.job_category = values.job_category;
-    } else if (values.job_type === "KANBAN") {
-      payload.job_category = values.job_category;
-    }
-
     try {
-      const response = await axiosProvider.post("/fineengg_erp/system/jobs", payload);
-
-      // Different success messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.success("Job Service added successfully");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.success("TSO Service added successfully");
-      } else if (values.job_type === "KANBAN") {
-        toast.success("Kanban added successfully");
-      }
-
+      await axiosProvider.post("/fineengg_erp/system/pending-materials/bulk", bulkPayload);
+      toast.success("Pending Materials added successfully");
       fetchData();
       setFlyoutOpen(false);
     } catch (error: any) {
-      console.error("Error saving job:", error);
-
-      // Different error messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.error("Failed to add Job Service");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.error("Failed to add TSO Service");
-      } else if (values.job_type === "KANBAN") {
-        toast.error("Failed to add Kanban");
-      } else if (values.job_type === "PENDING_MATERIAL") {
-        toast.error("Failed to add Pending Material");
-      }
+      console.error("Error saving pending materials:", error);
+      toast.error("Failed to add Pending Materials");
     }
   };
-
   const handleUrgent = (job_no: string | number) => {
     setSelectedJobId(String(job_no));
     setUrgentDate("");
@@ -518,21 +380,6 @@ export default function Home() {
     setFlyoutOpen(false);
   };
 
-  const openJobServiceFlyout = () => {
-    setFlyoutType("JOB_SERVICE");
-    setFlyoutOpen(true);
-  };
-
-  const openTsoServiceFlyout = () => {
-    setFlyoutType("TSO_SERVICE");
-    setFlyoutOpen(true);
-  };
-
-  const openKanbanFlyout = () => {
-    setFlyoutType("KANBAN");
-    setFlyoutOpen(true);
-  };
-
   const openPendingMaterialFlyout = () => {
     setFlyoutType("PENDING_MATERIAL");
     setFlyoutOpen(true);
@@ -540,48 +387,17 @@ export default function Home() {
 
   // Get initial values based on flyout type
   const getInitialValues = () => {
-    const values: any = { ...initialValues, job_type: flyoutType };
-    if (flyoutType === "PENDING_MATERIAL") {
-      values.pending_items = [
-        {
-          item_description: "",
-          item_no: "",
-          qty: "",
-          size: "",
-          moc: "",
-        },
-      ];
-      return values;
-    }
-    return values;
-  };
-
-  // Get category options based on job type
-  const getCategoryOptions = (jobType: string) => {
-    if (jobType === "TSO_SERVICE") {
-      return tsoServiceCategory;
-    } else if (jobType === "KANBAN") {
-      return kanbanCategory;
-    }
-    return [];
+    return { ...initialValues, pending_items: [{ item_description: "", item_no: "", qty: "", size: "", moc: "" }] };
   };
 
   // Get flyout title
   const getFlyoutTitle = () => {
-    if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
-    if (flyoutType === "JOB_SERVICE") return "Add JOB Service";
-    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
-    if (flyoutType === "KANBAN") return "Add Kanban";
-    return "Add Job";
+    return "Add Pending Material";
   };
 
   // Get submit button text
   const getSubmitButtonText = () => {
-    if (flyoutType === "PENDING_MATERIAL") return "Add Pending Material";
-    if (flyoutType === "JOB_SERVICE") return "Add Job Service";
-    if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
-    if (flyoutType === "KANBAN") return "Add Kanban";
-    return "Add Job";
+    return "Add Pending Material";
   };
 
   useEffect(() => {
@@ -1267,7 +1083,6 @@ export default function Home() {
                       />
 
                       {/* Job No - Only for JOB_SERVICE */}
-                      {(values.job_type === "JOB_SERVICE" || values.job_type === "PENDING_MATERIAL") && (
                         <div className="w-full mb-4">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                             Job No
@@ -1288,148 +1103,9 @@ export default function Home() {
                             className="text-red-500 text-sm mt-1"
                           />
                         </div>
-                      )}
-
-                      {/* Serial No - Not for Pending Material */}
-                      {/* {values.job_type !== "PENDING_MATERIAL" && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Serial No
-                          </p>
-                          <input
-                            type="number"
-                            name="serial_no"
-                            value={values.serial_no}
-                            onChange={(e) =>
-                              setFieldValue("serial_no", e.target.value)
-                            }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                            placeholder="Enter Serial No"
-                          />
-                          <ErrorMessage
-                            name="serial_no"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )} */}
-
-                      {/* Item No */}
-                      {values.job_type !== "PENDING_MATERIAL" && (
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Item No
-                        </p>
-                        <input
-                          type="text"
-                          name="item_no"
-                          value={values.item_no}
-                          onChange={(e) =>
-                            setFieldValue("item_no", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Item No"
-                        />
-                        <ErrorMessage
-                          name="item_no"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-                      )}
-
-                      {/* MOC */}
-                      {values.job_type !== "PENDING_MATERIAL" && (
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          MOC
-                        </p>
-                        <input
-                          type="text"
-                          name="moc"
-                          value={values.moc}
-                          onChange={(e) => setFieldValue("moc", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter MOC (Material of Construction)"
-                        />
-                        <ErrorMessage
-                          name="moc"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-                      )}
-
-                      {/* Quantity */}
-                      {values.job_type !== "PENDING_MATERIAL" && (
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Quantity
-                        </p>
-                        <input
-                          type="number"
-                          name="qty"
-                          value={values.qty}
-                          onChange={(e) => setFieldValue("qty", e.target.value)}
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                          placeholder="Enter Quantity"
-                        />
-                        <ErrorMessage
-                          name="qty"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-                      )}
-
-                      {/* Bin Location - Not for Pending Material */}
-                      {values.job_type !== "PENDING_MATERIAL" && (
-                        <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                            Bin Location
-                          </p>
-                          <input
-                            type="text"
-                            name="bin_location"
-                            value={values.bin_location}
-                            onChange={(e) => setFieldValue("bin_location", e.target.value)}
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
-                            placeholder="Enter Bin Location"
-                          />
-                          <ErrorMessage
-                            name="bin_location"
-                            component="div"
-                            className="text-red-500 text-sm mt-1"
-                          />
-                        </div>
-                      )}
-
-                      {/* Description */}
-                      {values.job_type !== "PENDING_MATERIAL" && (
-                      <div className="w-full">
-                        <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                          Description
-                        </p>
-                        <textarea
-                          name="item_description"
-                          value={values.item_description}
-                          onChange={(e) =>
-                            setFieldValue("item_description", e.target.value)
-                          }
-                          className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
-                          placeholder="Enter Description (Optional)"
-                        />
-                        <ErrorMessage
-                          name="item_description"
-                          component="div"
-                          className="text-red-500 text-sm mt-1"
-                        />
-                      </div>
-                      )}
                     </div>
 
                       {/* Pending Items - Only for PENDING_MATERIAL */}
-                      {values.job_type === "PENDING_MATERIAL" && (
                         <FieldArray name="pending_items">
                           {({ remove, push }) => (
                             <div className="col-span-1 md:col-span-2 space-y-6">
@@ -1605,7 +1281,6 @@ export default function Home() {
                             </div>
                           )}
                         </FieldArray>
-                      )}
 
                     <div className="mt-8 md:mt-10 w-full flex flex-col md:flex-row md:justify-between items-center gap-y-4 md:gap-y-0 gap-x-4">
                       <button

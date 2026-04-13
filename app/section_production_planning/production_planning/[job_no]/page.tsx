@@ -400,7 +400,7 @@ export default function JobDetailsPage() {
                 {categoryDetails.map((item) => (
                   <div key={item.id} className="space-y-4">
                     {/* Header */}
-                    <div className="flex justify-between items-center">
+                    {/* <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold text-gray-800">
                         Job Info
                       </h3>
@@ -414,7 +414,7 @@ export default function JobDetailsPage() {
                       >
                         {item.is_urgent ? "Urgent" : "Normal"}
                       </span>
-                    </div>
+                    </div> */}
 
                     {/* First Row - 4 Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
