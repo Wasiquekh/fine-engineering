@@ -112,7 +112,6 @@ export default function UserManagementPage() {
 
   const fetchRoles = async () => {
     try {
-      // ✅ CORRECT PATH
       const res = await axiosProvider.get("/fineengg_erp/system/roles");
       if (res.data.success) {
         setRoles(res.data.data || []);
@@ -171,23 +170,17 @@ export default function UserManagementPage() {
   const handleBlockUser = async (user: User) => {
     const result = await Swal.fire({
       title: "Block User",
-      input: "textarea",
-      inputLabel: "Reason for blocking",
-      inputPlaceholder: "Enter reason...",
+      text: `Are you sure you want to block ${user.name}?`,
+      icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Block",
-      preConfirm: (reason) => {
-        if (!reason) {
-          Swal.showValidationMessage("Reason is required");
-        }
-        return reason;
-      }
+      confirmButtonText: "Yes, block",
     });
 
     if (result.isConfirmed) {
       try {
+        // Add API call for blocking user
         toast.success("User blocked successfully");
         fetchUsers();
       } catch (error) {
@@ -209,6 +202,7 @@ export default function UserManagementPage() {
 
     if (result.isConfirmed) {
       try {
+        // Add API call for unblocking user
         toast.success("User unblocked successfully");
         fetchUsers();
       } catch (error) {
@@ -251,10 +245,20 @@ export default function UserManagementPage() {
 
   const handleEditUser = async (values: any) => {
     try {
-      const res = await axiosProvider.post("/fineengg_erp/system/updateuser", {
+      const payload: any = {
         id: selectedUser?.id,
-        ...values
-      });
+        name: values.name,
+        email: values.email,
+        mobile_number: values.mobile_number,
+      };
+      
+      // Only include password fields if password is provided
+      if (values.password && values.password.trim() !== '') {
+        payload.password = values.password;
+        payload.current_password = values.current_password;
+      }
+      
+      const res = await axiosProvider.post("/fineengg_erp/system/updateuser", payload);
       if (res.data.success) {
         toast.success("User updated successfully");
         setShowEditModal(false);
@@ -262,7 +266,11 @@ export default function UserManagementPage() {
         fetchUsers();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.msg || "Failed to update user");
+      const errorMsg = error.response?.data?.msg || "Failed to update user";
+      toast.error(errorMsg);
+      if (errorMsg.includes("Current password is incorrect")) {
+        // You can handle this specifically if needed
+      }
     }
   };
 
@@ -284,13 +292,16 @@ export default function UserManagementPage() {
     }
   };
 
+  // Validation schemas
   const userValidationSchema = Yup.object({
     name: Yup.string().required("Name is required"),
     email: Yup.string().email("Invalid email").required("Email is required"),
     mobile_number: Yup.string()
       .matches(/^\+91\d{10}$/, "Must be in format +91XXXXXXXXXX")
       .required("Mobile number is required"),
-    password: Yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
+    password: Yup.string()
+      .min(6, "Password must be at least 6 characters")
+      .required("Password is required"),
     roleLevel: Yup.number()
       .required("Role is required")
       .typeError("Role must be a number")
@@ -303,8 +314,18 @@ export default function UserManagementPage() {
     mobile_number: Yup.string()
       .matches(/^\+91\d{10}$/, "Must be in format +91XXXXXXXXXX")
       .required("Mobile number is required"),
-    password: Yup.string().min(6, "Password must be at least 6 characters").optional(),
-    roleName: Yup.string().required("Role is required"),
+    current_password: Yup.string().when('password', {
+      is: (password: string) => password && password.length > 0,
+      then: (schema) => schema.required("Current password is required to change password"),
+      otherwise: (schema) => schema.notRequired()
+    }),
+    password: Yup.string()
+      .min(6, "Password must be at least 6 characters")
+      .optional(),
+    roleLevel: Yup.number()
+      .required("Role is required")
+      .typeError("Role must be a number")
+      .positive("Invalid role"),
   });
 
   if (isChecking) {
@@ -395,14 +416,14 @@ export default function UserManagementPage() {
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                         </div>
-                      </td>
-                    </tr>
+                       </td>
+                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="text-center py-8 text-gray-500">
                         No users found
-                      </td>
-                    </tr>
+                       </td>
+                     </tr>
                   ) : (
                     filteredUsers.map((user) => (
                       <tr key={user.id} className="border border-tableBorder hover:bg-primary-50">
@@ -418,16 +439,16 @@ export default function UserManagementPage() {
                               <p className="text-sm text-gray-500 md:hidden">{user.email}</p>
                             </div>
                           </div>
-                        </td>
+                         </td>
                         <td className="p-3 border border-tableBorder hidden md:table-cell">
                           <p className="text-[#232323]">{user.email}</p>
                           <p className="text-sm text-gray-500">{user.mobile_number}</p>
-                        </td>
+                         </td>
                         <td className="p-3 border border-tableBorder">
                           <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
                             {user.role}
                           </span>
-                        </td>
+                         </td>
                         <td className="p-3 border border-tableBorder hidden lg:table-cell">
                           <span className={`px-3 py-1 rounded-full text-sm ${
                             user.status === 'active' 
@@ -436,7 +457,7 @@ export default function UserManagementPage() {
                           }`}>
                             {user.status || 'active'}
                           </span>
-                        </td>
+                         </td>
                         <td className="p-3 border border-tableBorder">
                           <div className="flex gap-2">
                             <button
@@ -490,8 +511,8 @@ export default function UserManagementPage() {
                               </button>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                         </td>
+                       </tr>
                     ))
                   )}
                 </tbody>
@@ -531,6 +552,7 @@ export default function UserManagementPage() {
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddUser}
           validationSchema={userValidationSchema}
+          isEdit={false}
         />
       )}
 
@@ -546,7 +568,7 @@ export default function UserManagementPage() {
           }}
           onSubmit={handleEditUser}
           validationSchema={editUserValidationSchema}
-          isEdit
+          isEdit={true}
         />
       )}
 
@@ -590,31 +612,50 @@ export default function UserManagementPage() {
   );
 }
 
-// User Form Modal Component
+// ==================== USER FORM MODAL COMPONENT ====================
 const UserFormModal = ({ title, user, roles, onClose, onSubmit, validationSchema, isEdit = false }: any) => {
   const initialValues = user ? {
     name: user.name,
     email: user.email,
     mobile_number: user.mobile_number,
     password: '',
+    current_password: '',
     roleLevel: user.role_level || ''
   } : {
     name: '',
     email: '',
     mobile_number: '',
     password: '',
+    current_password: '',
     roleLevel: ''
   };
 
-  const handleSubmit = async (values: any, { setSubmitting }: any) => {
+  const handleSubmit = async (values: any, { setSubmitting, setErrors }: any) => {
     try {
-      const submitValues = {
-        ...values,
+      const submitValues: any = {
+        name: values.name,
+        email: values.email,
+        mobile_number: values.mobile_number,
         roleLevel: values.roleLevel ? Number(values.roleLevel) : undefined
       };
+      
+      // For edit mode, only include password fields if password is provided
+      if (isEdit) {
+        if (values.password && values.password.trim() !== '') {
+          submitValues.password = values.password;
+          submitValues.current_password = values.current_password;
+        }
+      } else {
+        // For create mode, password is required
+        submitValues.password = values.password;
+      }
+      
       await onSubmit(submitValues);
-    } catch (error) {
-      console.error("Submit error:", error);
+    } catch (error: any) {
+      // Handle specific error from API
+      if (error.response?.data?.msg) {
+        setErrors({ current_password: error.response.data.msg });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -639,7 +680,7 @@ const UserFormModal = ({ title, user, roles, onClose, onSubmit, validationSchema
             {({ isSubmitting, setFieldValue, values }) => (
               <Form className="space-y-4">
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Full Name</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">Full Name *</label>
                   <Field
                     type="text"
                     name="name"
@@ -650,7 +691,7 @@ const UserFormModal = ({ title, user, roles, onClose, onSubmit, validationSchema
                 </div>
 
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Email</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">Email *</label>
                   <Field
                     type="email"
                     name="email"
@@ -661,7 +702,7 @@ const UserFormModal = ({ title, user, roles, onClose, onSubmit, validationSchema
                 </div>
 
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Mobile Number</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">Mobile Number *</label>
                   <Field
                     type="text"
                     name="mobile_number"
@@ -671,21 +712,56 @@ const UserFormModal = ({ title, user, roles, onClose, onSubmit, validationSchema
                   <ErrorMessage name="mobile_number" component="div" className="text-red-500 text-sm mt-1" />
                 </div>
 
-                <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">
-                    {isEdit ? "New Password (leave blank to keep current)" : "Password"}
-                  </label>
-                  <Field
-                    type="password"
-                    name="password"
-                    className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
-                    placeholder={isEdit ? "Enter new password" : "Enter password"}
-                  />
-                  <ErrorMessage name="password" component="div" className="text-red-500 text-sm mt-1" />
-                </div>
+                {/* Password Section for Edit Mode */}
+                {isEdit && (
+                  <div className="border-t border-[#E7E7E7] pt-4 mt-2">
+                    <div className="mb-3">
+                      <label className="block text-[#0A0A0A] font-medium mb-2 text-sm text-gray-600">
+                        Change Password (Optional)
+                      </label>
+                      <p className="text-xs text-gray-400">Leave blank to keep current password</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-[#0A0A0A] font-medium mb-2">Current Password</label>
+                      <Field
+                        type="password"
+                        name="current_password"
+                        className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
+                        placeholder="Enter current password"
+                      />
+                      <ErrorMessage name="current_password" component="div" className="text-red-500 text-sm mt-1" />
+                    </div>
+
+                    <div className="mt-3">
+                      <label className="block text-[#0A0A0A] font-medium mb-2">New Password</label>
+                      <Field
+                        type="password"
+                        name="password"
+                        className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
+                        placeholder="Enter new password (min 6 characters)"
+                      />
+                      <ErrorMessage name="password" component="div" className="text-red-500 text-sm mt-1" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Password Field for Create Mode */}
+                {!isEdit && (
+                  <div>
+                    <label className="block text-[#0A0A0A] font-medium mb-2">Password *</label>
+                    <Field
+                      type="password"
+                      name="password"
+                      className="w-full px-4 py-3 border border-[#E7E7E7] rounded-lg focus:outline-none focus:border-primary-600"
+                      placeholder="Enter password (min 6 characters)"
+                    />
+                    <ErrorMessage name="password" component="div" className="text-red-500 text-sm mt-1" />
+                  </div>
+                )}
 
                 <div>
-                  <label className="block text-[#0A0A0A] font-medium mb-2">Role</label>
+                  <label className="block text-[#0A0A0A] font-medium mb-2">Role *</label>
                   <Field
                     as="select"
                     name="roleLevel"
@@ -730,7 +806,7 @@ const UserFormModal = ({ title, user, roles, onClose, onSubmit, validationSchema
   );
 };
 
-// Role Manager Component
+// ==================== ROLE MANAGER COMPONENT ====================
 const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionClick }: any) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
@@ -748,7 +824,6 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
     }
 
     try {
-      // ✅ CORRECT PATH
       const res = await axiosProvider.post("/fineengg_erp/system/createrole", {
         name: formData.name,
         level: parseInt(formData.level)
@@ -768,7 +843,6 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
     if (!editingRole) return;
   
     try {
-      // ✅ CORRECT PATH
       const res = await axiosProvider.put(`/fineengg_erp/system/roles/${editingRole.id}`, {
         name: editingRole.name,
         level: editingRole.level
@@ -796,7 +870,6 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
   
     if (result.isConfirmed) {
       try {
-        // ✅ CORRECT PATH
         const res = await axiosProvider.delete(`/fineengg_erp/system/roles/${role.id}`);
         if (res.data.success) {
           toast.success(`Role "${role.name}" deleted successfully`);
@@ -956,7 +1029,7 @@ const RoleManager = ({ roles, permissions, onClose, onRoleUpdate, onPermissionCl
   );
 };
 
-// Role Permission Modal
+// ==================== ROLE PERMISSION MODAL ====================
 const RolePermissionModal = ({ role, permissions, assignedPermissions, onClose, onAssign, onPermissionToggle }: any) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedModule, setSelectedModule] = useState<string>("all");
