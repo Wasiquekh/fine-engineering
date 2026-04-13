@@ -60,6 +60,7 @@ export default function QcMainPage() {
       const response = await axiosProvider.get("/fineengg_erp/system/categories", {
         params: {
           ...(client ? { client_name: client } : {}),
+          ...(assignTo ? { assign_to: assignTo } : {}),
         },
       } as any);
       const cats = Array.isArray(response?.data?.data)
@@ -127,7 +128,7 @@ export default function QcMainPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, [client]);
+  }, [client, assignTo]);
 
   useEffect(() => {
     setSelectedJobNo(null);
