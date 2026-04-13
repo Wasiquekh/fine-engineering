@@ -19,7 +19,7 @@ interface JobDetail {
   job_type: string;
   job_category: string;
   item_description: string;
-  item_no: number;
+  item_no: string;
   serial_no: string;
   qty: number;
   moc: string;
