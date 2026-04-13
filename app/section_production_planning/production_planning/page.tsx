@@ -1267,7 +1267,7 @@ export default function Home() {
 
                       {/* Job No - Only for JOB_SERVICE */}
                       {(values.job_type === "JOB_SERVICE" || values.job_type === "PENDING_MATERIAL") && (
-                        <div className="w-full">
+                        <div className="w-full mb-4">
                           <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
                             Job No
                           </p>
