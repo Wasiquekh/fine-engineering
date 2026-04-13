@@ -890,10 +890,10 @@ export default function QcWeldingPage() {
                         Serial No
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">
-                        Item No
+                        Item Description
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">
-                        Item Description
+                        Item No
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">
                         MOC
@@ -974,10 +974,10 @@ export default function QcWeldingPage() {
                                 {item.serial_no || "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                {item.item_no ?? "-"}
+                                {item.job?.item_description || "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">
-                                {item.job?.item_description || "-"}
+                                {item.item_no ?? "-"}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder">
                                 {item.job?.moc || "-"}

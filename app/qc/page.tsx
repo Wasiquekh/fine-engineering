@@ -1165,10 +1165,10 @@ export default function QcMainPage() {
                       <th className="p-3 border border-tableBorder font-semibold">JO Number</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Items</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item No</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Item Description</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item No</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">MOC</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
                     </tr>
                   </thead>
@@ -1219,8 +1219,12 @@ export default function QcMainPage() {
                                   {jo.items.length}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 border border-tableBorder text-center">
-                                <span className="font-semibold text-green-600">{jo.totalQty}</span>
+                              <td className="px-3 py-2 border border-tableBorder">
+                                <div className="text-sm">
+                                  {jo.itemDescriptions.map((desc, idx) => (
+                                    <div key={idx} className="mb-1">{desc}</div>
+                                  ))}
+                                </div>
                               </td>
                               <td className="px-3 py-2 border border-tableBorder">
                                 <div className="text-sm">
@@ -1231,17 +1235,13 @@ export default function QcMainPage() {
                               </td>
                               <td className="px-3 py-2 border border-tableBorder">
                                 <div className="text-sm">
-                                  {jo.itemDescriptions.map((desc, idx) => (
-                                    <div key={idx} className="mb-1">{desc}</div>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 border border-tableBorder">
-                                <div className="text-sm">
                                   {jo.mocList.map((moc, idx) => (
                                     <div key={idx} className="mb-1">{moc}</div>
                                   ))}
                                 </div>
+                              </td>
+                              <td className="px-3 py-2 border border-tableBorder text-center">
+                                <span className="font-semibold text-green-600">{jo.totalQty}</span>
                               </td>
                               <td className="px-3 py-2 border border-tableBorder text-center">
                                 <div className="flex items-center gap-2 justify-center flex-wrap">

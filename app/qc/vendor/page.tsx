@@ -626,8 +626,8 @@ export default function QcVendorPage() {
                       <th className="p-3 border border-tableBorder">JO No</th>
                       <th className="px-2 py-0 border border-tableBorder">Type</th>
                       <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
                       <th className="px-2 py-0 border border-tableBorder">Item Description</th>
+                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
                       <th className="px-2 py-0 border border-tableBorder">MOC</th>
                       <th className="px-2 py-0 border border-tableBorder">Vendor Name</th>
                       <th className="px-2 py-0 border border-tableBorder">Pending Qty</th>
@@ -658,8 +658,8 @@ export default function QcVendorPage() {
                                 {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
                               </td>
                               <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.job?.item_description || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.job?.moc || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.vendor_name || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
