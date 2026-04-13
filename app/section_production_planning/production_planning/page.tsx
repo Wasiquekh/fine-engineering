@@ -118,6 +118,7 @@ const validationSchema = Yup.object().shape({
             qty: Yup.number()
               .required("Quantity is required")
               .typeError("Quantity must be a number")
+              .integer("Quantity must be a whole number")
               .positive("Quantity must be positive"),
             size: Yup.string().required("Size is required"),
             moc: Yup.string().required("MOC is required"),
@@ -1516,18 +1517,48 @@ export default function Home() {
                                       </div>
                                       <div className="w-full">
                                         <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
-                                          Quantity
+                                          Quantityy
                                         </p>
+
                                         <input
-                                          type="number"
+                                          type="text"
                                           name={`pending_items.${index}.qty`}
                                           value={item.qty}
-                                          onChange={(e) =>
-                                            setFieldValue(`pending_items.${index}.qty`, e.target.value)
-                                          }
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+
+                                            // Allow only digits 0-9
+                                            if (/^[0-9]*$/.test(value)) {
+                                              setFieldValue(`pending_items.${index}.qty`, value);
+                                            }
+                                          }}
+                                          onKeyDown={(e) => {
+                                            const allowedKeys = [
+                                              "Backspace",
+                                              "Delete",
+                                              "ArrowLeft",
+                                              "ArrowRight",
+                                              "Tab",
+                                            ];
+
+                                            // Prevent anything except 0-9 and control keys
+                                            if (
+                                              !allowedKeys.includes(e.key) &&
+                                              !/^[0-9]$/.test(e.key)
+                                            ) {
+                                              e.preventDefault();
+                                            }
+                                          }}
+                                          onWheel={(e) => {
+                                            e.preventDefault();
+                                            e.currentTarget.blur();
+                                          }}
+                                          inputMode="numeric"
+                                          pattern="[0-9]*"
                                           className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
                                           placeholder="Enter Quantity"
                                         />
+
                                         <ErrorMessage
                                           name={`pending_items.${index}.qty`}
                                           component="div"
