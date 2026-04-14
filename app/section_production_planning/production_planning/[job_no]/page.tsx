@@ -247,7 +247,7 @@ export default function JobDetailsPage() {
         toast.success("Job marked Ready-For-QC successfully");
         
         setJobDetails((prev) =>
-          prev.map((job) => (job.id === item.id ? { ...job, status: "QC" } : job))
+          prev.map((job) => (job.id === item.id ? { ...job, status: "QC", qty: 0 } : job))
         );
       } catch (error) {
         console.error("Error doing QC to job:", error);
@@ -553,6 +553,7 @@ export default function JobDetailsPage() {
 
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
+                          const isProcessed = item.status === 'completed' || item.status === 'QC' || item.qty === 0;
                           return (
                           <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 transition-colors ${isChild ? "bg-gray-50" : ""}`}>
                             <td className="px-4 py-3 border border-tableBorder">
@@ -575,7 +576,7 @@ export default function JobDetailsPage() {
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (isRejected ? "true" : item.qty) : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
                                 <td className="px-4 py-3 border border-tableBorder">
                                   {isRejected ? (
@@ -594,7 +595,7 @@ export default function JobDetailsPage() {
                                           handleAssignmentChange(item.id, "otherName", e.target.value)
                                         }
                                         autoFocus={!item.assign_to}
-                                        disabled={!!item.assign_to || !item.urgent || item.status === 'completed' || !!isRejected}
+                                        disabled={!!item.assign_to || !item.urgent || isProcessed || !!isRejected}
                                       />
                                       {!item.assign_to && (
                                         <button
@@ -614,7 +615,7 @@ export default function JobDetailsPage() {
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                       value={assignments[item.id]?.assignTo || ""}
                                       onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)}
-                                      disabled={!!item.assign_to || !item.urgent || item.status === 'completed' || !!isRejected}
+                                      disabled={!!item.assign_to || !item.urgent || isProcessed || !!isRejected}
                                     >
                                       <option value="">Select</option>
                                       <option value="Usmaan">Usmaan</option>
@@ -632,34 +633,35 @@ export default function JobDetailsPage() {
                                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                     value={assignments[item.id]?.assignDate || ""}
                                     onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                                    disabled={!!item.assign_to || !item.urgent || item.status === 'completed' || !!isRejected}
+                                    disabled={!!item.assign_to || !item.urgent || isProcessed || !!isRejected}
                                   />
                                   )}
                                 </td>
                                 <td className="px-4 py-3 border border-tableBorder">
                                   <div className="flex items-center gap-2">
-                                    {isFirst && !isRejected && (
+                                    {isFirst && !isRejected && !isProcessed && (
                                       <button
                                         onClick={() => !item.assign_to && item.urgent && !isRejected && item.status !== 'completed' && handleAssign(item.id)}
-                                        disabled={!!item.assign_to || !item.urgent || !!isRejected || item.status === 'completed'}
+                                        disabled={!!item.assign_to || !item.urgent || !!isRejected || isProcessed}
                                         className={`px-3 py-1 rounded text-sm transition-colors text-white ${
                                           item.status === 'completed' ? 'bg-indigo-500 cursor-default' :
+                                          item.status === 'QC' ? 'bg-orange-500 cursor-default' :
                                           item.assign_to ? "bg-green-600 cursor-default" :
                                           !item.urgent || isRejected ? "bg-gray-400 cursor-not-allowed" :
                                           "bg-blue-600 hover:bg-blue-700"
                                         }`}
                                       >
-                                        {item.status === 'completed' ? 'Completed' : item.assign_to ? "Assigned" : "Assign"}
+                                        {item.status === 'completed' ? 'Completed' : item.status === 'QC' ? 'In QC' : item.assign_to ? "Assigned" : "Assign"}
                                       </button>
                                     )}
                                     {(isChild || !hasMultiple) && ( <>
                                     <button
-                                      onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleReject(item)}
-                                      disabled={!!item.assign_to || !!isRejected || item.status === 'completed'}
+                                      onClick={() => !item.assign_to && !isRejected && !isProcessed && handleReject(item)}
+                                      disabled={!!item.assign_to || !!isRejected || isProcessed}
                                       className={`p-2 rounded-md transition-colors ${
                                         isRejected
                                           ? "bg-red-200 text-red-800 cursor-not-allowed"
-                                          : !!item.assign_to || item.status === 'completed'
+                                          : !!item.assign_to || isProcessed
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
                                           : "bg-red-100 text-red-600 hover:bg-red-200"
                                       }`}
@@ -668,10 +670,10 @@ export default function JobDetailsPage() {
                                       <FaBan className="w-4 h-4" />
                                     </button>
                                     <button
-                                      onClick={() => !item.assign_to && item.status !== 'completed' && handleMarkQc(item)}
-                                      disabled={!!item.assign_to || item.status === 'completed'}
+                                      onClick={() => !item.assign_to && !isProcessed && !isRejected && handleMarkQc(item)}
+                                      disabled={!!item.assign_to || isProcessed || !!isRejected}
                                       className={`p-2 rounded-md transition-colors ${
-                                        !!item.assign_to || item.status === 'completed'
+                                        !!item.assign_to || isProcessed || !!isRejected
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
                                           : "bg-green-100 text-green-600 hover:bg-green-200"
                                       }`}
