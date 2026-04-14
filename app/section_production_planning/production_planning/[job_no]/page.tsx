@@ -620,9 +620,9 @@ export default function JobDetailsPage() {
                                     >
                                       <option value="">Select</option>
                                       <option value="Usmaan">Usmaan</option>
-                                      <option value="Ashfaq">Ashfaq</option>
                                       <option value="Ramzaan">Ramzaan</option>
                                       <option value="Riyaaz">Riyaaz</option>
+                                      <option value="Ashfaq">Ashfaq</option>
                                       <option value="Others">Others</option>
                                     </select>
                                   ))}
