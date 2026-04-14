@@ -153,20 +153,19 @@ export default function JobDetailsPage() {
           <div className="flex flex-col gap-8">
             {/* Left Side: Assignment Form */}
             <div className="w-full">
-              <h2 className="text-xl font-bold mb-4">Material Recieved From Amar</h2>
+              <h2 className="text-xl font-semibold mb-4">Material Recieved From Amar</h2>
               <div className="relative overflow-x-auto sm:rounded-lg">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-[#999999]">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                  <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th scope="col" className="p-3 border border-tableBorder">J/O No</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Job Category</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Item Description</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Item No</th>
-                      <th scope="col" className="p-3 border border-tableBorder">MOC</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Assign To</th>
-                      <th scope="col" className="p-3 border border-tableBorder">Assign Date</th>
-                      {/* <th scope="col" className="p-3 border border-tableBorder">Action</th> */}
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Category</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Description</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign Date</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -182,7 +181,7 @@ export default function JobDetailsPage() {
                       jobDetails.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                           
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
                                 href={`/section_production/machine_category(kanban)/${encodeURIComponent(item.jo_number)}`}
@@ -194,12 +193,12 @@ export default function JobDetailsPage() {
                               "N/A"
                             )}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.job_category}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.item_description}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
-                          <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder text-[#232323]">{item.job_category}</td>
+                          <td className="px-4 py-3 border border-tableBorder text-[#232323]">{item.item_description}</td>
+                          <td className="px-4 py-3 border border-tableBorder text-[#232323]">{item.item_no}</td>
+                          <td className="px-4 py-3 border border-tableBorder text-[#232323]">{item.moc}</td>
+                          <td className="px-4 py-3 border border-tableBorder text-[#232323] font-semibold text-yellow-600">{item.qty}</td>
+                          <td className="px-4 py-3 border border-tableBorder">
                             {assignments[item.id]?.assignTo === "Others" ? (
                               <div className="flex items-center gap-1">
                                 <input
@@ -247,7 +246,7 @@ export default function JobDetailsPage() {
                               </select>
                             )}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder">
+                          <td className="px-4 py-3 border border-tableBorder">
                             <input
                               type="date"
                               className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"

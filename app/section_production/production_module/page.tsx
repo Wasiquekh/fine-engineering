@@ -199,92 +199,92 @@ export default function Home() {
 
             {/* ----------------Table----------------------- */}
             <div className="relative overflow-x-auto sm:rounded-lg">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Job No
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Job Category
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Description
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Material Type
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Quantity
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Bar
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Temperature
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Due Date
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Status
                         </div>
                       </div>
@@ -309,7 +309,7 @@ export default function Home() {
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
                       >
-                        <td className="px-2 py-2 border border-tableBorder">
+                        <td className="px-4 py-3 border border-tableBorder">
                           {item.job_no ? (
                             <p
                               onClick={() =>
@@ -317,7 +317,7 @@ export default function Home() {
                                   `/section_production/production_module/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}&assign_to=${encodeURIComponent(assignToParam || "")}`
                                 )
                               }
-                              className={`text-base leading-normal cursor-pointer underline ${
+                              className={`text-sm font-medium leading-normal cursor-pointer underline ${
                                 item.is_urgent
                                   ? "text-red-600 hover:text-red-800"
                                   : "text-blue-600 hover:text-blue-800"
@@ -326,31 +326,31 @@ export default function Home() {
                               {item.job_no}
                             </p>
                           ) : (
-                            <p className="text-[#232323] text-base leading-normal">N/A</p>
+                            <p className="text-[#232323] text-sm leading-normal">N/A</p>
                           )}
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.job_category || "N/A"}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm leading-normal">{item.job_category || "N/A"}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.description}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm leading-normal">{item.description}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.material_type}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm leading-normal">{item.material_type}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.qty}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{item.qty}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.bar}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm leading-normal">{item.bar}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.tempp}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm leading-normal">{item.tempp}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <p className="text-[#232323] text-base leading-normal">{item.urgent_due_date || "-"}</p>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          <p className="text-[#232323] text-sm leading-normal">{item.urgent_due_date || "-"}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
+                        <td className="px-4 py-3 border border-tableBorder">
                           <span
                             className={`px-2 py-1 rounded text-sm ${
                               item.is_urgent
