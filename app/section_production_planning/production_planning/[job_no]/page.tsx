@@ -200,7 +200,7 @@ export default function JobDetailsPage() {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleReject = async (item: JobDetail) => {
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "Do you want to reject this job?",
@@ -214,11 +214,12 @@ export default function JobDetailsPage() {
 
     if (result.isConfirmed) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/reject`, {});
+        await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/reject`, {});
+
         toast.success("Job rejected successfully");
 
         setJobDetails((prev) =>
-          prev.map((job) => (job.id === id ? { ...job, is_rejected: true } : job))
+          prev.map((job) => (job.id === item.id ? { ...job, is_rejected: true } : job))
         );
       } catch (error) {
         console.error("Error rejecting job:", error);
@@ -227,7 +228,7 @@ export default function JobDetailsPage() {
     }
   };
 
-  const handleMarkCompleted = async (id: string) => {
+  const handleMarkQc = async (item: JobDetail) => {
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "Do you want to mark this job as completed?",
@@ -241,14 +242,16 @@ export default function JobDetailsPage() {
 
     if (result.isConfirmed) {
       try {
-        await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/direct_complete`, {});
-        toast.success("Job marked as completed successfully");
+        await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/direct_qc`, {});
+        
+        toast.success("Job marked Ready-For-QC successfully");
+        
         setJobDetails((prev) =>
-          prev.map((job) => (job.id === id ? { ...job, status: "completed" } : job))
+          prev.map((job) => (job.id === item.id ? { ...job, status: "QC" } : job))
         );
       } catch (error) {
-        console.error("Error completing job:", error);
-        toast.error("Failed to complete job");
+        console.error("Error doing QC to job:", error);
+        toast.error("Failed to mark job as Ready-For-QC");
       }
     }
   };
@@ -575,7 +578,12 @@ export default function JobDetailsPage() {
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.qty : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
                                 <td className="px-4 py-3 border border-tableBorder">
-                                  {isFirst && (assignments[item.id]?.assignTo === "Others" ? (
+                                  {isRejected ? (
+                                      <div className="flex items-center gap-2 text-red-600 font-medium">
+                                        <FaBan className="w-4 h-4" />
+                                        <span>Rejected</span>
+                                      </div>
+                                    ) : isFirst && (assignments[item.id]?.assignTo === "Others" ? (
                                     <div className="flex items-center gap-1">
                                       <input
                                         type="text"
@@ -586,7 +594,7 @@ export default function JobDetailsPage() {
                                           handleAssignmentChange(item.id, "otherName", e.target.value)
                                         }
                                         autoFocus={!item.assign_to}
-                                        disabled={!!item.assign_to || !item.urgent || item.status === 'completed'}
+                                        disabled={!!item.assign_to || !item.urgent || item.status === 'completed' || !!isRejected}
                                       />
                                       {!item.assign_to && (
                                         <button
@@ -605,14 +613,8 @@ export default function JobDetailsPage() {
                                     <select
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                       value={assignments[item.id]?.assignTo || ""}
-                                      onChange={(e) =>
-                                        handleAssignmentChange(
-                                          item.id,
-                                          "assignTo",
-                                          e.target.value
-                                        )
-                                      }
-                                      disabled={!!item.assign_to || !item.urgent || item.status === 'completed'}
+                                      onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)}
+                                      disabled={!!item.assign_to || !item.urgent || item.status === 'completed' || !!isRejected}
                                     >
                                       <option value="">Select</option>
                                       <option value="Usmaan">Usmaan</option>
@@ -630,13 +632,13 @@ export default function JobDetailsPage() {
                                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                     value={assignments[item.id]?.assignDate || ""}
                                     onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                                    disabled={!!item.assign_to || !item.urgent || item.status === 'completed'}
+                                    disabled={!!item.assign_to || !item.urgent || item.status === 'completed' || !!isRejected}
                                   />
                                   )}
                                 </td>
                                 <td className="px-4 py-3 border border-tableBorder">
                                   <div className="flex items-center gap-2">
-                                    {isFirst && !isChild && (
+                                    {isFirst && !isRejected && (
                                       <button
                                         onClick={() => !item.assign_to && item.urgent && !isRejected && item.status !== 'completed' && handleAssign(item.id)}
                                         disabled={!!item.assign_to || !item.urgent || !!isRejected || item.status === 'completed'}
@@ -650,9 +652,9 @@ export default function JobDetailsPage() {
                                         {item.status === 'completed' ? 'Completed' : item.assign_to ? "Assigned" : "Assign"}
                                       </button>
                                     )}
-                                    {!isChild && ( <>
+                                    {(isChild || !hasMultiple) && ( <>
                                     <button
-                                      onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleReject(item.id)}
+                                      onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleReject(item)}
                                       disabled={!!item.assign_to || !!isRejected || item.status === 'completed'}
                                       className={`p-2 rounded-md transition-colors ${
                                         isRejected
@@ -666,7 +668,7 @@ export default function JobDetailsPage() {
                                       <FaBan className="w-4 h-4" />
                                     </button>
                                     <button
-                                      onClick={() => !item.assign_to && item.status !== 'completed' && handleMarkCompleted(item.id)}
+                                      onClick={() => !item.assign_to && item.status !== 'completed' && handleMarkQc(item)}
                                       disabled={!!item.assign_to || item.status === 'completed'}
                                       className={`p-2 rounded-md transition-colors ${
                                         !!item.assign_to || item.status === 'completed'
