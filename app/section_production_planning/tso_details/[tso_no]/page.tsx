@@ -7,7 +7,8 @@ import { toast } from "react-toastify";
 import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
-import { FaChevronDown, FaBan, FaCheckCircle } from "react-icons/fa";
+import { FaChevronDown, FaBan } from "react-icons/fa";
+import { MdOutlineVerified } from "react-icons/md"; // Import MdOutlineVerified for QC icon
 import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
@@ -387,16 +388,16 @@ export default function JobDetailsPage() {
                                   <FaBan className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => !item.assign_to && item.status !== 'completed' && handleMarkCompleted(item.id)}
-                                  disabled={!!item.assign_to || item.status === 'completed'}
+                                  onClick={() => !item.assign_to && item.status !== 'completed' && handleMarkCompleted(item.id)} // Keep original function name for now
+                                  disabled={!!item.assign_to || item.status === 'completed'} // Keep original disabled logic for now
                                   className={`p-2 rounded-md transition-colors ${
-                                    !!item.assign_to || item.status === 'completed'
+                                    !!item.assign_to || item.status === 'completed' // Keep original class logic for now
                                       ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
                                       : "bg-green-100 text-green-600 hover:bg-green-200"
                                   }`}
-                                  title={item.status === 'completed' ? 'Completed' : 'Mark as Completed'}
+                                  title={item.status === 'completed' ? 'Completed' : 'Mark for QC'} // Update title
                                 >
-                                  <FaCheckCircle className="w-4 h-4" />
+                                  <MdOutlineVerified className="w-4 h-4" /> {/* Use MdOutlineVerified icon */}
                                 </button>
                                 </> )}
                               </div>

@@ -7,7 +7,8 @@ import { toast } from "react-toastify";
 import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
-import { FaChevronDown, FaBan, FaCheckCircle } from "react-icons/fa";
+import { FaChevronDown, FaBan } from "react-icons/fa";
+import { MdOutlineVerified } from "react-icons/md"; // Import MdOutlineVerified for QC icon
 import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
@@ -595,7 +596,7 @@ export default function JobDetailsPage() {
                                           handleAssignmentChange(item.id, "otherName", e.target.value)
                                         }
                                         autoFocus={!item.assign_to}
-                                        disabled={!!item.assign_to || !item.urgent || isProcessed || !!isRejected}
+                                        disabled={!!item.assign_to || isProcessed || !!isRejected}
                                       />
                                       {!item.assign_to && (
                                         <button
@@ -615,7 +616,7 @@ export default function JobDetailsPage() {
                                       className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                       value={assignments[item.id]?.assignTo || ""}
                                       onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)}
-                                      disabled={!!item.assign_to || !item.urgent || isProcessed || !!isRejected}
+                                      disabled={!!item.assign_to || isProcessed || !!isRejected}
                                     >
                                       <option value="">Select</option>
                                       <option value="Usmaan">Usmaan</option>
@@ -633,7 +634,7 @@ export default function JobDetailsPage() {
                                     className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                     value={assignments[item.id]?.assignDate || ""}
                                     onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                                    disabled={!!item.assign_to || !item.urgent || isProcessed || !!isRejected}
+                                    disabled={!!item.assign_to || isProcessed || !!isRejected}
                                   />
                                   )}
                                 </td>
@@ -641,13 +642,13 @@ export default function JobDetailsPage() {
                                   <div className="flex items-center gap-2">
                                     {isFirst && !isRejected && !isProcessed && (
                                       <button
-                                        onClick={() => !item.assign_to && item.urgent && !isRejected && item.status !== 'completed' && handleAssign(item.id)}
-                                        disabled={!!item.assign_to || !item.urgent || !!isRejected || isProcessed}
+                                        onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleAssign(item.id)}
+                                        disabled={!!item.assign_to || !!isRejected || isProcessed}
                                         className={`px-3 py-1 rounded text-sm transition-colors text-white ${
                                           item.status === 'completed' ? 'bg-indigo-500 cursor-default' :
                                           item.status === 'QC' ? 'bg-orange-500 cursor-default' :
                                           item.assign_to ? "bg-green-600 cursor-default" :
-                                          !item.urgent || isRejected ? "bg-gray-400 cursor-not-allowed" :
+                                          isRejected ? "bg-gray-400 cursor-not-allowed" :
                                           "bg-blue-600 hover:bg-blue-700"
                                         }`}
                                       >
@@ -665,7 +666,7 @@ export default function JobDetailsPage() {
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
                                           : "bg-red-100 text-red-600 hover:bg-red-200"
                                       }`}
-                                      title={isRejected ? "Rejected" : "Reject"}
+                                      title={isRejected ? "Rejected" : "Reject Item"}
                                     >
                                       <FaBan className="w-4 h-4" />
                                     </button>
@@ -677,9 +678,9 @@ export default function JobDetailsPage() {
                                           ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
                                           : "bg-green-100 text-green-600 hover:bg-green-200"
                                       }`}
-                                      title={item.status === 'completed' ? 'Completed' : 'Mark as Completed'}
+                                      title={item.status === 'completed' ? 'Completed' : item.status === 'QC' ? 'Sent to QC' : 'Mark for QC'}
                                     >
-                                      <FaCheckCircle className="w-4 h-4" />
+                                      <MdOutlineVerified className="w-4 h-4" />
                                     </button>
                                     </> )}
                                   </div>
