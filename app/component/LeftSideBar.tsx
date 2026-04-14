@@ -206,7 +206,7 @@ const ProductionUserMenu = ({
                 <div className="pl-4 flex flex-col gap-1">
                   {/* Urgent/Job */}
                   {canViewUrgentJob && (
-                    <Link href={`/section_production/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&urgent=true&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/section_production/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentJobActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdWorkOutline className={`w-5 h-5 ${isUrgentJobActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
                         <p className={`text-base font-medium ${isUrgentJobActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/Job</p>
@@ -216,7 +216,7 @@ const ProductionUserMenu = ({
 
                   {/* Urgent/TSO */}
                   {canViewUrgentTSO && (
-                    <Link href={`/section_production/production_module_2?filter=TSO_SERVICE&client=Amar%20Equipment&urgent=true&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/section_production/production_module_2?filter=TSO_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentTSOActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdDesignServices className={`w-5 h-5 ${isUrgentTSOActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
                         <p className={`text-base font-medium ${isUrgentTSOActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/TSO</p>
@@ -357,7 +357,7 @@ const ProductionUserMenu = ({
                 <div className="pl-4 flex flex-col gap-1">
                   {/* Urgent/Job */}
                   {canViewUrgentJob && (
-                    <Link href={`/section_production/production_module?filter=JOB_SERVICE&client=Amar%20Biosystem&urgent=true&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/section_production/production_module?filter=JOB_SERVICE&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentJobBioActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdWorkOutline className={`w-5 h-5 ${isUrgentJobBioActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
                         <p className={`text-base font-medium ${isUrgentJobBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/Job</p>
@@ -367,7 +367,7 @@ const ProductionUserMenu = ({
 
                   {/* Urgent/TSO */}
                   {canViewUrgentTSO && (
-                    <Link href={`/section_production/production_module_2?filter=TSO_SERVICE&client=Amar%20Biosystem&urgent=true&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
+                    <Link href={`/section_production/production_module_2?filter=TSO_SERVICE&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentTSOBioActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdDesignServices className={`w-5 h-5 ${isUrgentTSOBioActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
                         <p className={`text-base font-medium ${isUrgentTSOBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/TSO</p>

@@ -60,7 +60,7 @@ export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const clientParam = searchParams.get("client");
-  const urgentParam = searchParams.get("urgent");
+  //const urgentParam = searchParams.get("urgent");
   const assignToParam = searchParams.get("assign_to");
 
   const filteredData = useMemo(() => {
@@ -100,9 +100,9 @@ export default function Home() {
       if (assignToParam) {
         params.append("assign_to", assignToParam);
       }
-      if (urgentParam === "true") {
-        params.append("is_urgent", "true");
-      }
+      // if (urgentParam === "true") {
+      //   params.append("is_urgent", "true");
+      // }
 
       params.append("job_type", "TSO_SERVICE");
 
@@ -128,7 +128,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [clientParam, assignToParam, urgentParam]);
+  }, [clientParam, assignToParam /*, urgentParam */]);
 
   return (
     <div className="flex justify-end min-h-screen">
