@@ -1,19 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, Fragment } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import AxiosProvider from "../../../../provider/AxiosProvider";
-import StorageManager from "../../../../provider/StorageManager";
-import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
 import PageGuard from "../../../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
-const storage = new StorageManager();
 
 interface VendorOutgoingAssignment {
   id: string;
@@ -53,7 +50,6 @@ interface VendorOutgoingAssignment {
 }
 
 export default function VendorOutgoingPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   
   const [data, setData] = useState<VendorOutgoingAssignment[]>([]);
@@ -91,33 +87,44 @@ export default function VendorOutgoingPage() {
   const fetchVendorOutgoing = async () => {
     setLoading(true);
     try {
-      // Fetch all job types: JOB_SERVICE, TSO_SERVICE, KANBAN
-      const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
-      let allData: VendorOutgoingAssignment[] = [];
-
-      for (const jobType of jobTypes) {
-        const params: any = { job_type: jobType };
-        if (client) params.client_name = client;
+      const params: any = {};
+      if (client) params.client_name = client;
+      
+      const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-vendor", {
+        params,
+        headers: undefined
+      });
+      const fetchedData = response?.data?.data || [];
+      
+      // CORRECTLY identify job_type from job object
+      const mappedData = fetchedData.map((item: any) => {
+        let jobType = "JOB_SERVICE";
         
-        const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-vendor", {
-            params,
-            headers: undefined
-        });
-        const fetchedData = response?.data?.data || [];
+        if (item.job) {
+          if (item.job.job_type === "TSO_SERVICE" || item.job.tso_no) {
+            jobType = "TSO_SERVICE";
+          } else if (item.job.job_type === "KANBAN" || (item.job.job_no === null && item.job.jo_number)) {
+            jobType = "KANBAN";
+          } else if (item.job.job_type === "JOB_SERVICE" || item.job.job_no) {
+            jobType = "JOB_SERVICE";
+          }
+        }
         
-        const dataWithType = fetchedData.map((item: any) => ({
+        if (item.tso_no) jobType = "TSO_SERVICE";
+        if (item.job_type === "KANBAN") jobType = "KANBAN";
+        
+        return {
           ...item,
           job_type: jobType,
           tso_no: item.tso_no || item.job?.tso_no,
           job_category: item.job_category || item.job?.job_category,
-        }));
-        
-        allData = [...allData, ...dataWithType];
-      }
+        };
+      });
       
-      setData(allData);
+      setData(mappedData);
     } catch (error) {
       console.error("Error fetching vendor outgoing:", error);
+      toast.error("Failed to load vendor outgoing data");
       setData([]);
     } finally {
       setLoading(false);
@@ -134,7 +141,6 @@ export default function VendorOutgoingPage() {
     fetchVendorOutgoing();
   }, [client]);
 
-  // Filter by category
   const filteredData = () => {
     if (jobServiceCategoryFilter === "ALL") return data;
     return data.filter((item) => {
@@ -143,12 +149,11 @@ export default function VendorOutgoingPage() {
     });
   };
 
-  // Get unique identifiers (Job No for JOB_SERVICE, TSO No for TSO_SERVICE, JO No for KANBAN)
   const getIdentifiers = () => {
     const ids = new Map<string, { type: string; category: string; vendorName: string; assigningDate: string }>();
     
     filteredData().forEach((item) => {
-      const jobType = item.job_type || item.job?.job_type;
+      const jobType = item.job_type;
       let identifier: string | null = null;
       
       if (jobType === "TSO_SERVICE") {
@@ -178,10 +183,9 @@ export default function VendorOutgoingPage() {
     }));
   };
 
-  // Get items for a specific identifier
   const getItemsForIdentifier = (identifier: string) => {
     return filteredData().filter((item) => {
-      const jobType = item.job_type || item.job?.job_type;
+      const jobType = item.job_type;
       let itemIdentifier: string | null = null;
       
       if (jobType === "TSO_SERVICE") {
@@ -196,7 +200,6 @@ export default function VendorOutgoingPage() {
     });
   };
 
-  // Group by JO for selected identifier
   const getJoGroupsForIdentifier = (identifier: string) => {
     const items = getItemsForIdentifier(identifier);
     const groups: Record<string, VendorOutgoingAssignment[]> = {};
@@ -215,7 +218,6 @@ export default function VendorOutgoingPage() {
     return groups;
   };
 
-  // Get summary for identifier
   const getIdentifierSummary = (identifier: string) => {
     const items = getItemsForIdentifier(identifier);
     const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
@@ -237,9 +239,9 @@ export default function VendorOutgoingPage() {
   };
 
   const countsByType = {
-    JOB_SERVICE: data.filter(d => (d.job_type || d.job?.job_type) === "JOB_SERVICE").length,
-    TSO_SERVICE: data.filter(d => (d.job_type || d.job?.job_type) === "TSO_SERVICE").length,
-    KANBAN: data.filter(d => (d.job_type || d.job?.job_type) === "KANBAN").length,
+    JOB_SERVICE: data.filter(d => d.job_type === "JOB_SERVICE").length,
+    TSO_SERVICE: data.filter(d => d.job_type === "TSO_SERVICE").length,
+    KANBAN: data.filter(d => d.job_type === "KANBAN").length,
     TOTAL: data.length
   };
 
@@ -252,7 +254,7 @@ export default function VendorOutgoingPage() {
 
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-2xl font-semibold text-firstBlack">
+          <h1 className="text-xl font-semibold text-firstBlack">
             Vendor Outgoing • In-Vendor Status {client && ` • ${client}`}
           </h1>
           <p className="text-sm text-gray-500 mt-1">Items sent to vendors for outsourcing</p>
@@ -267,55 +269,29 @@ export default function VendorOutgoingPage() {
 
         {categories.length > 0 && (
           <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
-            <button
-              onClick={() => setJobServiceCategoryFilter("ALL")}
-              className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                jobServiceCategoryFilter === "ALL" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              All Categories
-            </button>
+            <button onClick={() => setJobServiceCategoryFilter("ALL")} className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${jobServiceCategoryFilter === "ALL" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>All Categories</button>
             {categories.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => setJobServiceCategoryFilter(cat.value)}
-                className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                  jobServiceCategoryFilter === cat.value ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {cat.label}
-              </button>
+              <button key={cat.value} onClick={() => setJobServiceCategoryFilter(cat.value)} className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${jobServiceCategoryFilter === cat.value ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{cat.label}</button>
             ))}
           </div>
         )}
 
         <div className="relative overflow-x-auto sm:rounded-lg">
           {selectedIdentifier ? (
-            // JO Level View
             <>
-              <button onClick={() => { setSelectedIdentifier(null); setSelectedJO(null); }} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 mb-4">
-                <FaArrowLeft /> Back
-              </button>
-
+              <button onClick={() => { setSelectedIdentifier(null); setSelectedJO(null); }} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 mb-4"><FaArrowLeft /> Back</button>
               {selectedJO ? (
-                // Item Level View
                 <>
-                  <button onClick={() => setSelectedJO(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded mb-4 hover:bg-gray-200">
-                    <FaArrowLeft /> Back to JOs
-                  </button>
+                  <button onClick={() => setSelectedJO(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded mb-4 hover:bg-gray-200"><FaArrowLeft /> Back to JOs</button>
                   <h2 className="text-xl font-bold mb-4">JO: {selectedJO}</h2>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">Serial No</th>
-                          <th className="p-3 border">Item No</th>
-                          <th className="p-3 border">Item Description</th>
-                          <th className="p-3 border">MOC</th>
-                          <th className="p-3 border">Vendor Name</th>
-                          <th className="p-3 border">Machine</th>
-                          <th className="p-3 border text-center">Quantity</th>
-                          <th className="p-3 border text-center">Assigning Date</th>
+                          <th className="p-3 border">Serial No</th><th className="p-3 border">Item No</th>
+                          <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th>
+                          <th className="p-3 border">Vendor Name</th><th className="p-3 border">Machine</th>
+                          <th className="p-3 border text-center">Quantity</th><th className="p-3 border text-center">Assigning Date</th>
                          </tr>
                       </thead>
                       <tbody>
@@ -336,22 +312,17 @@ export default function VendorOutgoingPage() {
                   </div>
                 </>
               ) : (
-                // JO Level Table
                 <>
                   <h2 className="text-xl font-bold mb-4">{selectedIdentifier}</h2>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">JO Number</th>
-                          <th className="p-3 border">Vendor Name</th>
-                          <th className="p-3 border text-center">Items</th>
-                          <th className="p-3 border text-center">Total Quantity</th>
-                          <th className="p-3 border">Item Nos</th>
-                          <th className="p-3 border">Item Description</th>
-                          <th className="p-3 border">MOC</th>
-                          <th className="p-3 border text-center">Action</th>
-                        </tr>
+                          <th className="p-3 border">JO Number</th><th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">Items</th><th className="p-3 border text-center">Total Quantity</th>
+                          <th className="p-3 border">Item Nos</th><th className="p-3 border">Item Description</th>
+                          <th className="p-3 border">MOC</th><th className="p-3 border text-center">Action</th>
+                         </tr>
                       </thead>
                       <tbody>
                         {Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => {
@@ -359,12 +330,10 @@ export default function VendorOutgoingPage() {
                           const itemNos = [...new Set(items.map(i => i.item_no).filter(Boolean))];
                           const descriptions = [...new Set(items.map(i => i.job?.item_description).filter(Boolean))];
                           const mocList = [...new Set(items.map(i => i.job?.moc).filter(Boolean))];
-                          const vendorName = items[0]?.vendor_name || "N/A";
-                          
                           return (
                             <tr key={jo} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedJO(jo)}>
                               <td className="p-3 border text-blue-600 font-medium">{jo}</td>
-                              <td className="p-3 border">{vendorName}</td>
+                              <td className="p-3 border">{items[0]?.vendor_name || "N/A"}</td>
                               <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
                               <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
                               <td className="p-3 border"><div className="text-sm">{itemNos.slice(0, 3).join(", ")}{itemNos.length > 3 && ` +${itemNos.length - 3}`}</div></td>
@@ -381,21 +350,16 @@ export default function VendorOutgoingPage() {
               )}
             </>
           ) : (
-            // Identifier Level View (Jobs/TSOs/Kanbans)
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border bg-gray-50">
-                      <th className="p-3 border">Identifier</th>
-                      <th className="p-3 border">Type</th>
-                      <th className="p-3 border">Category</th>
-                      <th className="p-3 border">Vendor Name</th>
-                      <th className="p-3 border text-center">Total JOs</th>
-                      <th className="p-3 border text-center">Total Quantity</th>
-                      <th className="p-3 border text-center">Assigning Date</th>
-                      <th className="p-3 border text-center">Action</th>
-                    </tr>
+                      <th className="p-3 border">Identifier</th><th className="p-3 border">Type</th>
+                      <th className="p-3 border">Category</th><th className="p-3 border">Vendor Name</th>
+                      <th className="p-3 border text-center">Total JOs</th><th className="p-3 border text-center">Total Quantity</th>
+                      <th className="p-3 border text-center">Assigning Date</th><th className="p-3 border text-center">Action</th>
+                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
@@ -422,10 +386,7 @@ export default function VendorOutgoingPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="text-xs text-gray-500 mt-4">
-                Total Identifiers: <span className="font-semibold">{getIdentifiers().length}</span> | 
-                Total Items: <span className="font-semibold">{data.length}</span>
-              </div>
+              <div className="text-xs text-gray-500 mt-4">Total Identifiers: <span className="font-semibold">{getIdentifiers().length}</span> | Total Items: <span className="font-semibold">{data.length}</span></div>
             </>
           )}
         </div>
