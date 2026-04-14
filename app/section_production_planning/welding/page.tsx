@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
 import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
@@ -29,8 +29,9 @@ interface WeldingAssignment {
   gatepass_no: string | null;
   review_for: string | null;
   status: string;
-  created_at: string;
-  updated_at: string;
+  job_type?: string | null;
+  tso_no?: string | null;
+  job_category?: string | null;
   job: {
     id: string;
     job_type: string;
@@ -53,6 +54,7 @@ interface WeldingAssignment {
 export default function WeldingPage() {
   const [data, setData] = useState<WeldingAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIdentifier, setSelectedIdentifier] = useState<string | null>(null);
   const [selectedJO, setSelectedJO] = useState<string | null>(null);
 
   const searchParams = useSearchParams();
@@ -62,17 +64,36 @@ export default function WeldingPage() {
     setLoading(true);
     try {
       const params: any = {};
-      if (client) {
-        params.client_name = client;
-      }
+      if (client) params.client_name = client;
       
       const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-welding", {
-          params,
-          headers: undefined
+        params,
+        headers: undefined
+      });
+      const fetchedData = response?.data?.data || [];
+      
+      // Identify job_type from job object
+      const mappedData = fetchedData.map((item: any) => {
+        let jobType = "JOB_SERVICE";
+        
+        if (item.job) {
+          if (item.job.job_type === "TSO_SERVICE" || item.job.tso_no) {
+            jobType = "TSO_SERVICE";
+          } else if (item.job.job_type === "KANBAN" || (item.job.job_no === null && item.job.jo_number)) {
+            jobType = "KANBAN";
+          }
+        }
+        
+        if (item.tso_no) jobType = "TSO_SERVICE";
+        
+        return {
+          ...item,
+          job_type: jobType,
+          tso_no: item.tso_no || item.job?.tso_no,
+        };
       });
       
-      let fetchedData = response?.data?.data || [];
-      setData(fetchedData);
+      setData(mappedData);
     } catch (error) {
       console.error("Error fetching welding assignments:", error);
       setData([]);
@@ -85,306 +106,215 @@ export default function WeldingPage() {
     fetchWeldingAssignments();
   }, [client]);
 
-  // Group by JO Number
-  const josGrouped = () => {
-    const joMap = new Map<string, {
-      joNumber: string;
-      items: WeldingAssignment[];
-      totalQty: number;
-      jobNo: string;
-      clientName: string;
-      itemDescriptions: string[];
-      itemNos: string[];
-      serialNos: string[];
-      mocList: string[];
-    }>();
+  // Get unique identifiers
+  const getIdentifiers = () => {
+    const ids = new Map<string, { type: string; clientName: string; jobNo: string }>();
     
     data.forEach((item) => {
-      const joNumber = item.jo_no || item.job?.jo_number;
-      if (joNumber) {
-        if (!joMap.has(joNumber)) {
-          joMap.set(joNumber, {
-            joNumber,
-            items: [],
-            totalQty: 0,
-            jobNo: item.job?.job_no || "N/A",
-            clientName: item.job?.client_name || "N/A",
-            itemDescriptions: [],
-            itemNos: [],
-            serialNos: [],
-            mocList: [],
-          });
-        }
-        const joData = joMap.get(joNumber)!;
-        joData.items.push(item);
-        joData.totalQty += Number(item.quantity_no) || 0;
-        if (item.job?.item_description && !joData.itemDescriptions.includes(item.job.item_description)) {
-          joData.itemDescriptions.push(item.job.item_description);
-        }
-        if (item.item_no && !joData.itemNos.includes(String(item.item_no))) {
-          joData.itemNos.push(String(item.item_no));
-        }
-        if (item.serial_no && !joData.serialNos.includes(item.serial_no)) {
-          joData.serialNos.push(item.serial_no);
-        }
-        if (item.job?.moc && !joData.mocList.includes(item.job.moc)) {
-          joData.mocList.push(item.job.moc);
-        }
+      const jobType = item.job_type;
+      let identifier: string | null = null;
+      
+      if (jobType === "TSO_SERVICE") {
+        identifier = item.tso_no || item.job?.tso_no;
+      } else if (jobType === "KANBAN") {
+        identifier = item.jo_no;
+      } else {
+        identifier = item.job?.job_no;
+      }
+      
+      if (identifier && !ids.has(identifier)) {
+        ids.set(identifier, {
+          type: jobType || "JOB_SERVICE",
+          clientName: item.job?.client_name || "N/A",
+          jobNo: item.job?.job_no || "N/A",
+        });
       }
     });
     
-    return Array.from(joMap.values());
+    return Array.from(ids.entries()).map(([id, info]) => ({
+      identifier: id,
+      type: info.type,
+      clientName: info.clientName,
+      jobNo: info.jobNo,
+    }));
   };
 
-  const getItemsForJO = (joNumber: string) => {
-    return data.filter(item => (item.jo_no || item.job?.jo_number) === joNumber);
+  // Get items for identifier
+  const getItemsForIdentifier = (identifier: string) => {
+    return data.filter((item) => {
+      const jobType = item.job_type;
+      let itemIdentifier: string | null = null;
+      
+      if (jobType === "TSO_SERVICE") {
+        itemIdentifier = item.tso_no || item.job?.tso_no;
+      } else if (jobType === "KANBAN") {
+        itemIdentifier = item.jo_no;
+      } else {
+        itemIdentifier = item.job?.job_no;
+      }
+      
+      return itemIdentifier === identifier;
+    });
+  };
+
+  // Group by JO
+  const getJoGroupsForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    const groups: Record<string, WeldingAssignment[]> = {};
+  
+    items.forEach((item) => {
+      let jo = item.jo_no;
+      if (!jo && item.serial_no) {
+        const match = item.serial_no.match(/^([^-]+-[^-]+-[^/]+\/[^/]+\/[^/]+)/);
+        if (match) jo = match[1];
+        else jo = item.serial_no.substring(0, 20);
+      }
+      if (!jo) jo = "Unknown";
+      if (!groups[jo]) groups[jo] = [];
+      groups[jo].push(item);
+    });
+    return groups;
+  };
+
+  const getIdentifierSummary = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
+    const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
+    return { totalQty, uniqueJoCount };
+  };
+
+  const getJobTypeBadge = (jobType: string | null | undefined) => {
+    switch(jobType) {
+      case "TSO_SERVICE": return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
+      case "KANBAN": return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">KANBAN</span>;
+      default: return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">JOB</span>;
+    }
+  };
+
+  const countsByType = {
+    JOB_SERVICE: data.filter(d => d.job_type === "JOB_SERVICE").length,
+    TSO_SERVICE: data.filter(d => d.job_type === "TSO_SERVICE").length,
+    KANBAN: data.filter(d => d.job_type === "KANBAN").length,
+    TOTAL: data.length
   };
 
   const WeldingContent = () => (
     <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
-      <div className="absolute bottom-0 right-0">
-        <Image
-          src="/images/sideDesign.svg"
-          alt="side design"
-          width={100}
-          height={100}
-          className="w-full h-full"
-        />
-      </div>
-
+      <div className="absolute bottom-0 right-0"><Image src="/images/sideDesign.svg" alt="side design" width={100} height={100} className="w-full h-full" /></div>
       <DesktopHeader />
-
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-2xl font-semibold text-firstBlack">
-            Welding • In-Welding Status
-            {client && ` • ${client}`}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Items currently in welding process
-          </p>
+          <h1 className="text-xl font-semibold text-firstBlack">Welding • In-Welding Status {client && ` • ${client}`}</h1>
+          <p className="text-sm text-gray-500 mt-1">Items currently in welding process</p>
+          <div className="flex gap-3 mt-2 text-xs">
+            <span className="px-2 py-1 bg-green-100 text-green-800 rounded">JOB: {countsByType.JOB_SERVICE}</span>
+            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">TSO: {countsByType.TSO_SERVICE}</span>
+            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded">KANBAN: {countsByType.KANBAN}</span>
+            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded">TOTAL: {countsByType.TOTAL}</span>
+          </div>
         </div>
 
         <div className="relative overflow-x-auto sm:rounded-lg">
-          {selectedJO ? (
-            // Item Level View - Show items for selected JO
+          {selectedIdentifier ? (
             <>
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  onClick={() => setSelectedJO(null)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                >
-                  <FaArrowLeft />
-                  Back to JO List
-                </button>
-              </div>
-
-              <h2 className="text-2xl font-semibold mb-4">
-                JO: {selectedJO}
-              </h2>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder bg-gray-50">
-                      <th className="p-3 border border-tableBorder font-semibold">Serial No</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item No</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item Description</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">MOC</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Machine</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Quantity</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">QC Date</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Gatepass No</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {(() => {
-                      const items = getItemsForJO(selectedJO);
-                      if (items.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={9} className="px-4 py-6 text-center border border-tableBorder">
-                              <p className="text-[#666666] text-sm">No items found</p>
-                            </td>
+              <button onClick={() => { setSelectedIdentifier(null); setSelectedJO(null); }} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 mb-4"><FaArrowLeft /> Back</button>
+              {selectedJO ? (
+                <>
+                  <button onClick={() => setSelectedJO(null)} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded mb-4"><FaArrowLeft /> Back to JOs</button>
+                  <h2 className="text-xl font-bold mb-4">JO: {selectedJO}</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left text-gray-500">
+                      <thead className="text-xs text-[#999999]"><tr className="border bg-gray-50">
+                        <th className="p-3 border">Serial No</th><th className="p-3 border">Item No</th><th className="p-3 border">Item Description</th>
+                        <th className="p-3 border">MOC</th><th className="p-3 border">Machine</th><th className="p-3 border text-center">Quantity</th>
+                        <th className="p-3 border text-center">QC Date</th><th className="p-3 border text-center">Gatepass No</th>
+                      </tr></thead>
+                      <tbody>
+                        {getJoGroupsForIdentifier(selectedIdentifier)[selectedJO]?.map((item) => (
+                          <tr key={item.id} className="border hover:bg-primary-50">
+                            <td className="p-3 border font-mono text-blue-600">{item.serial_no || "N/A"}</td>
+                            <td className="p-3 border">{item.item_no || "N/A"}</td>
+                            <td className="p-3 border">{item.job?.item_description || "N/A"}</td>
+                            <td className="p-3 border">{item.job?.moc || "N/A"}</td>
+                            <td className="p-3 border">{item.machine_code} ({item.machine_category})</td>
+                            <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
+                            <td className="p-3 border text-center">{item.qc_date ? new Date(item.qc_date).toLocaleDateString() : "N/A"}</td>
+                            <td className="p-3 border text-center">{item.gatepass_no || "N/A"}</td>
                           </tr>
-                        );
-                      }
-                      
-                      return items.map((item) => (
-                        <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-50">
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-sm font-mono text-blue-600">
-                              {item.serial_no || "N/A"}
-                            </p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{item.item_no || "N/A"}</p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{item.job?.item_description || "N/A"}</p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{item.job?.moc || "N/A"}</p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">
-                              {item.machine_code} ({item.machine_category})
-                            </p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="font-semibold text-green-600">{item.quantity_no || 0}</span>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <p className="text-sm">{item.qc_date ? new Date(item.qc_date).toLocaleDateString() : "N/A"}</p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <p className="text-sm">{item.gatepass_no || "N/A"}</p>
-                          </td>
-                        </tr>
-                      ));
-                    })()}
-                  </tbody>
-                </table>
-              </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold mb-4">{selectedIdentifier}</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left text-gray-500">
+                      <thead className="text-xs text-[#999999]"><tr className="border bg-gray-50">
+                        <th className="p-3 border">JO Number</th><th className="p-3 border">Vendor Name</th><th className="p-3 border text-center">Items</th>
+                        <th className="p-3 border text-center">Total Quantity</th><th className="p-3 border">Item Nos</th>
+                        <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th><th className="p-3 border text-center">Action</th>
+                      </tr></thead>
+                      <tbody>
+                        {Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => {
+                          const totalQty = items.reduce((sum, i) => sum + (Number(i.quantity_no) || 0), 0);
+                          const itemNos = [...new Set(items.map(i => i.item_no).filter(Boolean))];
+                          const descriptions = [...new Set(items.map(i => i.job?.item_description).filter(Boolean))];
+                          const mocList = [...new Set(items.map(i => i.job?.moc).filter(Boolean))];
+                          return (
+                            <tr key={jo} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedJO(jo)}>
+                              <td className="p-3 border text-blue-600 font-medium">{jo}</td>
+                              <td className="p-3 border">{items[0]?.vendor_name || "N/A"}</td>
+                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
+                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
+                              <td className="p-3 border"><div className="text-sm">{itemNos.slice(0, 3).join(", ")}{itemNos.length > 3 && ` +${itemNos.length - 3}`}</div></td>
+                              <td className="p-3 border"><div className="text-sm max-w-[200px]">{descriptions.slice(0, 2).join(", ")}{descriptions.length > 2 && ` +${descriptions.length - 2}`}</div></td>
+                              <td className="p-3 border"><div className="text-sm">{mocList.slice(0, 2).join(", ")}{mocList.length > 2 && ` +${mocList.length - 2}`}</div></td>
+                              <td className="p-3 border text-center"><button className="px-3 py-1 bg-primary-600 text-white rounded text-sm">View Items</button></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </>
           ) : (
-            // JO Level View - Show all JOs (like QC page)
             <>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold">
-                  JO Groups in Welding
-                </h2>
-              </div>
-
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder bg-gray-50">
-                      <th className="p-3 border border-tableBorder font-semibold">JO Number</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Job No</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Serial Nos</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item Nos</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Item Description</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">MOC</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Items</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Action</th>
-                    </tr>
-                  </thead>
-
+                  <thead className="text-xs text-[#999999]"><tr className="border bg-gray-50">
+                    <th className="p-3 border">Identifier</th><th className="p-3 border">Type</th><th className="p-3 border">Client Name</th>
+                    <th className="p-3 border text-center">Total JOs</th><th className="p-3 border text-center">Total Quantity</th><th className="p-3 border text-center">Action</th>
+                  </tr></thead>
                   <tbody>
                     {loading ? (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <div className="flex justify-center items-center gap-2">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
-                            <p className="text-[#666666] text-sm">Loading...</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : josGrouped().length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-sm">No welding assignments found</p>
-                        </td>
-                      </tr>
+                      <tr><td colSpan={6} className="text-center p-4">Loading...</td></tr>
+                    ) : getIdentifiers().length === 0 ? (
+                      <tr><td colSpan={6} className="text-center p-4">No welding assignments found</td></tr>
                     ) : (
-                      josGrouped().map((jo) => (
-                        <tr
-                          key={jo.joNumber}
-                          className="border border-tableBorder cursor-pointer bg-white hover:bg-primary-50 transition-colors"
-                          onClick={() => setSelectedJO(jo.joNumber)}
-                        >
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-sm leading-normal text-blue-600 font-medium">
-                              {jo.joNumber}
-                            </p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{jo.jobNo}</p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{jo.clientName}</p>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <div className="text-sm max-w-[200px]">
-                              {jo.serialNos.slice(0, 2).map((serial, idx) => (
-                                <div key={idx} className="font-mono text-xs mb-1">{serial}</div>
-                              ))}
-                              {jo.serialNos.length > 2 && (
-                                <div className="text-gray-400 text-xs">+{jo.serialNos.length - 2} more</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <div className="text-sm">
-                              {jo.itemNos.map((itemNo, idx) => (
-                                <div key={idx} className="mb-1">{itemNo}</div>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <div className="text-sm max-w-[250px]">
-                              {jo.itemDescriptions.slice(0, 2).map((desc, idx) => (
-                                <div key={idx} className="mb-1 truncate">{desc}</div>
-                              ))}
-                              {jo.itemDescriptions.length > 2 && (
-                                <div className="text-gray-400 text-xs">+{jo.itemDescriptions.length - 2} more</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder">
-                            <div className="text-sm">
-                              {jo.mocList.slice(0, 2).map((moc, idx) => (
-                                <div key={idx} className="mb-1">{moc}</div>
-                              ))}
-                              {jo.mocList.length > 2 && (
-                                <div className="text-gray-400 text-xs">+{jo.mocList.length - 2} more</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                              {jo.items.length}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="font-semibold text-green-600">{jo.totalQty}</span>
-                          </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedJO(jo.joNumber);
-                              }}
-                              className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700 transition-colors"
-                            >
-                              View Items
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                      getIdentifiers().map(({ identifier, type, clientName }) => {
+                        const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
+                        return (
+                          <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
+                            <td className="p-3 border text-blue-600 font-medium">{identifier}</td>
+                            <td className="p-3 border">{getJobTypeBadge(type)}</td>
+                            <td className="p-3 border">{clientName}</td>
+                            <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{uniqueJoCount}</span></td>
+                            <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
+                            <td className="p-3 border text-center"><button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">View Details</button></td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
+              <div className="text-xs text-gray-500 mt-4">Total Identifiers: <span className="font-semibold">{getIdentifiers().length}</span> | Total Items: <span className="font-semibold">{data.length}</span></div>
             </>
           )}
-        </div>
-
-        <div className="text-xs text-gray-500 mt-4 px-2 flex justify-between items-center">
-          <div>
-            {selectedJO ? (
-              <>Total Items: <span className="font-semibold">{getItemsForJO(selectedJO).length}</span> | Total Quantity: <span className="font-semibold">{getItemsForJO(selectedJO).reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0)}</span></>
-            ) : (
-              <>Total JOs: <span className="font-semibold">{josGrouped().length}</span> | Total Items: <span className="font-semibold">{data.length}</span></>
-            )}
-          </div>
-          <div className="text-gray-400">
-            💡 Click on any row to view details
-          </div>
         </div>
       </div>
     </div>
@@ -393,9 +323,7 @@ export default function WeldingPage() {
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
-      <PageGuard requiredPermission="welding.view">
-        <WeldingContent />
-      </PageGuard>
+      <PageGuard requiredPermission="welding.view"><WeldingContent /></PageGuard>
     </div>
   );
 }
