@@ -370,7 +370,7 @@ export default function NotokMainPage() {
 
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
           <div className="mb-4 px-2">
-            <h1 className="text-2xl font-semibold text-firstBlack">
+            <h1 className="text-xl font-semibold text-firstBlack">
               Not Ok • {filterParam.replace("_", " ")}
               {client && ` • ${client}`}
             </h1>
@@ -543,7 +543,7 @@ export default function NotokMainPage() {
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-semibold mb-4">
+                <h2 className="text-lg font-semibold mb-4">
                   {filterParam === "TSO_SERVICE"
                     ? "Not OK TSOs"
                     : filterParam === "KANBAN"
