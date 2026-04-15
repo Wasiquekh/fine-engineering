@@ -261,7 +261,7 @@ export default function JoNumberPage() {
             ← Back
           </button>
 
-          <h1 className="text-2xl font-bold mb-6">
+          <h1 className="text-xl font-semibold mb-6">
             Machine Category - {jo_number}
           </h1>
 
@@ -271,16 +271,16 @@ export default function JoNumberPage() {
               Jobs for J/O No: {jo_number}
             </h2> */}
             <div className="relative overflow-x-auto sm:rounded-lg">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                   <tr className="border border-tableBorder">
                     {/* <th scope="col" className="p-3 border border-tableBorder">Job No</th> */}
-                    <th scope="col" className="p-3 border border-tableBorder">Item No</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Description</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Qty</th>
-                    <th scope="col" className="p-3 border border-tableBorder">MOC</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Bin Location</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Description</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Qty</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -299,13 +299,13 @@ export default function JoNumberPage() {
                   ) : (
                     jobs.map((job) => (
                       <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
-                        {/* <td className="px-2 py-2 border border-tableBorder">{job.job_no}</td> */}
-                        <td className="px-2 py-2 border border-tableBorder">{job.item_no}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.serial_no || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.item_description}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.qty}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.moc}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.bin_location}</td>
+                        {/* <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.job_no}</td> */}
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_no}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323] font-mono">{job.serial_no || "N/A"}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_description}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323] font-semibold text-yellow-600">{job.qty}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.moc}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.bin_location}</td>
                       </tr>
                     ))
                   )}
@@ -471,21 +471,21 @@ export default function JoNumberPage() {
 
           {/* Assigned Jobs Table */}
           <div className="mt-12 mb-8">
-            <h2 className="text-xl font-bold mb-4">
+            <h2 className="text-xl font-semibold mb-4">
               Assigned Jobs History
             </h2>
             <div className="relative overflow-x-auto sm:rounded-lg">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">Serial No</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Item No</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Machine Category</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Machine Size</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Machine Code</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Worker</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Quantity</th>
-                    <th scope="col" className="p-3 border border-tableBorder">Date</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Category</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Size</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Code</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Worker</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,14 +498,14 @@ export default function JoNumberPage() {
                   ) : (
                     assignedJobs.map((job) => (
                       <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
-                        <td className="px-2 py-2 border border-tableBorder">{job.serial_no || "N/A"}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.item_no}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.machine_category}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.machine_size}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.machine_code}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.worker_name}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.quantity_no}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{job.assigning_date}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323] font-mono">{job.serial_no || "N/A"}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_no}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.machine_category}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.machine_size}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.machine_code}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323] font-medium">{job.worker_name}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323] font-semibold text-green-600">{job.quantity_no}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.assigning_date}</td>
                       </tr>
                     ))
                   )}

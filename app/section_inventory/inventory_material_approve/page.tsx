@@ -330,12 +330,12 @@ export default function Home() {
                 </div>
               </div>
 
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           {activeFilter === "TSO_SERVICE"
                             ? "TSO No"
                             : activeFilter === "KANBAN"
@@ -347,10 +347,10 @@ export default function Home() {
                     {activeFilter !== "KANBAN" && (
                       <th
                         scope="col"
-                        className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                        className="px-4 py-4 border border-tableBorder hidden sm:table-cell"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="font-medium text-firstBlack text-base leading-normal">
+                          <div className="font-semibold">
                             J/O Number
                           </div>
                         </div>
@@ -358,60 +358,60 @@ export default function Home() {
                     )}
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder hidden sm:table-cell whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Job Type
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder hidden sm:table-cell whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Job Category
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder hidden sm:table-cell whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Assign To
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder hidden sm:table-cell whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Quantity
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder hidden sm:table-cell whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Status
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           Actions
                         </div>
                       </div>
@@ -436,42 +436,42 @@ export default function Home() {
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={group.groupId}
                       >
-                        <td className="px-2 py-2 border border-tableBorder">
+                        <td className="px-4 py-3 border border-tableBorder">
                           <button
                             onClick={() => handleGroupClick(group)}
                             className="text-blue-600 hover:underline text-left"
                           >
-                            <p className="text-base leading-normal">{group.groupId || "N/A"}</p>
+                            <p className="text-sm font-medium leading-normal">{group.groupId || "N/A"}</p>
                           </button>
                         </td>
                         {activeFilter !== "KANBAN" && (
-                          <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                            <p className="text-[#232323] text-base leading-normal">
+                          <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                            <p className="text-[#232323] text-sm leading-normal">
                               {group.jo_numbers || "N/A"}
                             </p>
                           </td>
                         )}
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {group.job_type}
                           </p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">
                             {group.job_category || "N/A"}
                           </p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal font-medium">
                             {group.assign_to || "N/A"}
                           </p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm font-semibold text-yellow-600">
                             {group.total_qty}
                           </p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
+                        <td className="px-4 py-3 border border-tableBorder">
                           <span
                             className={`px-2 py-1 rounded text-sm ${
                               group.is_approve
@@ -484,7 +484,7 @@ export default function Home() {
                             {group.is_approve ? "Approved" : (group.is_rejected ? "Not Approved" : "Pending")}
                           </span>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
+                        <td className="px-4 py-3 border border-tableBorder">
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => !group.is_approve && !group.is_rejected && handleApprove(group.items)}
