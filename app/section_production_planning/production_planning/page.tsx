@@ -213,80 +213,86 @@ export default function Home() {
       toast.error("Failed to add Pending Materials");
     }
   };
-  const handleUrgent = (job_no: string | number) => {
-    setSelectedJobId(String(job_no));
-    setUrgentDate("");
-    setUrgentModalOpen(true);
-  };
+  const handleUrgent = async (job_no: string | number) => {
+    const result = await Swal.fire({
+      title: "Mark as Urgent?",
+      text: "Are you sure you want to mark this job as urgent?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#facc15",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, mark urgent!",
+      cancelButtonText: "Cancel",
+    });
 
-  const submitUrgent = async () => {
-    if (!selectedJobId || !urgentDate) {
-      toast.error("Please select a due date");
-      return;
-    }
+    if (result.isConfirmed) {
+      try {
+        let response;
+        const id = String(job_no);
 
-    try {
-      let response;
+        if (activeFilter === "TSO_SERVICE") {
+          const params = new URLSearchParams();
+          params.append("tso_no", id);
+          response = await axiosProvider.post(
+            `/fineengg_erp/system/jobs/mark-urgent-by-tso`,
+            params,
+            {
+              headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
+            }
+          );
+        } else if (activeFilter === "KANBAN") {
+          const params = new URLSearchParams();
+          params.append("jo_number", id);
+          response = await axiosProvider.post(
+            `/fineengg_erp/system/jobs/mark-urgent-by-jo-number`,
+            params,
+            {
+              headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
+            }
+          );
+        } else {
+          response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent`, {
+            job_no: id,
+          });
+        }
 
-      if (activeFilter === "TSO_SERVICE") {
-        const params = new URLSearchParams();
-        params.append("tso_no", selectedJobId);
-        params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
-
-        response = await axiosProvider.post(
-          `/fineengg_erp/system/jobs/mark-urgent-by-tso`,
-          params,
-          {
-            headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-          }
-        );
-      } else if (activeFilter === "KANBAN") {
-        const params = new URLSearchParams();
-        params.append("jo_number", selectedJobId);
-        params.append("urgent_due_date", urgentDate.replace(/-/g, "/"));
-
-        response = await axiosProvider.post(
-          `/fineengg_erp/system/jobs/mark-urgent-by-jo-number`,
-          params,
-          {
-            headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-          }
-        );
-      } else {
-        response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent`, {
-          job_no: selectedJobId,
-          urgent_due_date: urgentDate,
-        });
-      }
-
-      //Always treat jobs API as source of truth
-      if (response.status === 200) {
-        // try {
-        //   const params = new URLSearchParams();
-        //   params.append("job_no", selectedJobId);
-        //   params.append("urgent_due_date", urgentDate);
-
-        //   await axiosProvider.post(
-        //     "/fineengg_erp/system/categories/mark-urgent",
-        //     params,
-        //     {
-        //       headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-        //     }
-        //   );
-        // } catch (error) {
-        //   console.warn("Category urgent update failed (safe to ignore)", error);
-        // }
-
-        toast.success("Job marked as urgent");
-        fetchData();
-        setUrgentModalOpen(false);
-        setSelectedJobId(null);
-      } else {
+        if (response.status === 200) {
+          toast.success("Job marked as urgent");
+          fetchData();
+        } else {
+          toast.error("Failed to mark as urgent");
+        }
+      } catch (error: any) {
+        console.error("Error marking job as urgent:", error);
         toast.error("Failed to mark as urgent");
       }
+    }
+  };
+
+  const updateDueDate = async (job_no: string, date: string) => {
+    if (!date) return;
+    try {
+      const params = new URLSearchParams();
+      params.append("job_no", job_no);
+      params.append("urgent_due_date", date.replace(/-/g, "/"));
+
+      const response = await axiosProvider.post(
+        "/fineengg_erp/system/categories/update-due-date",
+        params,
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
+        }
+      );
+
+      if (response.status === 200) {
+        toast.success("Due date updated successfully");
+        fetchData();
+      } else {
+        toast.error("Failed to update due date");
+      }
     } catch (error: any) {
-      console.error("Error marking job as urgent:", error);
-      toast.error("Failed to mark as urgent");
+      console.error("Error updating due date:", error);
+      toast.error("Failed to update due date");
     }
   };
 
@@ -866,7 +872,14 @@ export default function Home() {
                             <p className="text-[#232323] text-sm leading-normal">{item.tempp}</p>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm leading-normal">{item.urgent_due_date || "-"}</p>
+                          <input
+                            type="date"
+                            className="text-[#232323] text-sm leading-normal border border-gray-300 rounded px-1 focus:outline-none focus:ring-1 focus:ring-primary-600 bg-transparent"
+                            value={item.urgent_due_date ? item.urgent_due_date.replace(/\//g, "-") : ""}
+                            onChange={(e) =>
+                              updateDueDate(item.job_no, e.target.value)
+                            }
+                          />
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <span
@@ -1298,51 +1311,6 @@ export default function Home() {
           </div>
         </div>
       {/* FITLER FLYOUT END */}
-
-      {/* URGENT MODAL */}
-      {isUrgentModalOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Mark as Urgent</h3>
-              <button
-                onClick={() => setUrgentModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <IoCloseOutline className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date
-              </label>
-              <input
-                type="date"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-600"
-                value={urgentDate}
-                onChange={(e) => setUrgentDate(e.target.value)}
-                min={new Date().toISOString().split("T")[0]}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setUrgentModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitUrgent}
-                className="px-4 py-2 text-white bg-primary-600 rounded-md hover:bg-primary-700"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
