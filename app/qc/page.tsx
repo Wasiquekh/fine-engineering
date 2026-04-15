@@ -1005,7 +1005,7 @@ export default function QcMainPage() {
 
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-2xl font-semibold text-firstBlack">
+          <h1 className="text-xl font-semibold text-firstBlack">
             QC • {filterParam.replace("_", " ")}
             {client && ` • ${client}`}
           </h1>
@@ -1278,7 +1278,7 @@ export default function QcMainPage() {
             // Job Level View - Show all Jobs
             <>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-lg font-bold">
                   {filterParam === "TSO_SERVICE"
                     ? "TSOs Ready for QC"
                     : filterParam === "KANBAN"
