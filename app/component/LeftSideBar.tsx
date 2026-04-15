@@ -181,7 +181,7 @@ const ProductionUserMenu = ({
         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMenuOpen ? "bg-sideBarHoverbg" : ""}`}
       >
         <MdFactory className={`w-5 h-5 ${isMenuOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-        <p className={`text-base font-medium ${isMenuOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>{label}</p>
+        <p className={`text-sm font-medium ${isMenuOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>{label}</p>
         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isMenuOpen ? "rotate-180" : ""}`} />
       </div>
 
@@ -198,7 +198,7 @@ const ProductionUserMenu = ({
                 className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isAmarEquipmentOpen ? "bg-sideBarHoverbg" : ""}`}
               >
                 <MdOutlinePeopleOutline className={`w-5 h-5 ${isAmarEquipmentOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                <p className={`text-base font-medium ${isAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
+                <p className={`text-sm font-medium ${isAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
                 <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarEquipmentOpen ? "rotate-180" : ""}`} />
               </div>
 
@@ -209,7 +209,7 @@ const ProductionUserMenu = ({
                     <Link href={`/section_production/production_module?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentJobActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdWorkOutline className={`w-5 h-5 ${isUrgentJobActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isUrgentJobActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/Job</p>
+                        <p className={`text-sm font-medium ${isUrgentJobActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/Job</p>
                       </div>
                     </Link>
                   )}
@@ -219,7 +219,7 @@ const ProductionUserMenu = ({
                     <Link href={`/section_production/production_module_2?filter=TSO_SERVICE&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentTSOActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdDesignServices className={`w-5 h-5 ${isUrgentTSOActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isUrgentTSOActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/TSO</p>
+                        <p className={`text-sm font-medium ${isUrgentTSOActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/TSO</p>
                       </div>
                     </Link>
                   )}
@@ -229,7 +229,7 @@ const ProductionUserMenu = ({
                     <Link href={`/section_production/production_module_3?filter=KANBAN&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isKanbanActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdViewKanban className={`w-5 h-5 ${isKanbanActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isKanbanActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
+                        <p className={`text-sm font-medium ${isKanbanActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
                       </div>
                     </Link>
                   )}
@@ -245,7 +245,7 @@ const ProductionUserMenu = ({
                         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isAmarEqPOOpen ? "bg-sideBarHoverbg" : ""}`}
                       >
                         <MdPendingActions className={`w-5 h-5 ${isAmarEqPOOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isAmarEqPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
+                        <p className={`text-sm font-medium ${isAmarEqPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
                         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarEqPOOpen ? "rotate-180" : ""}`} />
                       </div>
 
@@ -254,13 +254,13 @@ const ProductionUserMenu = ({
                           <Link href={`/section_production_planning/po-services?filter=FINE&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                               <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Fine</p>
+                              <p className="text-sm font-medium text-firstBlack group-hover:text-primary-600">Fine</p>
                             </div>
                           </Link>
                           <Link href={`/section_production_planning/po-services?filter=PRESS_FLOW&client=Amar%20Equipment&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                               <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Press Flow</p>
+                              <p className="text-sm font-medium text-firstBlack group-hover:text-primary-600">Press Flow</p>
                             </div>
                           </Link>
                         </div>
@@ -279,7 +279,7 @@ const ProductionUserMenu = ({
                         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isProdAmarEqReviewOpen ? "bg-sideBarHoverbg" : ""}`}
                       >
                         <MdPendingActions className={`w-5 h-5 ${isProdAmarEqReviewOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isProdAmarEqReviewOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Review</p>
+                        <p className={`text-sm font-medium ${isProdAmarEqReviewOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Review</p>
                         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isProdAmarEqReviewOpen ? "rotate-180" : ""}`} />
                       </div>
 
@@ -349,7 +349,7 @@ const ProductionUserMenu = ({
                 className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isAmarBioOpen ? "bg-sideBarHoverbg" : ""}`}
               >
                 <MdOutlinePeopleOutline className={`w-5 h-5 ${isAmarBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                <p className={`text-base font-medium ${isAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
+                <p className={`text-sm font-medium ${isAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
                 <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarBioOpen ? "rotate-180" : ""}`} />
               </div>
 
@@ -360,7 +360,7 @@ const ProductionUserMenu = ({
                     <Link href={`/section_production/production_module?filter=JOB_SERVICE&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentJobBioActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdWorkOutline className={`w-5 h-5 ${isUrgentJobBioActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isUrgentJobBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/Job</p>
+                        <p className={`text-sm font-medium ${isUrgentJobBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/Job</p>
                       </div>
                     </Link>
                   )}
@@ -370,7 +370,7 @@ const ProductionUserMenu = ({
                     <Link href={`/section_production/production_module_2?filter=TSO_SERVICE&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isUrgentTSOBioActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdDesignServices className={`w-5 h-5 ${isUrgentTSOBioActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isUrgentTSOBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/TSO</p>
+                        <p className={`text-sm font-medium ${isUrgentTSOBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Urgent/TSO</p>
                       </div>
                     </Link>
                   )}
@@ -380,7 +380,7 @@ const ProductionUserMenu = ({
                     <Link href={`/section_production/production_module_3?filter=KANBAN&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                       <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isKanbanBioActive() ? "bg-sideBarHoverbg" : ""}`}>
                         <MdViewKanban className={`w-5 h-5 ${isKanbanBioActive() ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isKanbanBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
+                        <p className={`text-sm font-medium ${isKanbanBioActive() ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
                       </div>
                     </Link>
                   )}
@@ -396,7 +396,7 @@ const ProductionUserMenu = ({
                         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isAmarBioPOOpen ? "bg-sideBarHoverbg" : ""}`}
                       >
                         <MdPendingActions className={`w-5 h-5 ${isAmarBioPOOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isAmarBioPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
+                        <p className={`text-sm font-medium ${isAmarBioPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
                         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarBioPOOpen ? "rotate-180" : ""}`} />
                       </div>
 
@@ -405,13 +405,13 @@ const ProductionUserMenu = ({
                           <Link href={`/section_production_planning/po-services?filter=FINE&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                               <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Fine</p>
+                              <p className="text-sm font-medium text-firstBlack group-hover:text-primary-600">Fine</p>
                             </div>
                           </Link>
                           <Link href={`/section_production_planning/po-services?filter=PRESS_FLOW&client=Amar%20Biosystem&assign_to=${assignTo}`} onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer">
                               <MdPendingActions className="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
-                              <p className="text-base font-medium text-firstBlack group-hover:text-primary-600">Press Flow</p>
+                              <p className="text-sm font-medium text-firstBlack group-hover:text-primary-600">Press Flow</p>
                             </div>
                           </Link>
                         </div>
@@ -430,7 +430,7 @@ const ProductionUserMenu = ({
                         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isProdAmarBioReviewOpen ? "bg-sideBarHoverbg" : ""}`}
                       >
                         <MdPendingActions className={`w-5 h-5 ${isProdAmarBioReviewOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                        <p className={`text-base font-medium ${isProdAmarBioReviewOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Review</p>
+                        <p className={`text-sm font-medium ${isProdAmarBioReviewOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Review</p>
                         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isProdAmarBioReviewOpen ? "rotate-180" : ""}`} />
                       </div>
 
@@ -559,7 +559,7 @@ const Inventory1SubMenu = ({
         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isOpen ? "bg-sideBarHoverbg" : ""}`}
       >
         <MdStorage className={`w-5 h-5 ${isOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-        <p className={`text-base font-medium ${isOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Inventory 1</p>
+        <p className={`text-sm font-medium ${isOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Inventory 1</p>
         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
@@ -568,7 +568,7 @@ const Inventory1SubMenu = ({
           <Link href="/section_inventory/inventory" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialDataActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdStorage className={`w-5 h-5 ${isMaterialDataActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isMaterialDataActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Data</p>
+              <p className={`text-sm font-medium ${isMaterialDataActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Data</p>
             </div>
           </Link>
 
@@ -582,7 +582,7 @@ const Inventory1SubMenu = ({
                 className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApprovedOpen ? "bg-sideBarHoverbg" : ""}`}
               >
                 <MdCheckCircleOutline className={`w-5 h-5 ${isMaterialApprovedOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                <p className={`text-base font-medium ${isMaterialApprovedOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Approved</p>
+                  <p className={`text-sm font-medium ${isMaterialApprovedOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Approved</p>
                 <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isMaterialApprovedOpen ? "rotate-180" : ""}`} />
               </div>
 
@@ -596,7 +596,7 @@ const Inventory1SubMenu = ({
                     className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApprovedAmarOpen ? "bg-sideBarHoverbg" : ""}`}
                   >
                     <MdOutlinePeopleOutline className={`w-5 h-5 ${isMaterialApprovedAmarOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                    <p className={`text-base font-medium ${isMaterialApprovedAmarOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
+                      <p className={`text-sm font-medium ${isMaterialApprovedAmarOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
                     <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isMaterialApprovedAmarOpen ? "rotate-180" : ""}`} />
                   </div>
 
@@ -605,25 +605,25 @@ const Inventory1SubMenu = ({
                       <Link href="/section_inventory/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Equipment&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveJobActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdWorkOutline className={`w-5 h-5 ${isMaterialApproveJobActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveJobActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Job Service</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveJobActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Job Service</p>
                         </div>
                       </Link>
                       <Link href="/section_inventory/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Equipment&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveTSOActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdDesignServices className={`w-5 h-5 ${isMaterialApproveTSOActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveTSOActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Tso Service</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveTSOActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Tso Service</p>
                         </div>
                       </Link>
                       <Link href="/section_inventory/inventory_material_approve?filter=KANBAN&client=Amar%20Equipment&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveKanbanActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdViewKanban className={`w-5 h-5 ${isMaterialApproveKanbanActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveKanbanActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveKanbanActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
                         </div>
                       </Link>
                       <Link href="/section_inventory/inventory_material_approve?client=Amar%20Equipment&assign_to_not=Usmaan&assign_to_not=Riyaaz&assign_to_not=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveVendorActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdBusiness className={`w-5 h-5 ${isMaterialApproveVendorActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveVendorActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendors</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveVendorActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendors</p>
                         </div>
                       </Link>
                     </div>
@@ -637,7 +637,7 @@ const Inventory1SubMenu = ({
                     className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApprovedAmarBioOpen ? "bg-sideBarHoverbg" : ""}`}
                   >
                     <MdOutlinePeopleOutline className={`w-5 h-5 ${isMaterialApprovedAmarBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                    <p className={`text-base font-medium ${isMaterialApprovedAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
+                      <p className={`text-sm font-medium ${isMaterialApprovedAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
                     <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isMaterialApprovedAmarBioOpen ? "rotate-180" : ""}`} />
                   </div>
 
@@ -646,25 +646,25 @@ const Inventory1SubMenu = ({
                       <Link href="/section_inventory/inventory_material_approve?filter=JOB_SERVICE&client=Amar%20Biosystem&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveJobBioActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdWorkOutline className={`w-5 h-5 ${isMaterialApproveJobBioActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveJobBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Job Service</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveJobBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Job Service</p>
                         </div>
                       </Link>
                       <Link href="/section_inventory/inventory_material_approve?filter=TSO_SERVICE&client=Amar%20Biosystem&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveTSOBioActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdDesignServices className={`w-5 h-5 ${isMaterialApproveTSOBioActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveTSOBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Tso Service</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveTSOBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Tso Service</p>
                         </div>
                       </Link>
                       <Link href="/section_inventory/inventory_material_approve?filter=KANBAN&client=Amar%20Biosystem&assign_to=Usmaan&assign_to=Riyaaz&assign_to=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveKanbanBioActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdViewKanban className={`w-5 h-5 ${isMaterialApproveKanbanBioActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveKanbanBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveKanbanBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Kanban</p>
                         </div>
                       </Link>
                       <Link href="/section_inventory/inventory_material_approve?client=Amar%20Biosystem&assign_to_not=Usmaan&assign_to_not=Riyaaz&assign_to_not=Ramzaan" onClick={(e) => e.stopPropagation()}>
                         <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialApproveVendorBioActive ? "bg-sideBarHoverbg" : ""}`}>
                           <MdBusiness className={`w-5 h-5 ${isMaterialApproveVendorBioActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                          <p className={`text-base font-medium ${isMaterialApproveVendorBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendors</p>
+                          <p className={`text-sm font-medium ${isMaterialApproveVendorBioActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendors</p>
                         </div>
                       </Link>
                     </div>
@@ -713,7 +713,7 @@ const Inventory2SubMenu = ({
         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isOpen ? "bg-sideBarHoverbg" : ""}`}
       >
         <MdStorage className={`w-5 h-5 ${isOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-        <p className={`text-base font-medium ${isOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Inventory 2</p>
+        <p className={`text-sm font-medium ${isOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Inventory 2</p>
         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
@@ -722,28 +722,28 @@ const Inventory2SubMenu = ({
           <Link href="/section_inventory/inventory_2" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMasterActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdCategory className={`w-5 h-5 ${isMasterActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isMasterActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Master</p>
+              <p className={`text-sm font-medium ${isMasterActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Master</p>
             </div>
           </Link>
 
           <Link href="/inventory2/in-out" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isInOutActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdOutlineSwapHoriz className={`w-5 h-5 ${isInOutActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isInOutActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>In/Out</p>
+              <p className={`text-sm font-medium ${isInOutActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>In/Out</p>
             </div>
           </Link>
 
           <Link href="/inventory2/material-transfer" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialTransferActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdCompareArrows className={`w-5 h-5 ${isMaterialTransferActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isMaterialTransferActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Transfer</p>
+              <p className={`text-sm font-medium ${isMaterialTransferActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Transfer</p>
             </div>
           </Link>
 
           <Link href="/section_inventory/inventory2/pr" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isPRActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdPendingActions className={`w-5 h-5 ${isPRActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isPRActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>PR</p>
+              <p className={`text-sm font-medium ${isPRActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>PR</p>
             </div>
           </Link>
         </div>
@@ -787,7 +787,7 @@ const Inventory3SubMenu = ({
         className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isOpen ? "bg-sideBarHoverbg" : ""}`}
       >
         <MdStorage className={`w-5 h-5 ${isOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-        <p className={`text-base font-medium ${isOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Inventory 3</p>
+        <p className={`text-sm font-medium ${isOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Inventory 3</p>
         <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
@@ -796,35 +796,35 @@ const Inventory3SubMenu = ({
           <Link href="/section_inventory/inventory_3" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMasterActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdCategory className={`w-5 h-5 ${isMasterActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isMasterActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Master</p>
+              <p className={`text-sm font-medium ${isMasterActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Master</p>
             </div>
           </Link>
 
           <Link href="/inventory3/in-out" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isInOutActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdOutlineSwapHoriz className={`w-5 h-5 ${isInOutActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isInOutActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>In/Out</p>
+              <p className={`text-sm font-medium ${isInOutActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>In/Out</p>
             </div>
           </Link>
 
           <Link href="/inventory3/material-transfer" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isMaterialTransferActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdCompareArrows className={`w-5 h-5 ${isMaterialTransferActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isMaterialTransferActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Transfer</p>
+              <p className={`text-sm font-medium ${isMaterialTransferActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Material Transfer</p>
             </div>
           </Link>
 
           <Link href="/inventory3/pr" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isPRActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdPendingActions className={`w-5 h-5 ${isPRActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isPRActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>PR</p>
+              <p className={`text-sm font-medium ${isPRActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>PR</p>
             </div>
           </Link>
 
           <Link href="/inventory3/por" onClick={(e) => e.stopPropagation()}>
             <div className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isPORActive ? "bg-sideBarHoverbg" : ""}`}>
               <MdOutlineShoppingCart className={`w-5 h-5 ${isPORActive ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-              <p className={`text-base font-medium ${isPORActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>POR</p>
+              <p className={`text-sm font-medium ${isPORActive ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>POR</p>
             </div>
           </Link>
         </div>
@@ -1096,7 +1096,7 @@ const LeftSideBar: React.FC = () => {
     }`;
 
   const textCls = (active: boolean) =>
-    `text-base font-medium ${active ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`;
+    `text-sm font-medium ${active ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`;
 
   const iconCls = (active: boolean) =>
     `w-5 h-5 ${active ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`;
@@ -1122,7 +1122,7 @@ const LeftSideBar: React.FC = () => {
         {userName && (
           <div className="mb-4 px-3 py-2 bg-blue-50 rounded-lg">
             <p className="text-sm text-gray-600">Logged in as:</p>
-            <p className="font-semibold text-primary-600">{userName}</p>
+            <p className="text-sm font-semibold text-primary-600">{userName}</p>
             <p className="text-xs text-gray-500">Role: {userRoleName || "User"}</p>
           </div>
         )}
@@ -1131,7 +1131,7 @@ const LeftSideBar: React.FC = () => {
         {hasDashboardView && (
           <Link href="/dashboard">
             <div
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname === "/dashboard"
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : "text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600"
@@ -1147,7 +1147,7 @@ const LeftSideBar: React.FC = () => {
         {hasMaterialMovementView && (
           <Link href="/material-movement">
             <div
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname === "/material-movement"
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : "text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600"
@@ -1164,7 +1164,7 @@ const LeftSideBar: React.FC = () => {
           <>
             <div
               onClick={() => setIsInventoryOpen(!isInventoryOpen)}
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname.includes("/section_inventory")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : "text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600"
@@ -1225,7 +1225,7 @@ const LeftSideBar: React.FC = () => {
           <>
             <div
               onClick={() => setIsProductionOpen(!isProductionOpen)}
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname.includes("/section_production_planning/production_planning") ||
                 pathname === "/section_production_planning/category" ||
                 pathname.includes("/section_production_planning/po-services") ||
@@ -1265,7 +1265,7 @@ const LeftSideBar: React.FC = () => {
                       className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isVendorOpen ? "bg-sideBarHoverbg" : ""}`}
                     >
                       <MdBusiness className={`w-5 h-5 ${isVendorOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                      <p className={`text-base font-medium ${isVendorOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendor</p>
+                      <p className={`text-sm font-medium ${isVendorOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Vendor</p>
                       <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isVendorOpen ? "rotate-180" : ""}`} />
                     </div>
 
@@ -1349,7 +1349,7 @@ const LeftSideBar: React.FC = () => {
                       className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isAmarEquipmentOpen ? "bg-sideBarHoverbg" : ""}`}
                     >
                       <MdOutlinePeopleOutline className={`w-5 h-5 ${isAmarEquipmentOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                      <p className={`text-base font-medium ${isAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
+                      <p className={`text-sm font-medium ${isAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
                       <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarEquipmentOpen ? "rotate-180" : ""}`} />
                     </div>
 
@@ -1395,7 +1395,7 @@ const LeftSideBar: React.FC = () => {
                             className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isPOOpen ? "bg-sideBarHoverbg" : ""}`}
                           >
                             <MdPendingActions className={`w-5 h-5 ${isPOOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                            <p className={`text-base font-medium ${isPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
+                            <p className={`text-sm font-medium ${isPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isPOOpen ? "rotate-180" : ""}`} />
                           </div>
                         )}
@@ -1436,7 +1436,7 @@ const LeftSideBar: React.FC = () => {
                             className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isNotOkAmarEquipmentOpen ? "bg-sideBarHoverbg" : ""}`}
                           >
                             <MdErrorOutline className={`w-5 h-5 ${isNotOkAmarEquipmentOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                            <p className={`text-base font-medium ${isNotOkAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Not-Ok</p>
+                            <p className={`text-sm font-medium ${isNotOkAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Not-Ok</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isNotOkAmarEquipmentOpen ? "rotate-180" : ""}`} />
                           </div>
                         )}
@@ -1495,7 +1495,7 @@ const LeftSideBar: React.FC = () => {
                       className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isAmarBioOpen ? "bg-sideBarHoverbg" : ""}`}
                     >
                       <MdOutlinePeopleOutline className={`w-5 h-5 ${isAmarBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                      <p className={`text-base font-medium ${isAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
+                      <p className={`text-sm font-medium ${isAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
                       <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isAmarBioOpen ? "rotate-180" : ""}`} />
                     </div>
 
@@ -1541,7 +1541,7 @@ const LeftSideBar: React.FC = () => {
                             className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isPOOpen ? "bg-sideBarHoverbg" : ""}`}
                           >
                             <MdPendingActions className={`w-5 h-5 ${isPOOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                            <p className={`text-base font-medium ${isPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
+                            <p className={`text-sm font-medium ${isPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>P/O</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isPOOpen ? "rotate-180" : ""}`} />
                           </div>
                         )}
@@ -1583,7 +1583,7 @@ const LeftSideBar: React.FC = () => {
                             className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isNotOkAmarBioOpen ? "bg-sideBarHoverbg" : ""}`}
                           >
                             <MdErrorOutline className={`w-5 h-5 ${isNotOkAmarBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                            <p className={`text-base font-medium ${isNotOkAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Not-Ok</p>
+                            <p className={`text-sm font-medium ${isNotOkAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Not-Ok</p>
                             <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isNotOkAmarBioOpen ? "rotate-180" : ""}`} />
                           </div>
                         )}
@@ -1652,7 +1652,7 @@ const LeftSideBar: React.FC = () => {
           <>
             <div
               onClick={() => setIsProductionDropdownOpen(!isProductionDropdownOpen)}
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 (pathname.includes("/production") && !pathname.includes("/section_production_planning/production_planning")) ||
                 pathname.startsWith("/review")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
@@ -1723,7 +1723,7 @@ const LeftSideBar: React.FC = () => {
           <>
             <div
               onClick={() => setIsQCOpen(!isQCOpen)}
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname.startsWith("/qc")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : "text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600"
@@ -1744,7 +1744,7 @@ const LeftSideBar: React.FC = () => {
                   className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isQCAmarEquipmentOpen ? "bg-sideBarHoverbg" : ""}`}
                 >
                   <MdOutlinePeopleOutline className={`w-5 h-5 ${isQCAmarEquipmentOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                  <p className={`text-base font-medium ${isQCAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
+                  <p className={`text-sm font-medium ${isQCAmarEquipmentOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Equipment</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isQCAmarEquipmentOpen ? "rotate-180" : ""}`} />
                 </div>
 
@@ -1805,7 +1805,7 @@ const LeftSideBar: React.FC = () => {
                   className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isQCAmarBioOpen ? "bg-sideBarHoverbg" : ""}`}
                 >
                   <MdOutlinePeopleOutline className={`w-5 h-5 ${isQCAmarBioOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                  <p className={`text-base font-medium ${isQCAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
+                  <p className={`text-sm font-medium ${isQCAmarBioOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Amar Biosystem</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isQCAmarBioOpen ? "rotate-180" : ""}`} />
                 </div>
 
@@ -1867,7 +1867,7 @@ const LeftSideBar: React.FC = () => {
           <>
             <div
               onClick={() => setIsProcurementOpen(!isProcurementOpen)}
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname.startsWith("/procurement")
                   ? "bg-primary-600 text-white hover:!bg-primary-600 hover:!text-white"
                   : "text-firstBlack hover:bg-sideBarHoverbg hover:text-primary-600"
@@ -1901,7 +1901,7 @@ const LeftSideBar: React.FC = () => {
                   className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isPROpen ? "bg-sideBarHoverbg" : ""}`}
                 >
                   <MdPendingActions className={`w-5 h-5 ${isPROpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                  <p className={`text-base font-medium ${isPROpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>PR</p>
+                  <p className={`text-sm font-medium ${isPROpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>PR</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isPROpen ? "rotate-180" : ""}`} />
                 </div>
 
@@ -1943,7 +1943,7 @@ const LeftSideBar: React.FC = () => {
                   className={`flex items-center gap-3 px-3 py-2 rounded-[4px] hover:bg-sideBarHoverbg group cursor-pointer ${isRejectedPOOpen ? "bg-sideBarHoverbg" : ""}`}
                 >
                   <MdOutlineCancel className={`w-5 h-5 ${isRejectedPOOpen ? "text-primary-600" : "text-gray-500 group-hover:text-primary-600"}`} />
-                  <p className={`text-base font-medium ${isRejectedPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Rejected PO</p>
+                  <p className={`text-sm font-medium ${isRejectedPOOpen ? "text-primary-600" : "text-firstBlack group-hover:text-primary-600"}`}>Rejected PO</p>
                   <FaChevronDown className={`ml-auto w-3 h-3 transition-transform ${isRejectedPOOpen ? "rotate-180" : ""}`} />
                 </div>
 
@@ -1973,7 +1973,7 @@ const LeftSideBar: React.FC = () => {
           <>
             <div
               onClick={() => setIsUserManagementOpen(!isUserManagementOpen)}
-              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-base font-medium ${
+              className={`mb-4 flex gap-4 items-center group px-3 py-2 rounded-[4px] cursor-pointer text-sm font-medium ${
                 pathname.includes("/user-management") || 
                 pathname.includes("/user-activity") || 
                 pathname.includes("/role-management") ||
@@ -2015,7 +2015,7 @@ const LeftSideBar: React.FC = () => {
       <div className="flex gap-2 items-center px-3 py-2 z-10">
         <Image src="/images/logoutIcon.svg" alt="logout Icon" width={24} height={24} />
         <div
-          className="text-base font-semibold leading-normal text-[#EB5757] cursor-pointer"
+          className="text-sm font-semibold leading-normal text-[#EB5757] cursor-pointer"
           onClick={handleLogout}
         >
           Logout
