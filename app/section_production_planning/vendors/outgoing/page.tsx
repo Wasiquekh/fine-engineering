@@ -397,7 +397,7 @@ export default function VendorOutgoingPage() {
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
-      <PageGuard requiredPermission="vendors.view"><VendorOutgoingContent /></PageGuard>
+      <PageGuard ><VendorOutgoingContent /></PageGuard>
     </div>
   );
 }

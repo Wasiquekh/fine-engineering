@@ -18,6 +18,7 @@ class StorageManager {
       totpSetupRequired: "totpSetupRequired",
       workerToken: "workerToken",
       workerData: "workerData",
+      userRole: "userRole",
     };
   }
 
@@ -33,6 +34,7 @@ class StorageManager {
   async saveAccessToken(token: string): Promise<boolean> {
     if (typeof window !== "undefined") {
       localStorage.setItem(this.cacheKeys.accessToken, token);
+      console.log("✅ Access token saved, length:", token.length);
       return true;
     }
     return false;
@@ -158,6 +160,7 @@ class StorageManager {
         this.cacheKeys.userPermissions,
         JSON.stringify(permissions)
       );
+      console.log("✅ Permissions saved:", permissions.length);
       return true;
     }
     return false;
@@ -166,7 +169,9 @@ class StorageManager {
   getUserPermissions(): Array<any> | null {
     if (typeof window !== "undefined") {
       const data = localStorage.getItem(this.cacheKeys.userPermissions);
-      return data ? JSON.parse(data) : null;
+      const permissions = data ? JSON.parse(data) : null;
+      console.log("📋 Retrieved permissions:", permissions?.length || 0);
+      return permissions;
     }
     return null;
   }
@@ -186,7 +191,7 @@ class StorageManager {
     }
     return false;
   }
-  // Add to StorageManager class
+
   getUser(): any | null {
     if (typeof window !== "undefined") {
       const userId = this.getUserId();
@@ -194,8 +199,8 @@ class StorageManager {
       const userEmail = this.getUserEmail();
       const userMobile = this.getUserMobile();
       const permissions = this.getUserPermissions();
+      const role = this.getUserRole();
 
-      // If we have at least an ID, return a user object
       if (userId) {
         return {
           id: userId,
@@ -204,7 +209,7 @@ class StorageManager {
           mobile: userMobile,
           permissions: permissions,
           role: {
-            name: this.getUserRole?.() || "", // You might need to store role separately
+            name: role || "",
           },
         };
       }
@@ -213,10 +218,9 @@ class StorageManager {
     return null;
   }
 
-  // You might also need to add a method to store/retrieve user role
   async saveUserRole(role: string): Promise<boolean> {
     if (typeof window !== "undefined") {
-      localStorage.setItem("userRole", role);
+      localStorage.setItem(this.cacheKeys.userRole, role);
       return true;
     }
     return false;
@@ -224,7 +228,7 @@ class StorageManager {
 
   getUserRole(): string | null {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("userRole");
+      return localStorage.getItem(this.cacheKeys.userRole);
     }
     return null;
   }
@@ -361,9 +365,6 @@ class StorageManager {
 
   // ==================== CLEAR METHODS ====================
 
-  /**
-   * Clear all user data (for logout)
-   */
   async clearUserData(): Promise<void> {
     if (typeof window !== "undefined") {
       const userKeys = [
@@ -377,6 +378,7 @@ class StorageManager {
         this.cacheKeys.tempToken,
         this.cacheKeys.tempUserId,
         this.cacheKeys.totpSetupRequired,
+        this.cacheKeys.userRole,
       ];
 
       userKeys.forEach((key) => {
@@ -386,9 +388,6 @@ class StorageManager {
     }
   }
 
-  /**
-   * Clear all worker data
-   */
   async clearWorkerData(): Promise<void> {
     if (typeof window !== "undefined") {
       const workerKeys = [
@@ -403,9 +402,6 @@ class StorageManager {
     }
   }
 
-  /**
-   * Clear all data (complete logout)
-   */
   async clearAll(): Promise<void> {
     if (typeof window !== "undefined") {
       try {
@@ -421,9 +417,6 @@ class StorageManager {
 
   // ==================== UTILITY METHODS ====================
 
-  /**
-   * Get appropriate token based on URL
-   */
   getTokenForRequest(url: string): string | null {
     if (url.includes("/worker/")) {
       return this.getWorkerToken();
@@ -431,48 +424,30 @@ class StorageManager {
     return this.getAccessToken();
   }
 
-  /**
-   * Check if user is authenticated
-   */
   isAuthenticated(): boolean {
     const token = this.getAccessToken();
     return !!(token && token !== "null" && token !== "");
   }
 
-  /**
-   * Check if worker is authenticated
-   */
   isWorkerAuthenticated(): boolean {
     const token = this.getWorkerToken();
     return !!(token && token !== "null" && token !== "");
   }
 
-  /**
-   * Check if user is in TOTP setup flow
-   */
   isInTotpSetupFlow(): boolean {
     return this.getTotpSetupRequired() === "true" && !!this.getTempToken();
   }
 
-  /**
-   * Check if user is in TOTP verification flow
-   */
   isInTotpVerificationFlow(): boolean {
     return this.getTotpSetupRequired() === "false" && !!this.getTempToken();
   }
 
-  /**
-   * Clear all temporary TOTP data
-   */
   async clearTotpTempData(): Promise<void> {
     await this.removeTempToken();
     await this.removeTempUserId();
     await this.removeTotpSetupRequired();
   }
 
-  /**
-   * Get all storage data for debugging
-   */
   getAllData(): Record<string, string | null> {
     const data: Record<string, string | null> = {};
     Object.values(this.cacheKeys).forEach((key) => {

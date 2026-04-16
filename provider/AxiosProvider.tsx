@@ -69,9 +69,12 @@ export default class AxiosProvider {
         accessToken = this.storage.getAccessToken();
       }
       
-      // Set authorization header if token exists and not a login request
-      if (accessToken && accessToken !== "null" && accessToken !== "" && 
-          !url.includes('/login') && !url.includes('/verify')) {
+      // FIXED: Correct condition - add token for all requests except login, verify, and qrcode
+      const isAuthEndpoint = url.includes('/login') || 
+                            url.includes('/verifytotp') || 
+                            url.includes('/generateqrcode');
+      
+      if (accessToken && accessToken !== "null" && accessToken !== "" && !isAuthEndpoint) {
         config.headers.set("Authorization", `Bearer ${accessToken}`);
       }
 
@@ -91,6 +94,7 @@ export default class AxiosProvider {
         console.log(`📡 ${config.method?.toUpperCase()} ${url}`, {
           tokenType: url.includes('/worker/') ? 'worker' : 'system',
           hasToken: !!accessToken,
+          isAuthEndpoint,
           contentType: config.headers.get('Content-Type'),
           data: config.data
         });
@@ -120,42 +124,53 @@ export default class AxiosProvider {
       requestData: error.config?.data
     });
 
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized - Token Expired
     if (error.response?.status === 401 && !isServer && !this.isRedirecting) {
       const url = error.config?.url || '';
       
-      console.log("🔐 401 Unauthorized error");
+      console.log("🔐 401 Unauthorized - Token expired");
       
       this.isRedirecting = true;
       
       try {
-        // Clear appropriate storage based on URL
-        if (url.includes('/worker/')) {
-          await this.storage.clearWorkerData();
-        } else {
-          await this.storage.clearUserData();
-        }
+        const currentPath = window.location.pathname;
         
-        // Show message and redirect
-        if (typeof window !== 'undefined') {
-          const message = url.includes('/worker/') 
-            ? 'Worker session expired. Please login again.'
-            : 'Your session has expired. Please login again.';
-          
-          sessionStorage.setItem('logoutMessage', message);
-          
-          // Redirect to appropriate login
+        // Don't redirect if already on login or qrcode page (to avoid loops)
+        if (currentPath !== '/' && currentPath !== '/qrcode') {
+          // Clear appropriate storage based on URL
           if (url.includes('/worker/')) {
-            window.location.href = '/';
+            await this.storage.clearWorkerData();
           } else {
-            window.location.href = '/';
+            await this.storage.clearUserData();
           }
+          
+          // Show message and redirect
+          if (typeof window !== 'undefined') {
+            const message = url.includes('/worker/') 
+              ? 'Worker session expired. Please login again.'
+              : 'Your session has expired (10 minutes). Please login again.';
+            
+            sessionStorage.setItem('logoutMessage', message);
+            
+            // Small delay to ensure sessionStorage is set
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+          }
+        } else {
+          this.isRedirecting = false;
         }
       } catch (redirectError) {
         console.error('Error during redirect:', redirectError);
-        if (typeof window !== 'undefined') {
+        this.isRedirecting = false;
+        if (typeof window !== 'undefined' && window.location.pathname !== '/') {
           window.location.href = '/';
         }
+      } finally {
+        // Reset redirecting flag after 2 seconds
+        setTimeout(() => {
+          this.isRedirecting = false;
+        }, 2000);
       }
     }
 

@@ -14,6 +14,12 @@ import { FaArrowLeft } from "react-icons/fa";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
+// Permission helper function
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
+
 // TSO Service Categories
 const tsoServiceCategory = [
   { value: "drawing", label: "Drawing" },
@@ -75,6 +81,9 @@ export default function NotokMainPage() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
+
+  const permissions = storage.getUserPermissions();
+  const canEditNotOk = hasPermission(permissions, "not-ok.edit");
 
   const fetchCategories = async () => {
     try {
@@ -155,6 +164,7 @@ export default function NotokMainPage() {
   };
 
   const handleBackToQC = async (item: QcRow) => {
+    if (!canEditNotOk) return;
     if (!(await actionConfirm("Send back to QC?", "This serial will move back to QC.", "Yes, Send to QC"))) return;
     
     const job_id = getJobId(item);
@@ -176,6 +186,7 @@ export default function NotokMainPage() {
   };
 
   const handleRework = async (item: QcRow) => {
+    if (!canEditNotOk) return;
     if (!item) return;
 
     if (!(await actionConfirm(
@@ -204,6 +215,7 @@ export default function NotokMainPage() {
   };
 
   const handleReject = async (item: QcRow) => {
+    if (!canEditNotOk) return;
     if (!(await actionConfirm("Reject this serial?", "This will reject the selected Not OK serial.", "Yes, Reject"))) return;
     
     const job_id = getJobId(item);
@@ -468,14 +480,16 @@ export default function NotokMainPage() {
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
                       <th className="px-2 py-0 border border-tableBorder">Reason</th>
-                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
+                      {canEditNotOk && (
+                        <th className="px-2 py-0 border border-tableBorder">Actions</th>
+                      )}
                     </tr>
                   </thead>
 
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={canEditNotOk ? 11 : 10} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No JO data found</p>
                         </td>
                       </tr>
@@ -483,7 +497,7 @@ export default function NotokMainPage() {
                       Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
                         <Fragment key={jo}>
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={canEditNotOk ? 11 : 10}>
                               JO: {jo}
                             </td>
                           </tr>
@@ -504,31 +518,33 @@ export default function NotokMainPage() {
                                   {item.job?.reason || "-"}
                                 </span>
                               </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <button
-                                    onClick={() => handleBackToQC(item)}
-                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title="Send back to QC"
-                                  >
-                                    QC
-                                  </button>
-                                  <button
-                                    onClick={() => handleRework(item)}
-                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                    title="Send for rework"
-                                  >
-                                    Rework
-                                  </button>
-                                  <button
-                                    onClick={() => handleReject(item)}
-                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
-                                    title="Reject this serial"
-                                  >
-                                    Reject
-                                  </button>
-                                </div>
-                              </td>
+                              {canEditNotOk && (
+                                <td className="px-2 py-2 border border-tableBorder">
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <button
+                                      onClick={() => handleBackToQC(item)}
+                                      className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                      title="Send back to QC"
+                                    >
+                                      QC
+                                    </button>
+                                    <button
+                                      onClick={() => handleRework(item)}
+                                      className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                      title="Send for rework"
+                                    >
+                                      Rework
+                                    </button>
+                                    <button
+                                      onClick={() => handleReject(item)}
+                                      className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                      title="Reject this serial"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </Fragment>
@@ -537,9 +553,11 @@ export default function NotokMainPage() {
                   </tbody>
                 </table>
 
-                <div className="text-xs text-gray-400 mt-2 px-2 text-right">
-                  Actions are per serial number
-                </div>
+                {canEditNotOk && (
+                  <div className="text-xs text-gray-400 mt-2 px-2 text-right">
+                    Actions are per serial number
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -593,19 +611,19 @@ export default function NotokMainPage() {
                             onClick={() => setSelectedJobNo(identifier)}
                           >
                             <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-blue-600 text-sm leading-normal">{identifier}</p>
+                              <p className="text-blue-600 text-sm leading-normal">{identifier}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{summary.jobCategory}</p>
+                              <p className="text-[#232323] text-sm">{summary.jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{summary.uniqueJoCount}</p>
+                              <p className="text-[#232323] text-sm">{summary.uniqueJoCount}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{summary.totalQty}</p>
+                              <p className="text-[#232323] text-sm">{summary.totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
+                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-red-600 text-xs font-medium">{summary.reason}</p>

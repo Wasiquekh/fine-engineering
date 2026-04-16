@@ -292,7 +292,7 @@ export default function UserManagementPage() {
     <>
       <div className="flex justify-end min-h-screen bg-[#F5F7FA]">
         <LeftSideBar />
-        <PageGuard requiredPermission="user.management.view">
+        <PageGuard requiredPermission="usermanagement.view">
         <div className="w-full md:w-[83%] min-h-screen p-4 relative">
           <div className="absolute bottom-0 right-0">
             <Image

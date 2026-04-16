@@ -323,7 +323,7 @@ export default function WeldingPage() {
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
-      <PageGuard requiredPermission="welding.view"><WeldingContent /></PageGuard>
+      <PageGuard ><WeldingContent /></PageGuard>
     </div>
   );
 }

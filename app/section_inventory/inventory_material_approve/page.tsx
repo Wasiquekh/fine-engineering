@@ -8,9 +8,16 @@ import { toast } from "react-toastify";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import Swal from "sweetalert2";
-// import { group } from "console";
+import StorageManager from "../../../provider/StorageManager";
+
+// Permission helper function
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
 
 const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
 
   interface JobGroup {
     groupId: string;
@@ -36,6 +43,10 @@ export default function Home() {
   const jobNo = params?.job_no as string;
   const clientParam = searchParams.get("client");
   const filterParam = searchParams.get("filter");
+  const permissions = storage.getUserPermissions();
+  
+  // Permission for Actions column
+  const canMaterialapprove = hasPermission(permissions, "material.approved.edit");
 
   const handleFilterChange = (newFilter: string) => {
     const currentParams = new URLSearchParams(searchParams.toString());
@@ -139,8 +150,6 @@ export default function Home() {
     }
   };
 
-  //<p className="text-base leading-normal">{group.job_no || "N/A"}</p>
-
   const fetchData = async () => {
     try {
       const params = new URLSearchParams();
@@ -148,9 +157,6 @@ export default function Home() {
       if (jobNo) {
         params.append("job_no", jobNo);
       }
-
-      // const clientParam = searchParams.get("client");
-      // const filterParam = searchParams.get("filter");
 
       if (clientParam) {
         params.append("client_name", clientParam);
@@ -211,17 +217,16 @@ export default function Home() {
       } else if (job_type === "KANBAN") {
         groupKey = jo_number;
       } else {
-        // Fallback for items that might not have a job_type but have a job_no
         groupKey = job_no;
       }
 
       if (!groupKey) {
-        return acc; // Skip items that cannot be grouped
+        return acc;
       }
 
       if (!acc[groupKey]) {
         acc[groupKey] = {
-          groupId: groupKey, // The identifier for the group
+          groupId: groupKey,
           job_type: item.job_type,
           job_category: item.job_category,
           items: [],
@@ -406,23 +411,25 @@ export default function Home() {
                         </div>
                       </div>
                     </th>
-                    <th
-                      scope="col"
-                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-semibold">
-                          Actions
+                    {canMaterialapprove && (
+                      <th
+                        scope="col"
+                        className="px-4 py-4 border border-tableBorder whitespace-nowrap"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">
+                            Actions
+                          </div>
                         </div>
-                      </div>
-                    </th>
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {groupedData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={activeFilter === "KANBAN" ? 7 : 8}
+                        colSpan={activeFilter === "KANBAN" ? (canMaterialapprove ? 7 : 6) : (canMaterialapprove ? 8 : 7)}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-base">
@@ -484,38 +491,40 @@ export default function Home() {
                             {group.is_approve ? "Approved" : (group.is_rejected ? "Not Approved" : "Pending")}
                           </span>
                         </td>
-                        <td className="px-4 py-3 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => !group.is_approve && !group.is_rejected && handleApprove(group.items)}
-                              disabled={!!group.is_approve || !!group.is_rejected}
-                              className={`p-1.5 rounded transition-colors ${
-                                group.is_approve
-                                  ? "bg-green-100 text-green-600 cursor-not-allowed"
-                                  : group.is_rejected
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                              }`}
-                              title={group.is_approve ? "Approved" : "Approve"}
-                            >
-                              <HiCheck className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => !group.is_approve && !group.is_rejected && handleNotApprove(group.items)}
-                              disabled={!!group.is_approve || !!group.is_rejected}
-                              className={`p-1.5 rounded transition-colors ${
-                                group.is_rejected
-                                  ? "bg-red-100 text-red-600 cursor-not-allowed"
-                                  : group.is_approve
-                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                  : "bg-red-100 text-red-600 hover:bg-red-200"
-                              }`}
-                              title={group.is_rejected ? "Not Approved" : "Not Approve"}
-                            >
-                              <HiX className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
+                        {canMaterialapprove && (
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => !group.is_approve && !group.is_rejected && handleApprove(group.items)}
+                                disabled={!!group.is_approve || !!group.is_rejected}
+                                className={`p-1.5 rounded transition-colors ${
+                                  group.is_approve
+                                    ? "bg-green-100 text-green-600 cursor-not-allowed"
+                                    : group.is_rejected
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                                }`}
+                                title={group.is_approve ? "Approved" : "Approve"}
+                              >
+                                <HiCheck className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => !group.is_approve && !group.is_rejected && handleNotApprove(group.items)}
+                                disabled={!!group.is_approve || !!group.is_rejected}
+                                className={`p-1.5 rounded transition-colors ${
+                                  group.is_rejected
+                                    ? "bg-red-100 text-red-600 cursor-not-allowed"
+                                    : group.is_approve
+                                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                    : "bg-red-100 text-red-600 hover:bg-red-200"
+                                }`}
+                                title={group.is_rejected ? "Not Approved" : "Not Approve"}
+                              >
+                                <HiX className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
@@ -527,4 +536,4 @@ export default function Home() {
       </div>
     </>
   );
-} 
+}

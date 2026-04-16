@@ -24,6 +24,15 @@ export default function LoginHome() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
+  // Check for session expired message
+  useEffect(() => {
+    const logoutMessage = sessionStorage.getItem('logoutMessage');
+    if (logoutMessage) {
+      toast.info(logoutMessage);
+      sessionStorage.removeItem('logoutMessage');
+    }
+  }, []);
+
   // Check if already logged in - Redirect to first available module, not dashboard
   useEffect(() => {
     const accessToken = storage.getAccessToken();
@@ -71,6 +80,11 @@ export default function LoginHome() {
         await storage.saveUserEmail(values.email);
         await storage.saveUserPermissions(data.permissions || []);
         
+        // Save user role if present
+        if (data.role && data.role.name) {
+          await storage.saveUserRole(data.role.name);
+        }
+        
         // Save secret key if present
         if (data.secretKey) {
           console.log("🔐 Saving secret key");
@@ -91,6 +105,9 @@ export default function LoginHome() {
           router.push("/unauthorized");
           return;
         }
+        
+        // Clear any existing logout message
+        sessionStorage.removeItem('logoutMessage');
         
         // TOTP page pe jao, waha se first available module pe redirect hoga
         router.push("/qrcode");

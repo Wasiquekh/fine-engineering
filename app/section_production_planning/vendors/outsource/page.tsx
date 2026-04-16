@@ -10,10 +10,19 @@ import { useSearchParams } from "next/navigation";
 import { FaArrowLeft } from "react-icons/fa";
 import Image from "next/image";
 import PageGuard from "../../../component/PageGuard";
+import StorageManager from "../../../../provider/StorageManager";
+import Swal from "sweetalert2";
 
 type Row = any;
 
 const VENDOR_OPTIONS = ["Ashfaq", "Others"];
+const storage = new StorageManager();
+
+// Permission helper function
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
 
 export default function VendorOutsourcePage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -25,6 +34,9 @@ export default function VendorOutsourcePage() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "ALL";
   const client = searchParams.get("client") || "";
+  
+  const permissions = storage.getUserPermissions();
+  const canEditOutsource = hasPermission(permissions, "outsource.edit");
 
   const fetchCategories = async (data: Row[]) => {
     const uniqueMap = new Map<string, { value: string; label: string }>();
@@ -206,6 +218,22 @@ export default function VendorOutsourcePage() {
   }, [filteredData, jobIdentifiers]);
 
   const onAssign = async (r: Row) => {
+    // Show confirmation popup first
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `Do you want to assign this item to vendor?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, assign it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
     const picked = vendorPick[r.id] || "Ashfaq";
     const finalName = picked === "Others" ? (otherName[r.id] || "").trim() : picked;
 
@@ -362,13 +390,15 @@ export default function VendorOutsourcePage() {
                         <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                         <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                         <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                        <th className="px-2 py-0 border border-tableBorder">Assign Vendor</th>
-                      </tr>
+                        {canEditOutsource && (
+                          <th className="px-2 py-0 border border-tableBorder">Assign Vendor</th>
+                        )}
+                       </tr>
                     </thead>
                     <tbody>
                       {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                         <tr>
-                          <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
+                          <td colSpan={canEditOutsource ? 11 : 10} className="px-4 py-6 text-center border border-tableBorder">
                             <p className="text-[#666666] text-sm">No JO data found</p>
                           </td>
                         </tr>
@@ -377,7 +407,7 @@ export default function VendorOutsourcePage() {
                           <Fragment key={jo}>
                             {/* JO Group Header */}
                             <tr className="border border-tableBorder bg-gray-100">
-                              <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={11}>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={canEditOutsource ? 11 : 10}>
                                 JO: {jo} ({items.length} item(s))
                               </td>
                             </tr>
@@ -399,41 +429,43 @@ export default function VendorOutsourcePage() {
                                   <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">
-                                    <div className="flex flex-col gap-2 min-w-[200px]">
-                                      <select
-                                        className="border border-customBorder bg-white rounded-lg px-3 py-1 text-xs outline-none focus:ring-2 focus:ring-primary-200"
-                                        value={picked}
-                                        onChange={(e) =>
-                                          setVendorPick((p) => ({ ...p, [item.id]: e.target.value }))
-                                        }
-                                      >
-                                        {VENDOR_OPTIONS.map((v) => (
-                                          <option key={v} value={v}>
-                                            {v}
-                                          </option>
-                                        ))}
-                                      </select>
-
-                                      {picked === "Others" ? (
-                                        <input
+                                  {canEditOutsource && (
+                                    <td className="px-2 py-2 border border-tableBorder">
+                                      <div className="flex flex-col gap-2 min-w-[200px]">
+                                        <select
                                           className="border border-customBorder bg-white rounded-lg px-3 py-1 text-xs outline-none focus:ring-2 focus:ring-primary-200"
-                                          placeholder="Vendor name"
-                                          value={otherName[item.id] || ""}
+                                          value={picked}
                                           onChange={(e) =>
-                                            setOtherName((p) => ({ ...p, [item.id]: e.target.value }))
+                                            setVendorPick((p) => ({ ...p, [item.id]: e.target.value }))
                                           }
-                                        />
-                                      ) : null}
+                                        >
+                                          {VENDOR_OPTIONS.map((v) => (
+                                            <option key={v} value={v}>
+                                              {v}
+                                            </option>
+                                          ))}
+                                        </select>
 
-                                      <button
-                                        onClick={() => onAssign(item)}
-                                        className="px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs font-semibold"
-                                      >
-                                        Assign
-                                      </button>
-                                    </div>
-                                  </td>
+                                        {picked === "Others" ? (
+                                          <input
+                                            className="border border-customBorder bg-white rounded-lg px-3 py-1 text-xs outline-none focus:ring-2 focus:ring-primary-200"
+                                            placeholder="Vendor name"
+                                            value={otherName[item.id] || ""}
+                                            onChange={(e) =>
+                                              setOtherName((p) => ({ ...p, [item.id]: e.target.value }))
+                                            }
+                                          />
+                                        ) : null}
+
+                                        <button
+                                          onClick={() => onAssign(item)}
+                                          className="px-2 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs font-semibold"
+                                        >
+                                          Assign
+                                        </button>
+                                      </div>
+                                    </td>
+                                  )}
                                 </tr>
                               );
                             })}

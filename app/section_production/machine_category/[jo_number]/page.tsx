@@ -11,6 +11,17 @@ import StorageManager from "../../../../provider/StorageManager";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
+// Permission helper function
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
+
+const hasAnyPermission = (permissions: any[] | null, permissionNames: string[]): boolean => {
+  if (!permissions) return false;
+  return permissionNames.some(name => permissions.some(p => p.name === name));
+};
+
 interface JobData {
   id: string;
   job_no: number;
@@ -54,6 +65,14 @@ export default function JoNumberPage() {
   const [jobs, setJobs] = useState<JobData[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignedJobs, setAssignedJobs] = useState<AssignedJob[]>([]);
+
+  const permissions = storage.getUserPermissions();
+  
+  // Edit permission for Production JOB (Production 1,2,3)
+  const canEdit = hasAnyPermission(permissions, [
+    "production1.eqp.job.edit", "production2.eqp.job.edit", "production3.eqp.job.edit",
+    "production1.bio.job.edit", "production2.bio.job.edit", "production3.bio.job.edit"
+  ]);
 
   const fetchJobs = useCallback(async () => {
     if (!jo_number) return;
@@ -100,7 +119,6 @@ export default function JoNumberPage() {
   }, [jo_number, fetchJobs, fetchAssignedJobs]);
 
   useEffect(() => {
-    // Reset quantity when serial number changes
     setSelectedQuantity("");
   }, [selectedSerialNo]);
 
@@ -151,7 +169,6 @@ export default function JoNumberPage() {
     if (selectedOption === "Lathe" && machineSize === "large") {
       return ["Partab","Mujeeb bhai","Rangi lala","Mahtab mota bhai"];
     }
-
     if (selectedOption === "cnc" && machineSize === "small") {
       return ["Ramjan ali","Mustafa","Akramuddeen","Sufyan"];
     }
@@ -161,11 +178,9 @@ export default function JoNumberPage() {
     if (selectedOption === "cnc" && machineSize === "large") {
       return ["Aqif khan"];
     }
-
     if (selectedOption === "vmc") return ["Rajnish kumar"];
     if (selectedOption === "Milling") return ["Ramakanat"];
     if (selectedOption === "Drilling") return ["Rahman"];
-
     return [];
   };
 
@@ -198,6 +213,10 @@ export default function JoNumberPage() {
   }, [selectedJob]);
 
   const handleAssign = async () => {
+    if (!canEdit) {
+      toast.error("You don't have permission to assign jobs");
+      return;
+    }
     if (!selectedJob) return;
 
     const payload = {
@@ -256,16 +275,12 @@ export default function JoNumberPage() {
             Machine Category - {jo_number}
           </h1>
 
-          {/* Jobs Table */}
+          {/* Jobs Table - Always visible */}
           <div className="mt-6 mb-8">
-            {/* <h2 className="text-xl font-bold mb-4">
-              Jobs for J/O No: {jo_number}
-            </h2> */}
             <div className="relative overflow-x-auto sm:rounded-lg">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500">
                 <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                   <tr className="border border-tableBorder">
-                    {/* <th scope="col" className="p-3 border border-tableBorder">Job No</th> */}
                     <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
                     <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
                     <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Description</th>
@@ -276,21 +291,12 @@ export default function JoNumberPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-4 border border-tableBorder">
-                        Loading...
-                      </td>
-                    </tr>
+                    <tr><td colSpan={6} className="text-center py-4 border border-tableBorder">Loading...</td></tr>
                   ) : jobs.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-4 border border-tableBorder">
-                        No jobs found for this J/O number.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={6} className="text-center py-4 border border-tableBorder">No jobs found for this J/O number.</td></tr>
                   ) : (
                     jobs.map((job) => (
                       <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
-                        {/* <td className="px-2 py-2 border border-tableBorder">{job.job_no}</td> */}
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_no}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323] font-mono">{job.serial_no || "N/A"}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_description}</td>
@@ -305,48 +311,40 @@ export default function JoNumberPage() {
             </div>
           </div>
 
-          {/* ✅ GRID LAYOUT FIX */}
+          {/* Assignment Form - Disabled if no edit permission */}
           <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-6 gap-4 w-full max-w-full items-end">
-            {/* Serial No */}
+            {/* Serial No - Disabled if no edit permission */}
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Serial No
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Serial No</label>
               <select
                 value={selectedSerialNo}
                 onChange={(e) => setSelectedSerialNo(e.target.value)}
-                className="w-full px-4 py-2 border rounded-md"
-                disabled={serialNoOptions.length === 0}
+                className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
+                disabled={serialNoOptions.length === 0 || !canEdit}
               >
                 <option value="">Select</option>
                 {serialNoOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
+                  <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             </div>
 
-            {/* Machine Category */}
+            {/* Machine Category - Disabled if no edit permission */}
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Machine Category
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Machine Category</label>
               <select
                 value={selectedOption}
                 onChange={(e) => {
                   const val = e.target.value;
                   setSelectedOption(val);
-
                   if (val === "vmc") setMachineSize("FVMC01");
                   else if (val === "Milling") setMachineSize("FML01");
                   else if (val === "Drilling") setMachineSize("FDL01");
                   else setMachineSize("");
-
                   setSubSize("");
                   setWorker("");
                 }}
-                disabled={!selectedSerialNo || !selectedJob?.is_approved}
+                disabled={!selectedSerialNo || !selectedJob?.is_approved || !canEdit}
                 className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">Select</option>
@@ -358,11 +356,9 @@ export default function JoNumberPage() {
               </select>
             </div>
 
-            {/* Machine Size */}
+            {/* Machine Size - Disabled if no edit permission */}
             <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Machine Size
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Machine Size</label>
               <select
                 value={machineSize}
                 onChange={(e) => {
@@ -371,18 +367,16 @@ export default function JoNumberPage() {
                   setWorker("");
                 }}
                 className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
-                disabled={!selectedOption || !selectedJob?.is_approved}
+                disabled={!selectedOption || !selectedJob?.is_approved || !canEdit}
               >
                 <option value="">Select</option>
                 {getSizeOptions().map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
+                  <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
             </div>
 
-            {/* Machine Type */}
+            {/* Machine Type - Disabled if no edit permission */}
             {(machineSize === "small" || machineSize === "medium" || machineSize === "large") && (
               <div className="col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">
@@ -391,47 +385,39 @@ export default function JoNumberPage() {
                 <select
                   value={subSize}
                   onChange={(e) => setSubSize(e.target.value)}
-                  disabled={!machineSize || !selectedJob?.is_approved}
+                  disabled={!machineSize || !selectedJob?.is_approved || !canEdit}
                   className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Select</option>
                   {getSubSizeOptions().map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
+                    <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* Worker */}
+            {/* Worker - Disabled if no edit permission */}
             {workerOptions.length > 0 && (
               <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Worker
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Worker</label>
                 <select
                   value={worker}
                   onChange={(e) => setWorker(e.target.value)}
-                  disabled={!machineSize || !selectedJob?.is_approved}
+                  disabled={!machineSize || !selectedJob?.is_approved || !canEdit}
                   className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">Select</option>
                   {workerOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
+                    <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* Quantity and Assign Button */}
+            {/* Quantity and Assign Button - Disabled if no edit permission */}
             <div className="col-span-1">
               {selectedJob && (
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
               )}
               <div className="flex gap-2">
                 {selectedJob && (
@@ -439,53 +425,45 @@ export default function JoNumberPage() {
                     value={selectedQuantity}
                     onChange={(e) => setSelectedQuantity(e.target.value)}
                     className="flex-1 px-3 py-1.5 border rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    disabled={!selectedSerialNo || quantityOptions.length === 0 || !selectedJob?.is_approved}
+                    disabled={!selectedSerialNo || quantityOptions.length === 0 || !selectedJob?.is_approved || !canEdit}
                   >
                     <option value="">Select</option>
                     {quantityOptions.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
+                      <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 )}
-              <button
-                className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`}
-                disabled={!selectedSerialNo || !worker || !selectedQuantity || !selectedJob?.is_approved}
-                onClick={handleAssign}
-              >
-                Assign
-              </button>
+                <button
+                  className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`}
+                  disabled={!selectedSerialNo || !worker || !selectedQuantity || !selectedJob?.is_approved || !canEdit}
+                  onClick={handleAssign}
+                >
+                  Assign
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Assigned Jobs Table */}
+          {/* Assigned Jobs Table - Always visible */}
           <div className="mt-12 mb-8">
-            <h2 className="text-xl font-semibold mb-4">
-              Assigned Jobs History
-            </h2>
+            <h2 className="text-xl font-semibold mb-4">Assigned Jobs History</h2>
             <div className="relative overflow-x-auto sm:rounded-lg">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500">
                 <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Category</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Size</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Code</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Worker</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
-                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Date</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Category</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Size</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Code</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Worker</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {assignedJobs.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-4 border border-tableBorder">
-                        No assigned jobs found.
-                      </td>
-                    </tr>
+                    <td><td colSpan={8} className="text-center py-4 border border-tableBorder">No assigned jobs found.</td></td>
                   ) : (
                     assignedJobs.map((job) => (
                       <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">

@@ -230,26 +230,26 @@ export default function JobDetailsPage() {
           </button>
 
           {/* Bottom Section */}
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
             {/* Left Side: Assignment Form */}
             <div className="w-full">
               <h2 className="text-xl font-semibold mb-4">Material Recieved From Amar</h2>
               <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1600px]">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1100px]">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Type</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Category</th>
+                      {/* <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Type</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Category</th> */}
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Desc</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Qty</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Desc</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
+                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Qty</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
+                      <th scope="col" className="px-6 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign Date</th>
                       <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Action</th>
                     </tr>
@@ -285,8 +285,8 @@ export default function JobDetailsPage() {
                                 </div>
                               )}
                             </td>
-                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_category : ""}</td>
+                            {/* <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
+                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_category : ""}</td> */}
                             <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
                             <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
