@@ -254,7 +254,7 @@ export default function VendorIncomingPage() {
 
       <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
         <div className="mb-4 px-2">
-          <h1 className="text-2xl font-semibold text-firstBlack">
+          <h1 className="text-xl font-semibold text-firstBlack">
             Vendor Incoming • In-Review Status {client && ` • ${client}`}
           </h1>
           <p className="text-sm text-gray-500 mt-1">Items received back from vendors for QC review (excluding Usmaan, Ramzaan, Riyaaz)</p>

@@ -780,7 +780,7 @@ export default function QcWeldingPage() {
           <div className="mb-4 px-2">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-firstBlack">
+                <h1 className="text-xl font-semibold text-firstBlack">
                   QC • Welding
                   {client && ` • ${client}`}
                 </h1>
@@ -1026,7 +1026,7 @@ export default function QcWeldingPage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">
+                <h2 className="text-lg font-bold mb-4">
                   Welding QC - All Services
                 </h2>
 

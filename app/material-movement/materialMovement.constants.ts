@@ -85,9 +85,9 @@ export const KANBAN_CATEGORIES = [
 // Worker options based on machine category and size
 export const WORKER_OPTIONS = {
   Lathe: {
-    small: ["Naseem", "Sanjay", "Choto bhai", "Ali bhai", "Gufran bhai", "Mahtab alam", "Jamaluddeen", "Javed bhai", "Hasib shekh"],
-    medium: ["Shoakat ali", "Mohd Jumriti anshari", "Usman bhai"],
-    large: ["Partab", "Mujeeb bhai", "Rangi lala", "Mahtab mota bhai"],
+    small: ["Naseem", "Sanjay", "Choto bhai", "Ali bhai", "Gufran bhai", "Mahtab alam", "Jamaluddeen", "Javed bhai", "Hasib shaikh"],
+    medium: ["Shoakat ali", "Mohd Jumerati ansari", "Usman bhai"],
+    large: ["Pratab", "Mujeeb bhai", "Rangi laal", "Mahtab mota bhai"],
   },
   cnc: {
     small: ["Ramjan ali", "Mustafa", "Akramuddeen", "Sufyan"],

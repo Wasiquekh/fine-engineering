@@ -143,13 +143,13 @@ export default function JoNumberPage() {
 
   const getWorkerOptions = () => {
     if (selectedOption === "Lathe" && machineSize === "small") {
-      return ["Naseem","Sanjay","Choto bhai","Ali bhai","Gufran bhai","Mahtab alam","Jamaluddeen","Javed bhai","Hasib shekh"];
+      return ["Naseem","Sanjay","Choto bhai","Ali bhai","Gufran bhai","Mahtab alam","Jamaluddeen","Javed bhai","Hasib shaikh"];
     }
     if (selectedOption === "Lathe" && machineSize === "medium") {
-      return ["Shoakat ali","Mohd Jumriti anshari","Usman bhai"];
+      return ["Shoakat ali","Mohd Jumerati ansari","Usman bhai"];
     }
     if (selectedOption === "Lathe" && machineSize === "large") {
-      return ["Partab","Mujeeb bhai","Rangi lala","Mahtab mota bhai"];
+      return ["Pratab","Mujeeb bhai","Rangi laal","Mahtab mota bhai"];
     }
 
     if (selectedOption === "cnc" && machineSize === "small") {

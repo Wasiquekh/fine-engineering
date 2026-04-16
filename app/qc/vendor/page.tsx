@@ -698,7 +698,7 @@ export default function QcVendorPage() {
               </>
             ) : (
               <>
-                <h2 className="text-xl font-bold mb-4">Vendor QC - All Services</h2>
+                <h2 className="text-lg font-bold mb-4">Vendor QC - All Services</h2>
 
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">

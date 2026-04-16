@@ -1,9 +1,9 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { FiFilter } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
-import { FaChevronDown, FaPlus } from "react-icons/fa";
+import { FaChevronDown, FaPlus, FaRegEdit } from "react-icons/fa";
 import { HiTrash } from "react-icons/hi";
 import LeftSideBar from "../../component/LeftSideBar";
 import { toast } from "react-toastify";
@@ -111,6 +111,11 @@ const validationSchema = Yup.object().shape({
     then: (schema) => schema.notRequired(),
     otherwise: (schema) => schema.required("MOC is required"),
   }),
+  product_item_no: Yup.string().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.required("Product Item No is required"),
+    otherwise: (schema) => schema.notRequired().nullable(),
+  }),
   product_desc: Yup.string().when("sub_type", {
     is: "ASSEMBLY",
     then: (schema) => schema.required("Product Description is required"),
@@ -176,6 +181,7 @@ const initialValues = {
   bin_location: "",
   material_remark: "",
   product_desc: "",
+  product_item_no: "",
   product_qty: "",
   sub_type: "",
   assembly_items: [],
@@ -203,18 +209,69 @@ export default function Home() {
   const [isKanbanDropdownOpen, setKanbanDropdownOpen] =
     useState<boolean>(false);
   const [selectedSubType, setSelectedSubType] = useState<string>("PARTIAL");
+  const [editingJob, setEditingJob] = useState<any | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const pageSize = 10;
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (filter: string, page: number) => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/jobs");
+      let query = `?page=${page}&limit=${pageSize}`;
+      if (filter !== "ALL" && filter !== "REJECTED") {
+        query += `&job_type=${filter}`;
+      } else if (filter === "REJECTED") {
+        query += `&rejected=true`;
+      }
+      const response = await axiosProvider.get(`/fineengg_erp/system/jobs${query}`);
       setData(response.data.data);
+      if (response.data.meta) {
+        setTotalPages(response.data.meta.totalPages);
+        setCurrentPage(response.data.meta.page);
+      }
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
     }
   }, []);
+
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    setCurrentPage(1);
+  };
+
+  const handleEdit = async (item: any) => {
+    const subType = item.product_item_no ? "ASSEMBLY" : "PARTIAL";
+    
+    if (subType === "ASSEMBLY") {
+      try {
+        // Fetch all items in this assembly group using product_item_no
+        const response = await axiosProvider.get(`/fineengg_erp/system/jobs?product_item_no=${item.product_item_no}`);
+        const relatedItems = response.data.data.map((job: any) => ({
+          id: job.id,
+          item_description: job.item_description || "",
+          item_no: job.item_no || "",
+          qty: job.qty_history || job.qty || "",
+          moc: job.moc || "",
+          bin_location: job.bin_location || "",
+          material_remark: job.material_remark || "",
+        }));
+        
+        setEditingJob({ ...item, assembly_items: relatedItems });
+      } catch (error) {
+        console.error("Error fetching assembly items:", error);
+        toast.error("Failed to load complete assembly data");
+        return;
+      }
+    } else {
+      setEditingJob(item);
+    }
+
+    setFlyoutType(item.job_type);
+    setSelectedSubType(subType);
+    setFlyoutOpen(true);
+  };
 
   const handleSubmit = async (values: any) => {
     if (values.sub_type === "ASSEMBLY") {
@@ -225,6 +282,7 @@ export default function Home() {
         mtl_rcd_date: formatDate(values.mtl_rcd_date),
         mtl_challan_no: values.mtl_challan_no,
         product_desc: values.product_desc,
+        product_item_no: values.product_item_no,
         product_qty: Number(values.product_qty),
         client_name: values.client_name,
       };
@@ -252,9 +310,43 @@ export default function Home() {
       };
 
       try {
+        if (editingJob) {
+          const bulkUpdatePayload = {
+            common_data: {
+              job_type: values.job_type,
+              client_name: values.client_name,
+              jo_number: values.jo_number,
+              job_order_date: formatDate(values.job_order_date),
+              mtl_rcd_date: formatDate(values.mtl_rcd_date),
+              mtl_challan_no: values.mtl_challan_no,
+              product_desc: values.product_desc,
+              product_item_no: values.product_item_no,
+              product_qty: Number(values.product_qty),
+              job_no: values.job_no || null,
+              job_category: values.job_category || null,
+              tso_no: values.tso_no || null,
+              kanban_job_cat: values.kanban_job_cat || null,
+            },
+            items: values.assembly_items.map((item: any) => ({
+              id: item.id, // Using the ID we stored in handleEdit
+              item_description: item.item_description,
+              item_no: item.item_no,
+              qty: Number(item.qty),
+              moc: item.moc,
+              bin_location: item.bin_location,
+              material_remark: item.material_remark || null,
+            })),
+          };
+          
+          await axiosProvider.put("/fineengg_erp/system/jobs/bulk", bulkUpdatePayload);
+          toast.success("Assembly updated successfully");
+          fetchData(activeFilter, currentPage);
+          resetFormState();
+          return;
+        }
         await axiosProvider.post("/fineengg_erp/system/jobs/bulk", bulkPayload);
         toast.success("Assembly added successfully");
-        fetchData();
+        fetchData(activeFilter, currentPage);
         setFlyoutOpen(false);
       } catch (error: any) {
         console.error("Error saving assembly job:", error);
@@ -278,13 +370,13 @@ export default function Home() {
       bin_location: values.bin_location,
       material_remark: values.material_remark || "",
       product_desc: values.product_desc || null,
+      product_item_no: null,
       product_qty: values.product_qty ? Number(values.product_qty) : null,
     };
 
     // Add conditional fields
     if (values.job_type === "JOB_SERVICE") {
       payload.job_no = values.job_no;
-      payload.sub_type = values.sub_type;
     } else if (values.job_type === "TSO_SERVICE") {
       payload.tso_no = values.tso_no;
       payload.job_category = values.job_category;
@@ -295,30 +387,22 @@ export default function Home() {
     }
 
     try {
-      await axiosProvider.post("/fineengg_erp/system/jobs", payload);
-
-      // Different success messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.success("Job Service added successfully");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.success("TSO Service added successfully");
-      } else if (values.job_type === "KANBAN") {
-        toast.success("Kanban added successfully");
+      if (editingJob) {
+        await axiosProvider.put(`/fineengg_erp/system/jobs/${editingJob.id}`, payload);
+        toast.success(`${values.job_type.replace('_', ' ')} updated successfully`);
+      } else {
+        await axiosProvider.post("/fineengg_erp/system/jobs", payload);
+        toast.success(`${values.job_type.replace('_', ' ')} added successfully`);
       }
 
-      fetchData();
-      setFlyoutOpen(false);
+      fetchData(activeFilter, currentPage);
+      resetFormState();
     } catch (error: any) {
       console.error("Error saving job:", error);
-
-      // Different error messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.error("Failed to add Job Service");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.error("Failed to add TSO Service");
-      } else if (values.job_type === "KANBAN") {
-        toast.error("Failed to add Kanban");
-      }
+      toast.error(
+        error?.response?.data?.message || 
+        `Failed to ${editingJob ? "update" : "add"} ${values.job_type}`
+      );
     }
   };
 
@@ -342,7 +426,7 @@ export default function Home() {
 
         if (response.data.success) {
           toast.success("Job deleted successfully");
-          fetchData();
+          fetchData(activeFilter, currentPage);
         } else {
           toast.error("Failed to delete job");
         }
@@ -353,16 +437,9 @@ export default function Home() {
     }
   };
 
-  const filteredData = useMemo(() => {
-    if (activeFilter === "ALL") return data;
-    if (activeFilter === "REJECTED") {
-      return data.filter((item: any) => item.is_rejected || item.rejected);
-    }
-    return data.filter((item: any) => item.job_type === activeFilter);
-  }, [data, activeFilter]);
-
   const resetFormState = () => {
     setFlyoutOpen(false);
+    setEditingJob(null);
   };
 
   const openJobServiceFlyout = (subType: string = "PARTIAL") => {
@@ -388,6 +465,33 @@ export default function Home() {
 
   // Get initial values based on flyout type
   const initialFormValues = useMemo(() => {
+    if (editingJob) {
+      const subType = editingJob.product_item_no ? "ASSEMBLY" : "PARTIAL";
+      return {
+        job_type: editingJob.job_type || flyoutType,
+        client_name: editingJob.client_name || "",
+        jo_number: editingJob.jo_number || "",
+        job_category: editingJob.job_category || "",
+        job_no: editingJob.job_no || "",
+        tso_no: editingJob.tso_no || "",
+        kanban_job_cat: editingJob.kanban_job_cat || "",
+        job_order_date: editingJob.job_order_date || "",
+        mtl_rcd_date: editingJob.mtl_rcd_date || "",
+        mtl_challan_no: editingJob.mtl_challan_no || "",
+        item_description: editingJob.item_description || "",
+        item_no: editingJob.item_no || "",
+        qty: editingJob.qty || editingJob.qty_history || "",
+        moc: editingJob.moc || "",
+        bin_location: editingJob.bin_location || "",
+        material_remark: editingJob.material_remark || "",
+        product_desc: editingJob.product_desc || "",
+        product_item_no: editingJob.product_item_no || "",
+        product_qty: editingJob.product_qty || "",
+        sub_type: subType,
+        assembly_items: editingJob.assembly_items || (subType === "ASSEMBLY" ? [{}] : []),
+      };
+    }
+
     const values: any = {
       ...initialValues,
       job_type: flyoutType,
@@ -416,10 +520,11 @@ export default function Home() {
       values.bin_location = "";
       values.material_remark = "";
       values.product_desc = "";
+      values.product_item_no = "";
       values.product_qty = "";
     }
     return values;
-  }, [flyoutType, selectedSubType]);
+  }, [flyoutType, selectedSubType, editingJob]);
 
   // Get category options based on job type
   const getCategoryOptions = (jobType: string) => {
@@ -433,17 +538,19 @@ export default function Home() {
 
   // Get flyout title
   const getFlyoutTitle = () => {
+    const mode = editingJob ? "Edit" : "Add";
     const subTypeLabel = selectedSubType === "PARTIAL" ? "Partial" : "Assembly";
     if (flyoutType === "JOB_SERVICE")
-      return `Add Job Service (${subTypeLabel})`;
+      return `${mode} Job Service (${subTypeLabel})`;
     if (flyoutType === "TSO_SERVICE")
-      return `Add TSO Service (${subTypeLabel})`;
-    if (flyoutType === "KANBAN") return `Add Kanban (${subTypeLabel})`;
-    return "Add Job";
+      return `${mode} TSO Service (${subTypeLabel})`;
+    if (flyoutType === "KANBAN") return `${mode} Kanban (${subTypeLabel})`;
+    return `${mode} Job`;
   };
 
   // Get submit button text
   const getSubmitButtonText = () => {
+    if (editingJob) return "Update Job";
     if (flyoutType === "JOB_SERVICE") return "Add Job Service";
     if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
     if (flyoutType === "KANBAN") return "Add Kanban";
@@ -451,8 +558,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(activeFilter, currentPage);
+  }, [fetchData, activeFilter, currentPage]);
 
   return (
     <>
@@ -489,7 +596,7 @@ export default function Home() {
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                   <button
-                    onClick={() => setActiveFilter("ALL")}
+                    onClick={() => handleFilterChange("ALL")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "ALL"
                         ? "bg-primary-600 text-white"
@@ -499,7 +606,7 @@ export default function Home() {
                     All
                   </button>
                   <button
-                    onClick={() => setActiveFilter("JOB_SERVICE")}
+                    onClick={() => handleFilterChange("JOB_SERVICE")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "JOB_SERVICE"
                         ? "bg-primary-600 text-white"
@@ -509,7 +616,7 @@ export default function Home() {
                     Job Service
                   </button>
                   <button
-                    onClick={() => setActiveFilter("TSO_SERVICE")}
+                    onClick={() => handleFilterChange("TSO_SERVICE")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "TSO_SERVICE"
                         ? "bg-primary-600 text-white"
@@ -519,7 +626,7 @@ export default function Home() {
                     TSO Service
                   </button>
                   <button
-                    onClick={() => setActiveFilter("KANBAN")}
+                    onClick={() => handleFilterChange("KANBAN")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "KANBAN"
                         ? "bg-primary-600 text-white"
@@ -529,7 +636,7 @@ export default function Home() {
                     Kanban
                   </button>
                   <button
-                    onClick={() => setActiveFilter("REJECTED")}
+                    onClick={() => handleFilterChange("REJECTED")}
                     className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                       activeFilter === "REJECTED"
                         ? "bg-primary-600 text-white"
@@ -548,7 +655,7 @@ export default function Home() {
                       }
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                      <p className="text-white text-base font-medium group-hover:text-white">
+                        <p className="text-white text-sm font-medium group-hover:text-white">
                         Add Job Service
                       </p>
                       <FaChevronDown className="w-3 h-3 text-white ml-2" />
@@ -578,7 +685,7 @@ export default function Home() {
                       }
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                      <p className="text-white text-base font-medium group-hover:text-white">
+                        <p className="text-white text-sm font-medium group-hover:text-white">
                         Add TSO Service
                       </p>
                       <FaChevronDown className="w-3 h-3 text-white ml-2" />
@@ -608,7 +715,7 @@ export default function Home() {
                       }
                     >
                       <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                      <p className="text-white text-base font-medium group-hover:text-white">
+                        <p className="text-white text-sm font-medium group-hover:text-white">
                         Add Kanban
                       </p>
                       <FaChevronDown className="w-3 h-3 text-white ml-2" />
@@ -640,158 +747,183 @@ export default function Home() {
                     <tr className="border border-tableBorder">
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Client Name
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Job No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         J/O Number
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Product Desc
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                      >
+                        Product Item No
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Product Qty
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Item Desc
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Item No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Qty
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         MOC
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Job Order Date
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Mtl Rcd Date
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Mtl Challan No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Bin Location
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Mtl Remark
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-medium text-firstBlack text-base leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredData.length === 0 ? (
+                    {data.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={15}
+                          colSpan={16}
                           className="px-4 py-6 text-center border border-tableBorder"
                         >
-                          <p className="text-[#666666] text-base">
+                          <p className="text-[#666666] text-sm">
                             No data found
                           </p>
                         </td>
                       </tr>
                     ) : (
-                      filteredData.map((item: any) => (
+                      data.map((item: any) => (
                         <tr
                           className="border border-tableBorder bg-white hover:bg-primary-100"
                           key={item.id}
                         >
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
-                            {item.client_name || "N/A"}
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
+                            <div className="flex flex-col">
+                              <span>{item.client_name || "N/A"}</span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit mt-1 ${
+                                item.product_item_no 
+                                  ? 'bg-purple-100 text-purple-700' 
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {item.product_item_no ? 'ASSEMBLY' : 'PARTIAL'}
+                              </span>
+                            </div>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.job_no || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.jo_number || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.product_desc || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
+                            {item.product_item_no || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.product_qty || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.item_description || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.item_no || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.qty_history || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.moc || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.job_order_date || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.mtl_rcd_date || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.mtl_challan_no || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.bin_location || "N/A"}
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-base leading-normal">
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.material_remark || "N/A"}
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
+                                title="Edit"
+                              >
+                                <FaRegEdit className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => handleDelete(item.id)}
                                 className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
@@ -806,6 +938,29 @@ export default function Home() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Pagination Controls */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 px-2">
+                <p className="text-[#666666] text-sm font-medium">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -869,7 +1024,7 @@ export default function Home() {
 
                         {/* Client Name */}
                         <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                             Client Name
                           </p>
                           <SelectInput
@@ -898,7 +1053,7 @@ export default function Home() {
                         {/* Job No - Only for JOB_SERVICE */}
                         {values.job_type === "JOB_SERVICE" && (
                           <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                               Job No
                             </p>
                             <input
@@ -908,7 +1063,7 @@ export default function Home() {
                               onChange={(e) =>
                                 setFieldValue("job_no", e.target.value)
                               }
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                               placeholder="Enter Job No"
                             />
                             <ErrorMessage
@@ -922,7 +1077,7 @@ export default function Home() {
                         {/* TSO No - Only for TSO_SERVICE */}
                         {values.job_type === "TSO_SERVICE" && (
                           <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                               TSO No
                             </p>
                             <input
@@ -932,7 +1087,7 @@ export default function Home() {
                               onChange={(e) =>
                                 setFieldValue("tso_no", e.target.value)
                               }
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                               placeholder="Enter TSO No"
                             />
                             <ErrorMessage
@@ -945,7 +1100,7 @@ export default function Home() {
 
                         {/* J/O Number */}
                         <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                             J/O Number
                           </p>
                           <input
@@ -955,7 +1110,7 @@ export default function Home() {
                             onChange={(e) =>
                               setFieldValue("jo_number", e.target.value)
                             }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                             placeholder="Enter J/O Number"
                           />
                           <ErrorMessage
@@ -969,7 +1124,7 @@ export default function Home() {
                         {(values.job_type === "TSO_SERVICE" ||
                           values.job_type === "KANBAN") && (
                           <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                               {values.job_type === "KANBAN"
                                 ? "Product Category"
                                 : "Job Category"}
@@ -996,7 +1151,7 @@ export default function Home() {
                         {/* Kanban Job Category - Only for KANBAN */}
                         {values.job_type === "KANBAN" && (
                           <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                               Kanban Job Category
                             </p>
                             <SelectInput
@@ -1017,7 +1172,7 @@ export default function Home() {
                         {/* Job Order Date */}
                         {/* Job Order Date */}
                         <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                             Job Order Date
                           </p>
                           <DatePickerInput
@@ -1036,7 +1191,7 @@ export default function Home() {
 
                         {/* Material Received Date */}
                         <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                             Material Received Date
                           </p>
                           <DatePickerInput
@@ -1055,7 +1210,7 @@ export default function Home() {
 
                         {/* Material Challan No */}
                         <div className="w-full">
-                          <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                          <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                             Material Challan No
                           </p>
                           <input
@@ -1065,7 +1220,7 @@ export default function Home() {
                             onChange={(e) =>
                               setFieldValue("mtl_challan_no", e.target.value)
                             }
-                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                            className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                             placeholder="Enter Material Challan No"
                           />
                           <ErrorMessage
@@ -1082,7 +1237,7 @@ export default function Home() {
                           <>
                             {/* Item Description */}
                             <div className="w-full">
-                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 Item Description
                               </p>
                               <input
@@ -1095,7 +1250,7 @@ export default function Home() {
                                     e.target.value
                                   )
                                 }
-                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                 placeholder="Enter Item Description"
                               />
                               <ErrorMessage
@@ -1108,7 +1263,7 @@ export default function Home() {
                             {/* Item No */}
                             {values.job_type !== "KANBAN" && (
                               <div className="w-full">
-                                <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                   Item No
                                 </p>
                                 <input
@@ -1118,7 +1273,7 @@ export default function Home() {
                                   onChange={(e) =>
                                     setFieldValue("item_no", e.target.value)
                                   }
-                                  className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                  className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                   placeholder="Enter Item No"
                                 />
                                 <ErrorMessage
@@ -1131,7 +1286,7 @@ export default function Home() {
 
                             {/* Quantity */}
                             <div className="w-full">
-                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 Quantity
                               </p>
                               <input
@@ -1141,7 +1296,7 @@ export default function Home() {
                                 onChange={(e) =>
                                   setFieldValue("qty", e.target.value)
                                 }
-                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                 placeholder="Enter Quantity"
                               />
                               <ErrorMessage
@@ -1153,7 +1308,7 @@ export default function Home() {
 
                             {/* MOC */}
                             <div className="w-full">
-                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 MOC
                               </p>
                               <input
@@ -1163,7 +1318,7 @@ export default function Home() {
                                 onChange={(e) =>
                                   setFieldValue("moc", e.target.value)
                                 }
-                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                 placeholder="Enter MOC (Material of Construction)"
                               />
                               <ErrorMessage
@@ -1175,7 +1330,7 @@ export default function Home() {
 
                             {/* Bin Location */}
                             <div className="w-full">
-                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 Bin Location
                               </p>
                               <input
@@ -1185,7 +1340,7 @@ export default function Home() {
                                 onChange={(e) =>
                                   setFieldValue("bin_location", e.target.value)
                                 }
-                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                 placeholder="Enter Bin Location"
                               />
                               <ErrorMessage
@@ -1201,7 +1356,27 @@ export default function Home() {
                         {values.sub_type === "ASSEMBLY" && (
                           <>
                             <div className="w-full">
-                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                Product Item No
+                              </p>
+                              <input
+                                type="text"
+                                name="product_item_no"
+                                value={values.product_item_no}
+                                onChange={(e) =>
+                                  setFieldValue("product_item_no", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Product Item No"
+                              />
+                              <ErrorMessage
+                                name="product_item_no"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 Product Description
                               </p>
                               <input
@@ -1211,7 +1386,7 @@ export default function Home() {
                                 onChange={(e) =>
                                   setFieldValue("product_desc", e.target.value)
                                 }
-                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                 placeholder="Enter Product Description"
                               />
                               <ErrorMessage
@@ -1221,7 +1396,7 @@ export default function Home() {
                               />
                             </div>
                             <div className="w-full">
-                              <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 Product Quantity
                               </p>
                               <input
@@ -1231,7 +1406,7 @@ export default function Home() {
                                 onChange={(e) =>
                                   setFieldValue("product_qty", e.target.value)
                                 }
-                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                 placeholder="Enter Product Quantity"
                               />
                               <ErrorMessage
@@ -1266,7 +1441,7 @@ export default function Home() {
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                           <div className="w-full md:col-span-2">
-                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                               Item Description
                                             </p>
                                             <input
@@ -1279,7 +1454,7 @@ export default function Home() {
                                                   e.target.value
                                                 )
                                               }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                               placeholder="Enter Item Description"
                                             />
                                             <ErrorMessage
@@ -1289,7 +1464,7 @@ export default function Home() {
                                             />
                                           </div>
                                           <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                               Item No
                                             </p>
                                             <input
@@ -1302,7 +1477,7 @@ export default function Home() {
                                                   e.target.value
                                                 )
                                               }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                               placeholder="Enter Item No"
                                             />
                                             <ErrorMessage
@@ -1312,7 +1487,7 @@ export default function Home() {
                                             />
                                           </div>
                                           <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                               Quantity
                                             </p>
                                             <input
@@ -1325,7 +1500,7 @@ export default function Home() {
                                                   e.target.value
                                                 )
                                               }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                               placeholder="Enter Quantity"
                                             />
                                             <ErrorMessage
@@ -1335,7 +1510,7 @@ export default function Home() {
                                             />
                                           </div>
                                           <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                               MOC
                                             </p>
                                             <input
@@ -1348,7 +1523,7 @@ export default function Home() {
                                                   e.target.value
                                                 )
                                               }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                               placeholder="Enter MOC"
                                             />
                                             <ErrorMessage
@@ -1358,7 +1533,7 @@ export default function Home() {
                                             />
                                           </div>
                                           <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                               Bin Location
                                             </p>
                                             <input
@@ -1371,7 +1546,7 @@ export default function Home() {
                                                   e.target.value
                                                 )
                                               }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999]"
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
                                               placeholder="Enter Bin Location"
                                             />
                                             <ErrorMessage
@@ -1381,7 +1556,7 @@ export default function Home() {
                                             />
                                           </div>
                                           <div className="w-full md:col-span-2">
-                                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                               Material Remark
                                             </p>
                                             <textarea
@@ -1393,7 +1568,7 @@ export default function Home() {
                                                   e.target.value
                                                 )
                                               }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999] min-h-[100px]"
                                               placeholder="Enter Material Remark (Optional)"
                                             />
                                             <ErrorMessage
@@ -1435,7 +1610,7 @@ export default function Home() {
                         {/* Material Remark */}
                         {values.sub_type !== "ASSEMBLY" && (
                           <div className="w-full">
-                            <p className="text-[#0A0A0A] font-medium text-base leading-6 mb-2">
+                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                               Material Remark
                             </p>
                             <textarea
@@ -1444,7 +1619,7 @@ export default function Home() {
                               onChange={(e) =>
                                 setFieldValue("material_remark", e.target.value)
                               }
-                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6 placeholder:text-[#999999] min-h-[100px]"
+                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999] min-h-[100px]"
                               placeholder="Enter Material Remark (Optional)"
                             />
                             <ErrorMessage
@@ -1461,7 +1636,7 @@ export default function Home() {
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-base font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-sm font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isSubmitting
                             ? "Submitting..."
