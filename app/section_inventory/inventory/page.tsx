@@ -1,9 +1,9 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { FiFilter } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
-import { FaChevronDown, FaPlus } from "react-icons/fa";
+import { FaChevronDown, FaPlus, FaRegEdit } from "react-icons/fa";
 import { HiTrash } from "react-icons/hi";
 import LeftSideBar from "../../component/LeftSideBar";
 import { toast } from "react-toastify";
@@ -111,6 +111,11 @@ const validationSchema = Yup.object().shape({
     then: (schema) => schema.notRequired(),
     otherwise: (schema) => schema.required("MOC is required"),
   }),
+  product_item_no: Yup.string().when("sub_type", {
+    is: "ASSEMBLY",
+    then: (schema) => schema.required("Product Item No is required"),
+    otherwise: (schema) => schema.notRequired().nullable(),
+  }),
   product_desc: Yup.string().when("sub_type", {
     is: "ASSEMBLY",
     then: (schema) => schema.required("Product Description is required"),
@@ -176,6 +181,7 @@ const initialValues = {
   bin_location: "",
   material_remark: "",
   product_desc: "",
+  product_item_no: "",
   product_qty: "",
   sub_type: "",
   assembly_items: [],
@@ -203,6 +209,7 @@ export default function Home() {
   const [isKanbanDropdownOpen, setKanbanDropdownOpen] =
     useState<boolean>(false);
   const [selectedSubType, setSelectedSubType] = useState<string>("PARTIAL");
+  const [editingJob, setEditingJob] = useState<any | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -234,6 +241,38 @@ export default function Home() {
     setCurrentPage(1);
   };
 
+  const handleEdit = async (item: any) => {
+    const subType = item.product_item_no ? "ASSEMBLY" : "PARTIAL";
+    
+    if (subType === "ASSEMBLY") {
+      try {
+        // Fetch all items in this assembly group using product_item_no
+        const response = await axiosProvider.get(`/fineengg_erp/system/jobs?product_item_no=${item.product_item_no}`);
+        const relatedItems = response.data.data.map((job: any) => ({
+          id: job.id,
+          item_description: job.item_description || "",
+          item_no: job.item_no || "",
+          qty: job.qty_history || job.qty || "",
+          moc: job.moc || "",
+          bin_location: job.bin_location || "",
+          material_remark: job.material_remark || "",
+        }));
+        
+        setEditingJob({ ...item, assembly_items: relatedItems });
+      } catch (error) {
+        console.error("Error fetching assembly items:", error);
+        toast.error("Failed to load complete assembly data");
+        return;
+      }
+    } else {
+      setEditingJob(item);
+    }
+
+    setFlyoutType(item.job_type);
+    setSelectedSubType(subType);
+    setFlyoutOpen(true);
+  };
+
   const handleSubmit = async (values: any) => {
     if (values.sub_type === "ASSEMBLY") {
       const commonData: any = {
@@ -243,6 +282,7 @@ export default function Home() {
         mtl_rcd_date: formatDate(values.mtl_rcd_date),
         mtl_challan_no: values.mtl_challan_no,
         product_desc: values.product_desc,
+        product_item_no: values.product_item_no,
         product_qty: Number(values.product_qty),
         client_name: values.client_name,
       };
@@ -270,6 +310,40 @@ export default function Home() {
       };
 
       try {
+        if (editingJob) {
+          const bulkUpdatePayload = {
+            common_data: {
+              job_type: values.job_type,
+              client_name: values.client_name,
+              jo_number: values.jo_number,
+              job_order_date: formatDate(values.job_order_date),
+              mtl_rcd_date: formatDate(values.mtl_rcd_date),
+              mtl_challan_no: values.mtl_challan_no,
+              product_desc: values.product_desc,
+              product_item_no: values.product_item_no,
+              product_qty: Number(values.product_qty),
+              job_no: values.job_no || null,
+              job_category: values.job_category || null,
+              tso_no: values.tso_no || null,
+              kanban_job_cat: values.kanban_job_cat || null,
+            },
+            items: values.assembly_items.map((item: any) => ({
+              id: item.id, // Using the ID we stored in handleEdit
+              item_description: item.item_description,
+              item_no: item.item_no,
+              qty: Number(item.qty),
+              moc: item.moc,
+              bin_location: item.bin_location,
+              material_remark: item.material_remark || null,
+            })),
+          };
+          
+          await axiosProvider.put("/fineengg_erp/system/jobs/bulk", bulkUpdatePayload);
+          toast.success("Assembly updated successfully");
+          fetchData(activeFilter, currentPage);
+          resetFormState();
+          return;
+        }
         await axiosProvider.post("/fineengg_erp/system/jobs/bulk", bulkPayload);
         toast.success("Assembly added successfully");
         fetchData(activeFilter, currentPage);
@@ -296,13 +370,13 @@ export default function Home() {
       bin_location: values.bin_location,
       material_remark: values.material_remark || "",
       product_desc: values.product_desc || null,
+      product_item_no: null,
       product_qty: values.product_qty ? Number(values.product_qty) : null,
     };
 
     // Add conditional fields
     if (values.job_type === "JOB_SERVICE") {
       payload.job_no = values.job_no;
-      payload.sub_type = values.sub_type;
     } else if (values.job_type === "TSO_SERVICE") {
       payload.tso_no = values.tso_no;
       payload.job_category = values.job_category;
@@ -313,30 +387,22 @@ export default function Home() {
     }
 
     try {
-      await axiosProvider.post("/fineengg_erp/system/jobs", payload);
-
-      // Different success messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.success("Job Service added successfully");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.success("TSO Service added successfully");
-      } else if (values.job_type === "KANBAN") {
-        toast.success("Kanban added successfully");
+      if (editingJob) {
+        await axiosProvider.put(`/fineengg_erp/system/jobs/${editingJob.id}`, payload);
+        toast.success(`${values.job_type.replace('_', ' ')} updated successfully`);
+      } else {
+        await axiosProvider.post("/fineengg_erp/system/jobs", payload);
+        toast.success(`${values.job_type.replace('_', ' ')} added successfully`);
       }
 
       fetchData(activeFilter, currentPage);
-      setFlyoutOpen(false);
+      resetFormState();
     } catch (error: any) {
       console.error("Error saving job:", error);
-
-      // Different error messages based on job type
-      if (values.job_type === "JOB_SERVICE") {
-        toast.error("Failed to add Job Service");
-      } else if (values.job_type === "TSO_SERVICE") {
-        toast.error("Failed to add TSO Service");
-      } else if (values.job_type === "KANBAN") {
-        toast.error("Failed to add Kanban");
-      }
+      toast.error(
+        error?.response?.data?.message || 
+        `Failed to ${editingJob ? "update" : "add"} ${values.job_type}`
+      );
     }
   };
 
@@ -373,6 +439,7 @@ export default function Home() {
 
   const resetFormState = () => {
     setFlyoutOpen(false);
+    setEditingJob(null);
   };
 
   const openJobServiceFlyout = (subType: string = "PARTIAL") => {
@@ -398,6 +465,33 @@ export default function Home() {
 
   // Get initial values based on flyout type
   const initialFormValues = useMemo(() => {
+    if (editingJob) {
+      const subType = editingJob.product_item_no ? "ASSEMBLY" : "PARTIAL";
+      return {
+        job_type: editingJob.job_type || flyoutType,
+        client_name: editingJob.client_name || "",
+        jo_number: editingJob.jo_number || "",
+        job_category: editingJob.job_category || "",
+        job_no: editingJob.job_no || "",
+        tso_no: editingJob.tso_no || "",
+        kanban_job_cat: editingJob.kanban_job_cat || "",
+        job_order_date: editingJob.job_order_date || "",
+        mtl_rcd_date: editingJob.mtl_rcd_date || "",
+        mtl_challan_no: editingJob.mtl_challan_no || "",
+        item_description: editingJob.item_description || "",
+        item_no: editingJob.item_no || "",
+        qty: editingJob.qty || editingJob.qty_history || "",
+        moc: editingJob.moc || "",
+        bin_location: editingJob.bin_location || "",
+        material_remark: editingJob.material_remark || "",
+        product_desc: editingJob.product_desc || "",
+        product_item_no: editingJob.product_item_no || "",
+        product_qty: editingJob.product_qty || "",
+        sub_type: subType,
+        assembly_items: editingJob.assembly_items || (subType === "ASSEMBLY" ? [{}] : []),
+      };
+    }
+
     const values: any = {
       ...initialValues,
       job_type: flyoutType,
@@ -426,10 +520,11 @@ export default function Home() {
       values.bin_location = "";
       values.material_remark = "";
       values.product_desc = "";
+      values.product_item_no = "";
       values.product_qty = "";
     }
     return values;
-  }, [flyoutType, selectedSubType]);
+  }, [flyoutType, selectedSubType, editingJob]);
 
   // Get category options based on job type
   const getCategoryOptions = (jobType: string) => {
@@ -443,17 +538,19 @@ export default function Home() {
 
   // Get flyout title
   const getFlyoutTitle = () => {
+    const mode = editingJob ? "Edit" : "Add";
     const subTypeLabel = selectedSubType === "PARTIAL" ? "Partial" : "Assembly";
     if (flyoutType === "JOB_SERVICE")
-      return `Add Job Service (${subTypeLabel})`;
+      return `${mode} Job Service (${subTypeLabel})`;
     if (flyoutType === "TSO_SERVICE")
-      return `Add TSO Service (${subTypeLabel})`;
-    if (flyoutType === "KANBAN") return `Add Kanban (${subTypeLabel})`;
-    return "Add Job";
+      return `${mode} TSO Service (${subTypeLabel})`;
+    if (flyoutType === "KANBAN") return `${mode} Kanban (${subTypeLabel})`;
+    return `${mode} Job`;
   };
 
   // Get submit button text
   const getSubmitButtonText = () => {
+    if (editingJob) return "Update Job";
     if (flyoutType === "JOB_SERVICE") return "Add Job Service";
     if (flyoutType === "TSO_SERVICE") return "Add TSO Service";
     if (flyoutType === "KANBAN") return "Add Kanban";
@@ -676,6 +773,12 @@ export default function Home() {
                         scope="col"
                         className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
                       >
+                        Product Item No
+                      </th>
+                      <th
+                        scope="col"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                      >
                         Product Qty
                       </th>
                       <th
@@ -744,7 +847,7 @@ export default function Home() {
                     {data.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={15}
+                          colSpan={16}
                           className="px-4 py-6 text-center border border-tableBorder"
                         >
                           <p className="text-[#666666] text-sm">
@@ -759,7 +862,16 @@ export default function Home() {
                           key={item.id}
                         >
                           <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
-                            {item.client_name || "N/A"}
+                            <div className="flex flex-col">
+                              <span>{item.client_name || "N/A"}</span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit mt-1 ${
+                                item.product_item_no 
+                                  ? 'bg-purple-100 text-purple-700' 
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {item.product_item_no ? 'ASSEMBLY' : 'PARTIAL'}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.job_no || "N/A"}
@@ -769,6 +881,9 @@ export default function Home() {
                           </td>
                           <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.product_desc || "N/A"}
+                          </td>
+                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
+                            {item.product_item_no || "N/A"}
                           </td>
                           <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.product_qty || "N/A"}
@@ -802,6 +917,13 @@ export default function Home() {
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
+                                title="Edit"
+                              >
+                                <FaRegEdit className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => handleDelete(item.id)}
                                 className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
@@ -1233,6 +1355,26 @@ export default function Home() {
                         {/* Assembly Items - Only for JOB_SERVICE - ASSEMBLY */}
                         {values.sub_type === "ASSEMBLY" && (
                           <>
+                            <div className="w-full">
+                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                Product Item No
+                              </p>
+                              <input
+                                type="text"
+                                name="product_item_no"
+                                value={values.product_item_no}
+                                onChange={(e) =>
+                                  setFieldValue("product_item_no", e.target.value)
+                                }
+                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                placeholder="Enter Product Item No"
+                              />
+                              <ErrorMessage
+                                name="product_item_no"
+                                component="div"
+                                className="text-red-500 text-sm mt-1"
+                              />
+                            </div>
                             <div className="w-full">
                               <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
                                 Product Description
