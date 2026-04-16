@@ -15,8 +15,16 @@ import DatePickerInput from "../../component/DatePickerInput";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import Swal from "sweetalert2";
 import PageGuard from "../../component/PageGuard";
+import StorageManager from "../../../provider/StorageManager";
 
 const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
+
+// Permission helper function
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
 
 const clientOptions = [
   { value: "Amar Equipment", label: "Amar Equipment" },
@@ -216,6 +224,12 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
 
+  // Get user permissions
+  const permissions = storage.getUserPermissions();
+  
+  // ALL buttons (Add Job Service, Add TSO Service, Add Kanban, Delete) controlled by material.data.edit
+  const canEditInventory = hasPermission(permissions, "material.data.edit");
+
   const fetchData = useCallback(async (filter: string, page: number) => {
     try {
       let query = `?page=${page}&limit=${pageSize}`;
@@ -234,7 +248,7 @@ export default function Home() {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
     }
-  }, []);
+  }, [pageSize]);
 
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
@@ -242,6 +256,11 @@ export default function Home() {
   };
 
   const handleEdit = async (item: any) => {
+    if (!canEditInventory) {
+      toast.error("You don't have permission to edit jobs");
+      return;
+    }
+    
     const subType = item.product_item_no ? "ASSEMBLY" : "PARTIAL";
     
     if (subType === "ASSEMBLY") {
@@ -274,6 +293,11 @@ export default function Home() {
   };
 
   const handleSubmit = async (values: any) => {
+    if (!canEditInventory) {
+      toast.error("You don't have permission to add/edit jobs");
+      return;
+    }
+    
     if (values.sub_type === "ASSEMBLY") {
       const commonData: any = {
         job_type: values.job_type,
@@ -328,7 +352,7 @@ export default function Home() {
               kanban_job_cat: values.kanban_job_cat || null,
             },
             items: values.assembly_items.map((item: any) => ({
-              id: item.id, // Using the ID we stored in handleEdit
+              id: item.id,
               item_description: item.item_description,
               item_no: item.item_no,
               qty: Number(item.qty),
@@ -407,6 +431,12 @@ export default function Home() {
   };
 
   const handleDelete = async (id: string) => {
+    // Check edit permission for delete
+    if (!canEditInventory) {
+      toast.error("You don't have permission to delete jobs");
+      return;
+    }
+
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -443,6 +473,10 @@ export default function Home() {
   };
 
   const openJobServiceFlyout = (subType: string = "PARTIAL") => {
+    if (!canEditInventory) {
+      toast.error("You don't have permission to add Job Service");
+      return;
+    }
     setFlyoutType("JOB_SERVICE");
     setSelectedSubType(subType);
     setFlyoutOpen(true);
@@ -450,6 +484,10 @@ export default function Home() {
   };
 
   const openTsoServiceFlyout = (subType: string = "PARTIAL") => {
+    if (!canEditInventory) {
+      toast.error("You don't have permission to add TSO Service");
+      return;
+    }
     setFlyoutType("TSO_SERVICE");
     setSelectedSubType(subType);
     setFlyoutOpen(true);
@@ -457,6 +495,10 @@ export default function Home() {
   };
 
   const openKanbanFlyout = (subType: string = "PARTIAL") => {
+    if (!canEditInventory) {
+      toast.error("You don't have permission to add Kanban");
+      return;
+    }
     setFlyoutType("KANBAN");
     setSelectedSubType(subType);
     setFlyoutOpen(true);
@@ -573,7 +615,7 @@ export default function Home() {
           -moz-appearance: textfield;
         }
       `}</style>
-      <PageGuard requiredPermission="inventory.view">
+      <PageGuard requiredPermission="inventory1.view">
         <div className="flex justify-end min-h-screen">
           <LeftSideBar />
           {/* Main content right section */}
@@ -581,7 +623,7 @@ export default function Home() {
             <div className="absolute bottom-0 right-0">
               <Image
                 src="/images/sideDesign.svg"
-                alt="side desgin"
+                alt="side design"
                 width={100}
                 height={100}
                 className="w-full h-full"
@@ -647,20 +689,19 @@ export default function Home() {
                   </button>
                 </div>
                 <div className="flex justify-center items-center gap-4">
+                  {/* Add Job Service Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-blue-600 group hover:bg-blue-500"
-                      onClick={() =>
-                        setJobServiceDropdownOpen(!isJobServiceDropdownOpen)
-                      }
+                      className={`flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
+                        canEditInventory ? "bg-blue-600 group hover:bg-blue-500" : "bg-gray-400 cursor-not-allowed"
+                      }`}
+                      onClick={() => canEditInventory && setJobServiceDropdownOpen(!isJobServiceDropdownOpen)}
                     >
-                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                        <p className="text-white text-sm font-medium group-hover:text-white">
-                        Add Job Service
-                      </p>
+                      <FiFilter className="w-4 h-4 text-white" />
+                      <p className="text-white text-sm font-medium">Add Job Service</p>
                       <FaChevronDown className="w-3 h-3 text-white ml-2" />
                     </div>
-                    {isJobServiceDropdownOpen && (
+                    {canEditInventory && isJobServiceDropdownOpen && (
                       <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
                         <div
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
@@ -677,20 +718,20 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+
+                  {/* Add TSO Service Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-green-600 group hover:bg-green-500"
-                      onClick={() =>
-                        setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)
-                      }
+                      className={`flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
+                        canEditInventory ? "bg-green-600 group hover:bg-green-500" : "bg-gray-400 cursor-not-allowed"
+                      }`}
+                      onClick={() => canEditInventory && setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)}
                     >
-                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                        <p className="text-white text-sm font-medium group-hover:text-white">
-                        Add TSO Service
-                      </p>
+                      <FiFilter className="w-4 h-4 text-white" />
+                      <p className="text-white text-sm font-medium">Add TSO Service</p>
                       <FaChevronDown className="w-3 h-3 text-white ml-2" />
                     </div>
-                    {isTsoServiceDropdownOpen && (
+                    {canEditInventory && isTsoServiceDropdownOpen && (
                       <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
                         <div
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
@@ -707,20 +748,20 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+
+                  {/* Add Kanban Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
-                      className="flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-purple-600 group hover:bg-purple-500"
-                      onClick={() =>
-                        setKanbanDropdownOpen(!isKanbanDropdownOpen)
-                      }
+                      className={`flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
+                        canEditInventory ? "bg-purple-600 group hover:bg-purple-500" : "bg-gray-400 cursor-not-allowed"
+                      }`}
+                      onClick={() => canEditInventory && setKanbanDropdownOpen(!isKanbanDropdownOpen)}
                     >
-                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                        <p className="text-white text-sm font-medium group-hover:text-white">
-                        Add Kanban
-                      </p>
+                      <FiFilter className="w-4 h-4 text-white" />
+                      <p className="text-white text-sm font-medium">Add Kanban</p>
                       <FaChevronDown className="w-3 h-3 text-white ml-2" />
                     </div>
-                    {isKanbanDropdownOpen && (
+                    {canEditInventory && isKanbanDropdownOpen && (
                       <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
                         <div
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
@@ -916,22 +957,24 @@ export default function Home() {
                             {item.material_remark || "N/A"}
                           </td>
                           <td className="px-2 py-2 border border-tableBorder">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleEdit(item)}
-                                className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
-                                title="Edit"
-                              >
-                                <FaRegEdit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                                title="Delete"
-                              >
-                                <HiTrash className="w-4 h-4" />
-                              </button>
-                            </div>
+                            {canEditInventory && (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleEdit(item)}
+                                  className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200 transition-colors"
+                                  title="Edit"
+                                >
+                                  <FaRegEdit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(item.id)}
+                                  className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                                  title="Delete"
+                                >
+                                  <HiTrash className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -939,7 +982,7 @@ export default function Home() {
                   </tbody>
                 </table>
               </div>
-
+              
               {/* Pagination Controls */}
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 px-2">
                 <p className="text-[#666666] text-sm font-medium">
@@ -966,7 +1009,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* FITLER FLYOUT */}
+        {/* FILTER FLYOUT */}
         <>
           {/* DARK BG SCREEN */}
           {isFlyoutOpen && (
@@ -1009,7 +1052,6 @@ export default function Home() {
                   setFieldValue,
                   handleSubmit,
                   isSubmitting,
-                  errors,
                 }) => (
                   <Form onSubmit={handleSubmit} autoComplete="off">
                     <div className="w-full">
@@ -1169,7 +1211,6 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* Job Order Date */}
                         {/* Job Order Date */}
                         <div className="w-full">
                           <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
@@ -1352,7 +1393,7 @@ export default function Home() {
                           </>
                         )}
 
-                        {/* Assembly Items - Only for JOB_SERVICE - ASSEMBLY */}
+                        {/* Assembly Items - Only for ASSEMBLY type */}
                         {values.sub_type === "ASSEMBLY" && (
                           <>
                             <div className="w-full">
@@ -1415,199 +1456,201 @@ export default function Home() {
                                 className="text-red-500 text-sm mt-1"
                               />
                             </div>
-                            <FieldArray name="assembly_items">
-                              {({ remove, push }) => (
-                                <div className="col-span-1 md:col-span-2 space-y-6">
-                                  {values.assembly_items &&
-                                    values.assembly_items.length > 0 &&
-                                    values.assembly_items.map((item, index) => (
-                                      <div
-                                        key={index}
-                                        className="border border-gray-200 p-4 rounded-lg"
-                                      >
-                                        <div className="flex justify-between items-center mb-4">
-                                          <p className="font-semibold text-gray-700">
-                                            Item #{index + 1}
-                                          </p>
-                                          {values.assembly_items.length > 1 && (
-                                            <button
-                                              type="button"
-                                              className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                                              onClick={() => remove(index)}
-                                            >
-                                              <HiTrash className="w-4 h-4" />
-                                            </button>
-                                          )}
+                            <div className="col-span-1 md:col-span-2">
+                              <FieldArray name="assembly_items">
+                                {({ remove, push }) => (
+                                  <div className="space-y-6">
+                                    {values.assembly_items &&
+                                      values.assembly_items.length > 0 &&
+                                      values.assembly_items.map((item: any, index: number) => (
+                                        <div
+                                          key={index}
+                                          className="border border-gray-200 p-4 rounded-lg"
+                                        >
+                                          <div className="flex justify-between items-center mb-4">
+                                            <p className="font-semibold text-gray-700">
+                                              Item #{index + 1}
+                                            </p>
+                                            {values.assembly_items.length > 1 && (
+                                              <button
+                                                type="button"
+                                                className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                                                onClick={() => remove(index)}
+                                              >
+                                                <HiTrash className="w-4 h-4" />
+                                              </button>
+                                            )}
+                                          </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                            <div className="w-full md:col-span-2">
+                                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                                Item Description
+                                              </p>
+                                              <input
+                                                type="text"
+                                                name={`assembly_items.${index}.item_description`}
+                                                value={item.item_description}
+                                                onChange={(e) =>
+                                                  setFieldValue(
+                                                    `assembly_items.${index}.item_description`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                                placeholder="Enter Item Description"
+                                              />
+                                              <ErrorMessage
+                                                name={`assembly_items.${index}.item_description`}
+                                                component="div"
+                                                className="text-red-500 text-sm mt-1"
+                                              />
+                                            </div>
+                                            <div className="w-full">
+                                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                                Item No
+                                              </p>
+                                              <input
+                                                type="text"
+                                                name={`assembly_items.${index}.item_no`}
+                                                value={item.item_no}
+                                                onChange={(e) =>
+                                                  setFieldValue(
+                                                    `assembly_items.${index}.item_no`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                                placeholder="Enter Item No"
+                                              />
+                                              <ErrorMessage
+                                                name={`assembly_items.${index}.item_no`}
+                                                component="div"
+                                                className="text-red-500 text-sm mt-1"
+                                              />
+                                            </div>
+                                            <div className="w-full">
+                                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                                Quantity
+                                              </p>
+                                              <input
+                                                type="number"
+                                                name={`assembly_items.${index}.qty`}
+                                                value={item.qty}
+                                                onChange={(e) =>
+                                                  setFieldValue(
+                                                    `assembly_items.${index}.qty`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                                placeholder="Enter Quantity"
+                                              />
+                                              <ErrorMessage
+                                                name={`assembly_items.${index}.qty`}
+                                                component="div"
+                                                className="text-red-500 text-sm mt-1"
+                                              />
+                                            </div>
+                                            <div className="w-full">
+                                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                                MOC
+                                              </p>
+                                              <input
+                                                type="text"
+                                                name={`assembly_items.${index}.moc`}
+                                                value={item.moc}
+                                                onChange={(e) =>
+                                                  setFieldValue(
+                                                    `assembly_items.${index}.moc`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                                placeholder="Enter MOC"
+                                              />
+                                              <ErrorMessage
+                                                name={`assembly_items.${index}.moc`}
+                                                component="div"
+                                                className="text-red-500 text-sm mt-1"
+                                              />
+                                            </div>
+                                            <div className="w-full">
+                                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                                Bin Location
+                                              </p>
+                                              <input
+                                                type="text"
+                                                name={`assembly_items.${index}.bin_location`}
+                                                value={item.bin_location}
+                                                onChange={(e) =>
+                                                  setFieldValue(
+                                                    `assembly_items.${index}.bin_location`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
+                                                placeholder="Enter Bin Location"
+                                              />
+                                              <ErrorMessage
+                                                name={`assembly_items.${index}.bin_location`}
+                                                component="div"
+                                                className="text-red-500 text-sm mt-1"
+                                              />
+                                            </div>
+                                            <div className="w-full md:col-span-2">
+                                              <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
+                                                Material Remark
+                                              </p>
+                                              <textarea
+                                                name={`assembly_items.${index}.material_remark`}
+                                                value={item.material_remark}
+                                                onChange={(e) =>
+                                                  setFieldValue(
+                                                    `assembly_items.${index}.material_remark`,
+                                                    e.target.value
+                                                  )
+                                                }
+                                                className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999] min-h-[100px]"
+                                                placeholder="Enter Material Remark (Optional)"
+                                              />
+                                              <ErrorMessage
+                                                name={`assembly_items.${index}.material_remark`}
+                                                component="div"
+                                                className="text-red-500 text-sm mt-1"
+                                              />
+                                            </div>
+                                          </div>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                          <div className="w-full md:col-span-2">
-                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
-                                              Item Description
-                                            </p>
-                                            <input
-                                              type="text"
-                                              name={`assembly_items.${index}.item_description`}
-                                              value={item.item_description}
-                                              onChange={(e) =>
-                                                setFieldValue(
-                                                  `assembly_items.${index}.item_description`,
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
-                                              placeholder="Enter Item Description"
-                                            />
-                                            <ErrorMessage
-                                              name={`assembly_items.${index}.item_description`}
-                                              component="div"
-                                              className="text-red-500 text-sm mt-1"
-                                            />
-                                          </div>
-                                          <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
-                                              Item No
-                                            </p>
-                                            <input
-                                              type="text"
-                                              name={`assembly_items.${index}.item_no`}
-                                              value={item.item_no}
-                                              onChange={(e) =>
-                                                setFieldValue(
-                                                  `assembly_items.${index}.item_no`,
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
-                                              placeholder="Enter Item No"
-                                            />
-                                            <ErrorMessage
-                                              name={`assembly_items.${index}.item_no`}
-                                              component="div"
-                                              className="text-red-500 text-sm mt-1"
-                                            />
-                                          </div>
-                                          <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
-                                              Quantity
-                                            </p>
-                                            <input
-                                              type="number"
-                                              name={`assembly_items.${index}.qty`}
-                                              value={item.qty}
-                                              onChange={(e) =>
-                                                setFieldValue(
-                                                  `assembly_items.${index}.qty`,
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
-                                              placeholder="Enter Quantity"
-                                            />
-                                            <ErrorMessage
-                                              name={`assembly_items.${index}.qty`}
-                                              component="div"
-                                              className="text-red-500 text-sm mt-1"
-                                            />
-                                          </div>
-                                          <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
-                                              MOC
-                                            </p>
-                                            <input
-                                              type="text"
-                                              name={`assembly_items.${index}.moc`}
-                                              value={item.moc}
-                                              onChange={(e) =>
-                                                setFieldValue(
-                                                  `assembly_items.${index}.moc`,
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
-                                              placeholder="Enter MOC"
-                                            />
-                                            <ErrorMessage
-                                              name={`assembly_items.${index}.moc`}
-                                              component="div"
-                                              className="text-red-500 text-sm mt-1"
-                                            />
-                                          </div>
-                                          <div className="w-full">
-                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
-                                              Bin Location
-                                            </p>
-                                            <input
-                                              type="text"
-                                              name={`assembly_items.${index}.bin_location`}
-                                              value={item.bin_location}
-                                              onChange={(e) =>
-                                                setFieldValue(
-                                                  `assembly_items.${index}.bin_location`,
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999]"
-                                              placeholder="Enter Bin Location"
-                                            />
-                                            <ErrorMessage
-                                              name={`assembly_items.${index}.bin_location`}
-                                              component="div"
-                                              className="text-red-500 text-sm mt-1"
-                                            />
-                                          </div>
-                                          <div className="w-full md:col-span-2">
-                                            <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
-                                              Material Remark
-                                            </p>
-                                            <textarea
-                                              name={`assembly_items.${index}.material_remark`}
-                                              value={item.material_remark}
-                                              onChange={(e) =>
-                                                setFieldValue(
-                                                  `assembly_items.${index}.material_remark`,
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-sm leading-6 placeholder:text-[#999999] min-h-[100px]"
-                                              placeholder="Enter Material Remark (Optional)"
-                                            />
-                                            <ErrorMessage
-                                              name={`assembly_items.${index}.material_remark`}
-                                              component="div"
-                                              className="text-red-500 text-sm mt-1"
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  <button
-                                    type="button"
-                                    className="flex items-center gap-2 text-primary-600 font-medium py-2 px-4 border-2 border-dashed border-primary-600 rounded-lg hover:bg-primary-50"
-                                    onClick={() =>
-                                      push({
-                                        item_description: "",
-                                        item_no: "",
-                                        qty: "",
-                                        moc: "",
-                                        bin_location: "",
-                                        material_remark: "",
-                                      })
-                                    }
-                                  >
-                                    <FaPlus /> Add Another Item
-                                  </button>
-                                  <ErrorMessage
-                                    name="assembly_items"
-                                    component="div"
-                                    className="text-red-500 text-sm mt-1"
-                                  />
-                                </div>
-                              )}
-                            </FieldArray>
+                                      ))}
+                                    <button
+                                      type="button"
+                                      className="flex items-center gap-2 text-primary-600 font-medium py-2 px-4 border-2 border-dashed border-primary-600 rounded-lg hover:bg-primary-50"
+                                      onClick={() =>
+                                        push({
+                                          item_description: "",
+                                          item_no: "",
+                                          qty: "",
+                                          moc: "",
+                                          bin_location: "",
+                                          material_remark: "",
+                                        })
+                                      }
+                                    >
+                                      <FaPlus /> Add Another Item
+                                    </button>
+                                    <ErrorMessage
+                                      name="assembly_items"
+                                      component="div"
+                                      className="text-red-500 text-sm mt-1"
+                                    />
+                                  </div>
+                                )}
+                              </FieldArray>
+                            </div>
                           </>
                         )}
 
-                        {/* Material Remark */}
+                        {/* Material Remark - For non-assembly */}
                         {values.sub_type !== "ASSEMBLY" && (
                           <div className="w-full">
                             <p className="text-[#0A0A0A] font-medium text-sm leading-6 mb-2">
@@ -1636,7 +1679,7 @@ export default function Home() {
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:full text-sm font-medium leading-6 text-white text-center hover:bg-lightMaroon hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="py-[13px] px-[26px] bg-primary-600 hover:bg-primary-500 rounded-[4px] w-full md:w-auto text-sm font-medium leading-6 text-white text-center disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isSubmitting
                             ? "Submitting..."

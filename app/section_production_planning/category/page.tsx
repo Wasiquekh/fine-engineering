@@ -83,6 +83,12 @@ const initialValues = {
   drawing_recieved_date: null,
 };
 
+// Permission helper function
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
+
 export default function Home() {
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
@@ -99,6 +105,8 @@ export default function Home() {
   const storage = new StorageManager();
   const userID = storage.getUserId();
   const router = useRouter();
+  const permissions = storage.getUserPermissions();
+  const canEditCategory = hasPermission(permissions, "category.edit");
 
   const handleSubmit = async (values: any) => {
     const formatDate = (date: any) => {
@@ -144,6 +152,7 @@ export default function Home() {
   };
 
   const handleEdit = (item: any) => {
+    if (!canEditCategory) return;
     setIsEditMode(true);
     setEditId(item.id);
     setFlyoutOpen(true);
@@ -167,6 +176,7 @@ export default function Home() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canEditCategory) return;
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "You won't be able to revert this!",
@@ -272,20 +282,22 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <div className="flex justify-center items-center gap-4">
-                  <div
-                    className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 group hover:bg-primary-500"
-                    onClick={() => {
-                      resetFormState();
-                      setFlyoutOpen(true);
-                    }}
-                  >
-                    <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
-                  <p className="text-white text-sm font-medium group-hover:text-white">
-                      Add Category
-                    </p>
+                {canEditCategory && (
+                  <div className="flex justify-center items-center gap-4">
+                    <div
+                      className="flex items-center gap-2 py-3 px-6 rounded-[4px] border border-[#E7E7E7] cursor-pointer bg-primary-600 group hover:bg-primary-500"
+                      onClick={() => {
+                        resetFormState();
+                        setFlyoutOpen(true);
+                      }}
+                    >
+                      <FiFilter className="w-4 h-4 text-white group-hover:text-white" />
+                      <p className="text-white text-sm font-medium group-hover:text-white">
+                        Add Category
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
@@ -378,23 +390,25 @@ export default function Home() {
                         </div>
                       </div>
                     </th>
-                    <th
-                      scope="col"
-                      className="px-2 py-0 border border-tableBorder"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
-                          Actions
+                    {canEditCategory && (
+                      <th
+                        scope="col"
+                        className="px-2 py-0 border border-tableBorder"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold text-firstBlack text-xs uppercase leading-normal">
+                            Actions
+                          </div>
                         </div>
-                      </div>
-                    </th>
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={canEditCategory ? 10 : 9}
                         className="px-4 py-6 text-center border border-tableBorder"
                       >
                         <p className="text-[#666666] text-sm">
@@ -449,25 +463,27 @@ export default function Home() {
                             {item.tempp}
                           </p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
-                              title="Edit"
-                            >
-                              <HiPencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item.id)}
-                              className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
-                              title="Delete"
-                            >
-                              <HiTrash className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                        {canEditCategory && (
+                          <td className="px-2 py-2 border border-tableBorder">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEdit(item)}
+                                className="p-1.5 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
+                                title="Edit"
+                              >
+                                <HiPencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors"
+                                title="Delete"
+                              >
+                                <HiTrash className="w-4 h-4" />
+                              </button>
+                            </div>
+                           </td>
+                        )}
+                       </tr>
                     ))
                   )}
                 </tbody>
@@ -481,7 +497,8 @@ export default function Home() {
       </div>
 
       {/* FITLER FLYOUT */}
-      <>
+      {canEditCategory && (
+        <>
         {/* DARK BG SCREEN */}
         {isFlyoutOpen && (
           <div
@@ -751,7 +768,8 @@ export default function Home() {
             </Formik>
           </div>
         </div>
-      </>
+        </>
+      )}
       {/* FITLER FLYOUT END */}
       </PageGuard>
     </>

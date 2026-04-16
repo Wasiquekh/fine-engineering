@@ -8,10 +8,22 @@ import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
 import { FaChevronDown, FaBan } from "react-icons/fa";
-import { MdOutlineVerified } from "react-icons/md"; // Import MdOutlineVerified for QC icon
+import { MdOutlineVerified } from "react-icons/md";
 import Swal from "sweetalert2";
+import StorageManager from "../../../../provider/StorageManager";
 
 const axiosProvider = new AxiosProvider();
+const storage = new StorageManager();
+
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some(p => p.name === permissionName);
+};
+
+const hasAnyPermission = (permissions: any[] | null, permissionNames: string[]): boolean => {
+  if (!permissions) return false;
+  return permissionNames.some(name => permissions.some(p => p.name === name));
+};
 
 interface JobDetail {
   id: string;
@@ -74,6 +86,14 @@ export default function JobDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const job_no = params.job_no ? decodeURIComponent(params.job_no as string) : "";
+
+  const permissions = storage.getUserPermissions();
+  
+  // Edit permission for actions (assign, reject, qc) - Backend se aayega
+  const canEdit = hasAnyPermission(permissions, [
+    "pp.eqp.job.edit", "pp.eqp.tso.edit", "pp.eqp.kanban.edit",
+    "pp.bio.job.edit", "pp.bio.tso.edit", "pp.bio.kanban.edit"
+  ]);
 
   const groupedJobDetails = useMemo(() => {
     return jobDetails.reduce((acc, job) => {
@@ -150,6 +170,7 @@ export default function JobDetailsPage() {
   }, [job_no]);
 
   const handleAssignmentChange = (id: string, field: string, value: string) => {
+    if (!canEdit) return;
     setAssignments((prev) => ({
       ...prev,
       [id]: {
@@ -160,6 +181,7 @@ export default function JobDetailsPage() {
   };
 
   const handleAssign = async (id: string) => {
+    if (!canEdit) return;
     const assignment = assignments[id];
 
     if (!assignment?.assignTo) {
@@ -202,6 +224,7 @@ export default function JobDetailsPage() {
   };
 
   const handleReject = async (item: JobDetail) => {
+    if (!canEdit) return;
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "Do you want to reject this job?",
@@ -216,9 +239,7 @@ export default function JobDetailsPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/reject`, {});
-
         toast.success("Job rejected successfully");
-
         setJobDetails((prev) =>
           prev.map((job) => (job.id === item.id ? { ...job, is_rejected: true } : job))
         );
@@ -230,6 +251,7 @@ export default function JobDetailsPage() {
   };
 
   const handleMarkQc = async (item: JobDetail) => {
+    if (!canEdit) return;
     const result = await Swal.fire({
       title: "Are you sure?",
       text: "Do you want to mark this job as completed?",
@@ -244,9 +266,7 @@ export default function JobDetailsPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/direct_qc`, {});
-        
         toast.success("Job marked Ready-For-QC successfully");
-        
         setJobDetails((prev) =>
           prev.map((job) => (job.id === item.id ? { ...job, status: "QC", qty: 0 } : job))
         );
@@ -262,251 +282,36 @@ export default function JobDetailsPage() {
       <LeftSideBar />
       <div className="w-full md:w-[83%] bg-[#F5F7FA] min-h-[500px] rounded p-4 mt-0 relative">
         <div className="absolute bottom-0 right-0">
-          <Image
-            src="/images/sideDesign.svg"
-            alt="side design"
-            width={100}
-            height={100}
-            className="w-full h-full"
-          />
+          <Image src="/images/sideDesign.svg" alt="side design" width={100} height={100} className="w-full h-full" />
         </div>
         <DesktopHeader />
         <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
-          <button
-            onClick={() => router.back()}
-            className="text-blue-600 hover:underline mb-4"
-          >
-            &larr; Back
-          </button>
-
-          {/* Job Details Section */}
-          {/* <div className="mb-12">
-            <h1 className="text-xl font-bold mb-6">
-              Job Details for Job No: {job_no}
-            </h1>
-            <div className="relative overflow-x-auto sm:rounded-lg">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
-                  <tr className="border border-tableBorder">
-                    
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Client Name
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Job Category
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Drawing Rec. Date
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Description
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Material Type
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Quantity
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Pressure[Bar]
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Temperature
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Due Date
-                    </th>
-                    <th scope="col" className="p-3 border border-tableBorder">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={10} className="text-center py-4">
-                        Loading...
-                      </td>
-                    </tr>
-                  ) : categoryDetails.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="text-center py-4">
-                        No job details found for this job number.
-                      </td>
-                    </tr>
-                  ) : (
-                    categoryDetails.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="border border-tableBorder bg-white hover:bg-primary-100"
-                      >
-                        
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.client_name}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.job_category || "N/A"}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.drawing_recieved_date}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.description}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.material_type}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.qty}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.bar}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.tempp}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          {item.urgent_due_date || "-"}
-                        </td>
-                        <td className="px-2 py-2 border border-tableBorder">
-                          <span
-                            className={`px-2 py-1 rounded text-sm ${
-                              item.is_urgent
-                                ? "bg-red-100 text-red-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            {item.is_urgent ? "Urgent" : "Normal"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div> */}
+          <button onClick={() => router.back()} className="text-blue-600 hover:underline mb-4">&larr; Back</button>
 
           {/* Job Details Section */}
           <div className="mb-12">
-            <h1 className="text-xl font-semibold mb-6">
-              Job Details for Job No: {job_no}
-            </h1>
-
+            <h1 className="text-xl font-semibold mb-6">Job Details for Job No: {job_no}</h1>
             {loading ? (
               <p className="text-center py-4 text-gray-500">Loading...</p>
             ) : categoryDetails.length === 0 ? (
-              <p className="text-center py-4 text-gray-500">
-                No job details found for this job number.
-              </p>
+              <p className="text-center py-4 text-gray-500">No job details found for this job number.</p>
             ) : (
               <div className="space-y-8">
                 {categoryDetails.map((item) => (
                   <div key={item.id} className="space-y-4">
-                    {/* Header */}
-                    {/* <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-semibold text-gray-800">
-                        Job Info
-                      </h3>
-
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          item.is_urgent
-                            ? "bg-red-100 text-red-600"
-                            : "bg-green-100 text-green-600"
-                        }`}
-                      >
-                        {item.is_urgent ? "Urgent" : "Normal"}
-                      </span>
-                    </div> */}
-
-                    {/* First Row - 4 Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Client Name
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.client_name || "-"}
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Job Category
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.job_category || "N/A"}
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Drawing Rec. Date
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.drawing_recieved_date || "-"}
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Material Type
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.material_type || "-"}
-                        </span>
-                      </div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Client Name</span><span className="text-sm font-semibold text-gray-900">{item.client_name || "-"}</span></div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Job Category</span><span className="text-sm font-semibold text-gray-900">{item.job_category || "N/A"}</span></div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Drawing Rec. Date</span><span className="text-sm font-semibold text-gray-900">{item.drawing_recieved_date || "-"}</span></div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Material Type</span><span className="text-sm font-semibold text-gray-900">{item.material_type || "-"}</span></div>
                     </div>
-
-                    {/* Second Row - 4 Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Quantity
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.qty || "-"}
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Pressure [Bar]
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.bar || "-"}
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Temperature
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.tempp || "-"}
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                        <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-1">
-                          Due Date
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900">
-                          {item.urgent_due_date || "-"}
-                        </span>
-                      </div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Qty</span><span className="text-sm font-semibold text-gray-900">{item.qty || "-"}</span></div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Pressure [Bar]</span><span className="text-sm font-semibold text-gray-900">{item.bar || "-"}</span></div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Temperature</span><span className="text-sm font-semibold text-gray-900">{item.tempp || "-"}</span></div>
+                      <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-1">Due Date</span><span className="text-sm font-semibold text-gray-900">{item.urgent_due_date || "-"}</span></div>
                     </div>
-
-                    {/* Third Row - Description */}
-                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                      <span className="block text-gray-500 text-[10px] uppercase tracking-wider mb-2">
-                        Description
-                      </span>
-                      <p className="text-sm text-gray-900 font-medium leading-relaxed">
-                        {item.description || "-"}
-                      </p>
-                    </div>
+                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm"><span className="block text-gray-500 text-[10px] uppercase mb-2">Description</span><p className="text-sm text-gray-900 font-medium">{item.description || "-"}</p></div>
                   </div>
                 ))}
               </div>
@@ -515,188 +320,84 @@ export default function JobDetailsPage() {
 
           {/* Bottom Section */}
           <div className="flex flex-col gap-8">
-            {/* Left Side: Assignment Form */}
             <div className="w-full">
-              <h2 className="text-xl font-semibold mb-4">Material Recieved From Amar</h2>
+              <h2 className="text-xl font-semibold mb-4">Material Received From Amar</h2>
               <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1600px]">
+                <table className="w-full text-sm text-left min-w-[1100px]">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Type</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Category</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Desc</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Product Qty</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Desc</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign Date</th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">Action</th>
+                      <th className="px-4 py-4 border border-tableBorder">J/O No</th>
+                      <th className="px-4 py-4 border border-tableBorder">Product Desc</th>
+                      <th className="px-4 py-4 border border-tableBorder">Product Qty</th>
+                      <th className="px-4 py-4 border border-tableBorder">Serial No</th>
+                      <th className="px-4 py-4 border border-tableBorder">Item Desc</th>
+                      <th className="px-4 py-4 border border-tableBorder">Item No</th>
+                      <th className="px-4 py-4 border border-tableBorder">MOC</th>
+                      <th className="px-4 py-4 border border-tableBorder">Qty</th>
+                      <th className="px-4 py-4 border border-tableBorder">Bin Location</th>
+                      <th className="px-6 py-4 border border-tableBorder">Assign To</th>
+                      <th className="px-4 py-4 border border-tableBorder">Assign Date</th>
+                      {canEdit && <th className="px-4 py-4 border border-tableBorder">Action</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr>
-                        <td colSpan={14} className="text-center py-4 border border-tableBorder">Loading...</td>
-                      </tr>
+                      <tr><td colSpan={canEdit ? 12 : 11} className="text-center py-4">Loading...</td></tr>
                     ) : jobDetails.length === 0 ? (
-                      <tr>
-                        <td colSpan={14} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td>
-                      </tr>
+                      <tr><td colSpan={canEdit ? 12 : 11} className="text-center py-4">No items to assign for this job.</td></tr>
                     ) : (
                       Object.entries(groupedJobDetails).flatMap(([joNumber, jobs]) => {
                         const isExpanded = expandedJoNumbers.includes(joNumber);
                         const hasMultiple = jobs.length > 1;
-
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
                           const isProcessed = item.status === 'completed' || item.status === 'QC' || item.qty === 0;
                           return (
-                          <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 transition-colors ${isChild ? "bg-gray-50" : ""}`}>
-                            <td className="px-4 py-3 border border-tableBorder">
-                              {isFirst && (
-                                <div className="flex items-center gap-2">
-                                  {joNumber}
-                                  {hasMultiple && (
-                                    <button onClick={() => toggleJoNumberExpansion(joNumber)}>
-                                      <FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_category : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (isRejected ? "true" : item.qty) : ""}</td>
-                            <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
-                                <td className="px-4 py-3 border border-tableBorder">
-                                  {isRejected ? (
-                                      <div className="flex items-center gap-2 text-red-600 font-medium">
-                                        <FaBan className="w-4 h-4" />
-                                        <span>Rejected</span>
-                                      </div>
-                                    ) : isFirst && (assignments[item.id]?.assignTo === "Others" ? (
-                                    <div className="flex items-center gap-1">
-                                      <input
-                                        type="text"
-                                        placeholder="Enter Name"
-                                        className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                        value={assignments[item.id]?.otherName || ""}
-                                        onChange={(e) =>
-                                          handleAssignmentChange(item.id, "otherName", e.target.value)
-                                        }
-                                        autoFocus={!item.assign_to}
-                                        disabled={!!item.assign_to || isProcessed || !!isRejected}
-                                      />
-                                      {!item.assign_to && (
-                                        <button
-                                          onClick={() => {
-                                            handleAssignmentChange(item.id, "assignTo", "");
-                                            handleAssignmentChange(item.id, "otherName", "");
-                                          }}
-                                          className="text-gray-500 hover:text-red-500 px-1"
-                                          title="Clear"
-                                        >
-                                          ✕
-                                        </button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <select
-                                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                      value={assignments[item.id]?.assignTo || ""}
-                                      onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)}
-                                      disabled={!!item.assign_to || isProcessed || !!isRejected}
-                                    >
-                                      <option value="">Select</option>
-                                      <option value="Usmaan">Usmaan</option>
-                                      <option value="Ramzaan">Ramzaan</option>
-                                      <option value="Riyaaz">Riyaaz</option>
-                                      <option value="Ashfaq">Ashfaq</option>
-                                      <option value="Others">Others</option>
-                                    </select>
-                                  ))}
-                                </td>
-                                <td className="px-4 py-3 border border-tableBorder">
-                                  {isFirst && (
-                                  <input
-                                    type="date"
-                                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                    value={assignments[item.id]?.assignDate || ""}
-                                    onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                                    disabled={!!item.assign_to || isProcessed || !!isRejected}
-                                  />
-                                  )}
-                                </td>
+                            <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
+                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <div className="flex items-center gap-2">{joNumber}{hasMultiple && <button onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}</div>}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (isRejected ? "true" : item.qty) : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {isRejected ? (
+                                  <div className="flex items-center gap-2 text-red-600 font-medium"><FaBan className="w-4 h-4" /><span>Rejected</span></div>
+                                ) : isFirst && (assignments[item.id]?.assignTo === "Others" ? (
+                                  <div className="flex items-center gap-1"><input type="text" placeholder="Enter Name" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.otherName || ""} onChange={(e) => handleAssignmentChange(item.id, "otherName", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} /></div>
+                                ) : (
+                                  <select className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignTo || ""} onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit}>
+                                    <option value="">Select</option><option value="Usmaan">Usmaan</option><option value="Ramzaan">Ramzaan</option><option value="Riyaaz">Riyaaz</option><option value="Ashfaq">Ashfaq</option><option value="Others">Others</option>
+                                  </select>
+                                ))}
+                              </td>
+                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <input type="date" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignDate || ""} onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} />}</td>
+                              {canEdit && (
                                 <td className="px-4 py-3 border border-tableBorder">
                                   <div className="flex items-center gap-2">
                                     {isFirst && !isRejected && !isProcessed && (
-                                      <button
-                                        onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleAssign(item.id)}
-                                        disabled={!!item.assign_to || !!isRejected || isProcessed}
-                                        className={`px-3 py-1 rounded text-sm transition-colors text-white ${
-                                          item.status === 'completed' ? 'bg-indigo-500 cursor-default' :
-                                          item.status === 'QC' ? 'bg-orange-500 cursor-default' :
-                                          item.assign_to ? "bg-green-600 cursor-default" :
-                                          isRejected ? "bg-gray-400 cursor-not-allowed" :
-                                          "bg-blue-600 hover:bg-blue-700"
-                                        }`}
-                                      >
+                                      <button onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleAssign(item.id)} disabled={!!item.assign_to || !!isRejected || isProcessed} className={`px-3 py-1 rounded text-sm text-white ${item.status === 'completed' ? 'bg-indigo-500' : item.status === 'QC' ? 'bg-orange-500' : item.assign_to ? "bg-green-600" : isRejected ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
                                         {item.status === 'completed' ? 'Completed' : item.status === 'QC' ? 'In QC' : item.assign_to ? "Assigned" : "Assign"}
                                       </button>
                                     )}
-                                    {(isChild || !hasMultiple) && ( <>
-                                    <button
-                                      onClick={() => !item.assign_to && !isRejected && !isProcessed && handleReject(item)}
-                                      disabled={!!item.assign_to || !!isRejected || isProcessed}
-                                      className={`p-2 rounded-md transition-colors ${
-                                        isRejected
-                                          ? "bg-red-200 text-red-800 cursor-not-allowed"
-                                          : !!item.assign_to || isProcessed
-                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
-                                          : "bg-red-100 text-red-600 hover:bg-red-200"
-                                      }`}
-                                      title={isRejected ? "Rejected" : "Reject Item"}
-                                    >
-                                      <FaBan className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => !item.assign_to && !isProcessed && !isRejected && handleMarkQc(item)}
-                                      disabled={!!item.assign_to || isProcessed || !!isRejected}
-                                      className={`p-2 rounded-md transition-colors ${
-                                        !!item.assign_to || isProcessed || !!isRejected
-                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
-                                          : "bg-green-100 text-green-600 hover:bg-green-200"
-                                      }`}
-                                      title={item.status === 'completed' ? 'Completed' : item.status === 'QC' ? 'Sent to QC' : 'Mark for QC'}
-                                    >
-                                      <MdOutlineVerified className="w-4 h-4" />
-                                    </button>
-                                    </> )}
+                                    {(isChild || !hasMultiple) && (
+                                      <>
+                                        <button onClick={() => !item.assign_to && !isRejected && !isProcessed && handleReject(item)} disabled={!!item.assign_to || !!isRejected || isProcessed} className={`p-2 rounded-md ${isRejected ? "bg-red-200 text-red-800" : (!!item.assign_to || isProcessed) ? "bg-gray-100 text-gray-400 opacity-50" : "bg-red-100 text-red-600 hover:bg-red-200"}`}><FaBan className="w-4 h-4" /></button>
+                                        <button onClick={() => !item.assign_to && !isProcessed && !isRejected && handleMarkQc(item)} disabled={!!item.assign_to || isProcessed || !!isRejected} className={`p-2 rounded-md ${(!!item.assign_to || isProcessed || !!isRejected) ? "bg-gray-100 text-gray-400 opacity-50" : "bg-green-100 text-green-600 hover:bg-green-200"}`}><MdOutlineVerified className="w-4 h-4" /></button>
+                                      </>
+                                    )}
                                   </div>
                                 </td>
-                          </tr>
-                        );
+                              )}
+                            </tr>
+                          );
                         };
-
-                        if (!hasMultiple) {
-                          return [renderJobRow(jobs[0], true, false)];
-                        }
-
+                        if (!hasMultiple) return [renderJobRow(jobs[0], true, false)];
                         const rows = [renderJobRow(jobs[0], true, false)];
-                        if (isExpanded) {
-                          jobs.forEach(job => rows.push(renderJobRow(job, false, true)));
-                        }
+                        if (isExpanded) jobs.forEach(job => rows.push(renderJobRow(job, false, true)));
                         return rows;
                       })
                     )}
@@ -705,89 +406,29 @@ export default function JobDetailsPage() {
               </div>
             </div>
 
-            {/* Right Side: Pending Materials */}
             <div className="w-full">
-              <h1 className="text-xl font-semibold mb-6">
-                Pending Materials for Job No: {job_no}
-              </h1>
+              <h1 className="text-xl font-semibold mb-6">Pending Materials for Job No: {job_no}</h1>
               <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 min-w-[1000px]">
+                <table className="w-full text-sm text-left min-w-[1000px]">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Job No
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Description
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Item No
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Size
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        MOC
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Quantity
-                      </th>
-                      <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                        Status
-                      </th>
+                      <th className="px-4 py-4 border border-tableBorder">Job No</th><th className="px-4 py-4 border border-tableBorder">Description</th><th className="px-4 py-4 border border-tableBorder">Item No</th><th className="px-4 py-4 border border-tableBorder">Size</th><th className="px-4 py-4 border border-tableBorder">MOC</th><th className="px-4 py-4 border border-tableBorder">Qty</th><th className="px-4 py-4 border border-tableBorder">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-4">
-                          Loading...
-                        </td>
+                    {loading ? <tr><td colSpan={7} className="text-center py-4">Loading...</td></tr>
+                    : pendingData.filter((item) => !item.is_completed).length === 0 ? <tr><td colSpan={7} className="text-center py-4">No pending materials found.</td></tr>
+                    : pendingData.filter((item) => !item.is_completed).map((item) => (
+                      <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                        <td className="px-4 py-3 border border-tableBorder">{item.job_no}</td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.description}</td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.item_no}</td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.size}</td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.moc}</td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.qty}</td>
+                        <td className="px-4 py-3 border border-tableBorder"><span className={`px-2 py-1 rounded text-sm ${item.is_completed ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600"}`}>{item.is_completed ? "Completed" : "Pending"}</span></td>
                       </tr>
-                    ) : pendingData.filter((item) => !item.is_completed).length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-4">
-                          No pending materials found for this job number.
-                        </td>
-                      </tr>
-                    ) : (
-                      pendingData.filter((item) => !item.is_completed).map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border border-tableBorder bg-white hover:bg-primary-100"
-                        >
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.job_no}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.description}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.item_no}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.size}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.moc}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            {item.qty}
-                          </td>
-                          <td className="px-4 py-3 border border-tableBorder">
-                            <span
-                              className={`px-2 py-1 rounded text-sm ${
-                                item.is_completed
-                                  ? "bg-green-100 text-green-600"
-                                  : "bg-yellow-100 text-yellow-600"
-                              }`}
-                            >
-                              {item.is_completed ? "Completed" : "Pending"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>

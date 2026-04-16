@@ -36,7 +36,6 @@ export default function OtpHome() {
     if (accessToken && accessToken !== "null" && accessToken !== "") {
       const permissions = storage.getUserPermissions();
       console.log("User has access token, permissions:", permissions);
-      // User ko uske first available module pe bhejo
       const redirectPath = getFirstAvailableModulePath(permissions);
       if (redirectPath) {
         console.log("Redirecting to first module:", redirectPath);
@@ -197,6 +196,7 @@ export default function OtpHome() {
 
       if (res.status === 200 && res.data.success) {
         // Save the access token
+        console.log("Saving access token...");
         await storage.saveAccessToken(res.data.data.token);
         
         if (isSetup && secretKey) {
@@ -226,7 +226,7 @@ export default function OtpHome() {
         // IMPORTANT: Get permissions and redirect to first available module
         const permissions = storage.getUserPermissions();
         console.log("========== REDIRECT DEBUG ==========");
-        console.log("Permissions from storage:", permissions);
+        console.log("Permissions from storage:", JSON.stringify(permissions, null, 2));
         console.log("Permissions length:", permissions?.length);
         
         let redirectPath = "/unauthorized";
@@ -248,6 +248,7 @@ export default function OtpHome() {
         
         console.log("Final redirect path:", redirectPath);
         
+        // Small delay before redirect
         setTimeout(() => {
           router.push(redirectPath);
         }, 1000);
