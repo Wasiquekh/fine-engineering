@@ -322,22 +322,22 @@ export default function JobDetailsPage() {
           <div className="flex flex-col gap-8">
             <div className="w-full">
               <h2 className="text-xl font-semibold mb-4">Material Received From Amar</h2>
-              <div className="relative overflow-x-auto sm:rounded-lg border border-tableBorder shadow-sm">
-                <table className="w-full text-sm text-left min-w-[1100px]">
-                  <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
+              <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg border border-tableBorder shadow-sm max-h-[550px]">
+                <table className="w-full text-sm text-left min-w-[1100px] border-separate border-spacing-0">
+                  <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50 sticky top-0 z-20">
                     <tr className="border border-tableBorder">
-                      <th className="px-4 py-4 border border-tableBorder">J/O No</th>
-                      <th className="px-4 py-4 border border-tableBorder">Product Desc</th>
-                      <th className="px-4 py-4 border border-tableBorder">Product Qty</th>
-                      <th className="px-4 py-4 border border-tableBorder">Serial No</th>
-                      <th className="px-4 py-4 border border-tableBorder">Item Desc</th>
-                      <th className="px-4 py-4 border border-tableBorder">Item No</th>
-                      <th className="px-4 py-4 border border-tableBorder">MOC</th>
-                      <th className="px-4 py-4 border border-tableBorder">Qty</th>
-                      <th className="px-4 py-4 border border-tableBorder">Bin Location</th>
-                      <th className="px-6 py-4 border border-tableBorder">Assign To</th>
-                      <th className="px-4 py-4 border border-tableBorder">Assign Date</th>
-                      {canEdit && <th className="px-4 py-4 border border-tableBorder">Action</th>}
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">J/O No</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Product Desc</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Product Qty</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Serial No</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Item Desc</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Item No</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">MOC</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Qty</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Bin Location</th>
+                      <th className="px-6 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Assign To</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Assign Date</th>
+                      {canEdit && <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Action</th>}
                     </tr>
                   </thead>
                   <tbody>

@@ -747,7 +747,7 @@ export default function Home() {
                       <p className="text-white text-sm font-medium">Add Job</p>
                     </div>
                     {canEditInventory && isJobServiceDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-50">
                         <div
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
                           onClick={() => openJobServiceFlyout("PARTIAL")}
@@ -776,7 +776,7 @@ export default function Home() {
                       <p className="text-white text-sm font-medium">Add TSO</p>
                     </div>
                     {canEditInventory && isTsoServiceDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-50">
                         <div
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
                           onClick={() => openTsoServiceFlyout("PARTIAL")}
@@ -805,7 +805,7 @@ export default function Home() {
                       <p className="text-white text-sm font-medium">Add Kanban</p>
                     </div>
                     {canEditInventory && isKanbanDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
+                      <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-50">
                         <div
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
                           onClick={() => openKanbanFlyout("PARTIAL")}
