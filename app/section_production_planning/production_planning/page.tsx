@@ -161,57 +161,73 @@ export default function Home() {
         return true;
       });
     }
+    
     if (activeFilter === "TSO_SERVICE") {
-      const tsoData = currentData.filter((item) => {
-        if (item.job_type !== "TSO_SERVICE") return false;
-        if (tsoSubFilter === "URGENT_TAB") {
-          return isItemUrgent(item);
-        }
-        if (tsoSubFilter === "ALL") return true;
-        return item.job_category === tsoSubFilter;
-      });
+      // First filter by job type
+      let tsoData = currentData.filter((item) => item.job_type === "TSO_SERVICE");
+      
+      // Apply urgent filter if needed
+      if (tsoSubFilter === "URGENT_TAB") {
+        tsoData = tsoData.filter((item) => isItemUrgent(item));
+      } else if (tsoSubFilter !== "ALL") {
+        tsoData = tsoData.filter((item) => item.job_category === tsoSubFilter);
+      }
 
+      // Deduplicate after filtering to avoid losing data
       const uniqueTsoData: any[] = [];
       const seenTsoNos = new Set();
 
       tsoData.forEach((item) => {
-        if (item.tso_no && !seenTsoNos.has(item.tso_no)) {
-          seenTsoNos.add(item.tso_no);
-          uniqueTsoData.push(item);
-        } else if (!item.tso_no) {
+        // Only deduplicate if there's a tso_no
+        if (item.tso_no) {
+          if (!seenTsoNos.has(item.tso_no)) {
+            seenTsoNos.add(item.tso_no);
+            uniqueTsoData.push(item);
+          }
+        } else {
+          // Keep items without tso_no
           uniqueTsoData.push(item);
         }
       });
 
       return uniqueTsoData;
     }
+    
     if (activeFilter === "KANBAN") {
-      const kanbanData = currentData.filter((item) => {
-        if (item.job_type !== "KANBAN") return false;
-        if (kanbanSubFilter === "URGENT_TAB") {
-          return isItemUrgent(item);
-        }
-        if (kanbanSubFilter === "ALL") return true;
-        return item.job_category === kanbanSubFilter;
-      });
+      // First filter by job type
+      let kanbanData = currentData.filter((item) => item.job_type === "KANBAN");
+      
+      // Apply urgent filter if needed
+      if (kanbanSubFilter === "URGENT_TAB") {
+        kanbanData = kanbanData.filter((item) => isItemUrgent(item));
+      } else if (kanbanSubFilter !== "ALL") {
+        kanbanData = kanbanData.filter((item) => item.job_category === kanbanSubFilter);
+      }
 
+      // Deduplicate after filtering to avoid losing data
       const uniqueKanbanData: any[] = [];
       const seenJoNumbers = new Set();
 
       kanbanData.forEach((item) => {
-        if (item.jo_number && !seenJoNumbers.has(item.jo_number)) {
-          seenJoNumbers.add(item.jo_number);
-          uniqueKanbanData.push(item);
-        } else if (!item.jo_number) {
+        // Only deduplicate if there's a jo_number
+        if (item.jo_number) {
+          if (!seenJoNumbers.has(item.jo_number)) {
+            seenJoNumbers.add(item.jo_number);
+            uniqueKanbanData.push(item);
+          }
+        } else {
+          // Keep items without jo_number
           uniqueKanbanData.push(item);
         }
       });
 
       return uniqueKanbanData;
     }
+    
     if (activeFilter === "ALL") {
       return currentData;
     }
+    
     return currentData.filter((item) => item.job_type === activeFilter);
   }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, currentDataset]);
 
@@ -295,7 +311,20 @@ export default function Home() {
 
         if (response.status === 200) {
           toast.success("Job marked as urgent");
-          fetchData();
+          
+          // Store current filter values before refetching
+          const currentTsoFilter = tsoSubFilter;
+          const currentKanbanFilter = kanbanSubFilter;
+          
+          // Refetch data
+          await fetchData();
+          
+          // Ensure filters are still applied
+          if (activeFilter === "TSO_SERVICE") {
+            setTsoSubFilter(currentTsoFilter);
+          } else if (activeFilter === "KANBAN") {
+            setKanbanSubFilter(currentKanbanFilter);
+          }
         } else {
           toast.error("Failed to mark as urgent");
         }
@@ -382,6 +411,11 @@ export default function Home() {
         } else {
           baseUrl = "/fineengg_erp/system/jobs";
         }
+      }
+
+      // Ensure job_type filter is applied for TSO and KANBAN when using the jobs endpoint
+      if (baseUrl && baseUrl.includes("/system/jobs") && activeFilter !== "ALL" && activeFilter !== "JOB_SERVICE") {
+        params.set("job_type", activeFilter);
       }
 
       if (clientParam) {
