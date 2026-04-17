@@ -38,6 +38,16 @@ type QcRow = {
     job_category?: string | null;
     client_name?: string | null;
     assign_to?: string | null;
+    jo_number?: string | null;
+    item_description?: string | null;
+    item_no?: string | null;
+    product_desc?: string | null;
+    product_qty?: number | string | null;
+    product_item_no?: string | null;
+    qty?: number | string | null;
+    moc?: string | null;
+    bin_location?: string | null;
+    assign_date?: string | null;
   } | null;
 };
 
@@ -114,7 +124,8 @@ export default function QcMainPage() {
       
       if (fetchedData.length > 0) {
         console.log("Sample data item:", fetchedData[0]);
-        console.log("Available job categories:", Array.from(new Set(fetchedData.map(item => item.job_category || item.job?.job_category))));      }
+        console.log("Available job categories:", Array.from(new Set(fetchedData.map(item => item.job_category || item.job?.job_category))));
+      }
 
       setData(fetchedData);
     } catch (error) {
@@ -171,7 +182,7 @@ export default function QcMainPage() {
     return Array.from(ids);
   }, [filteredData, filterParam]);
 
-  const getJoGroupsForIdentifier = (identifier: string) => {
+  const getItemsForIdentifier = (identifier: string) => {
     const items = filteredData.filter((item) => {
       let itemIdentifier: string | null | undefined;
       if (filterParam === "TSO_SERVICE") {
@@ -184,15 +195,7 @@ export default function QcMainPage() {
       return itemIdentifier === identifier;
     });
     
-    const groups: Record<string, QcRow[]> = {};
-
-    items.forEach((item) => {
-      const jo = item.jo_no || "Unknown";
-      if (!groups[jo]) groups[jo] = [];
-      groups[jo].push(item);
-    });
-
-    return groups;
+    return items;
   };
 
   const jobSummary = useMemo(() => {
@@ -364,92 +367,137 @@ export default function QcMainPage() {
                     : "Job"}: {selectedJobNo}
                 </h2>
 
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">JO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No JO data found</p>
-                        </td>
+                {/* JO Details Table */}
+                <div className="relative overflow-x-auto sm:rounded-lg">
+                  <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                    <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
+                      <tr className="border border-tableBorder">
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">J/O No</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Product Desc</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Product Item No</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Product Qty</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Item Description</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Item No</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">MOC</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Qty</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Actions</div>
+                          </div>
+                        </th>
                       </tr>
-                    ) : (
-                      Object.entries(getJoGroupsForIdentifier(selectedJobNo)).map(([jo, items]) => (
-                        <Fragment key={jo}>
-                          {/* JO Group Header */}
-                          <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={10}>
-                              JO: {jo}
-                            </td>
-                          </tr>
-                          
-                          {/* Individual Items with Actions on Each Row */}
-                          {items.map((item) => (
-                            <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder"></td>
-                              <td className="px-2 py-2 border border-tableBorder font-mono">
-                                {item.serial_no || "-"}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  <button
-                                    onClick={() => handleQc(item.id, item.serial_no || undefined)}
-                                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    title={`QC Serial: ${item.serial_no || 'N/A'}`}
-                                  >
-                                    QC
-                                  </button>
-                                  <button
-                                    onClick={() => handleMachine(item.id, item.serial_no || undefined)}
-                                    className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
-                                    title={`Machine Serial: ${item.serial_no || 'N/A'}`}
-                                  >
-                                    M/C
-                                  </button>
-                                  <button
-                                    onClick={() => handleWelding(item.id, item.serial_no || undefined)}
-                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    title={`Welding Serial: ${item.serial_no || 'N/A'}`}
-                                  >
-                                    WLD
-                                  </button>
-                                  <button
-                                    onClick={() => handleVendor(item.id, item.serial_no || undefined)}
-                                    className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
-                                    title={`Vendor Serial: ${item.serial_no || 'N/A'}`}
-                                  >
-                                    VEN
-                                  </button>
-                                </div>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const items = getItemsForIdentifier(selectedJobNo);
+                        if (items.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={9} className="px-4 py-6 text-center border border-tableBorder">
+                                <p className="text-[#666666] text-base">No data found</p>
                               </td>
                             </tr>
-                          ))}
-                        </Fragment>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                          );
+                        }
+                        return items.map((item) => (
+                          <tr
+                            className="border border-tableBorder bg-white hover:bg-primary-100"
+                            key={item.id}
+                          >
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.jo_no || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.job?.product_desc || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.job?.product_item_no || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.job?.product_qty || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.job?.item_description || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.item_no ?? item.job?.item_no ?? "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.job?.moc || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{item.quantity_no ?? item.job?.qty ?? "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <button
+                                  onClick={() => handleQc(item.id, item.serial_no || undefined)}
+                                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                  title={`QC Serial: ${item.serial_no || 'N/A'}`}
+                                >
+                                  QC
+                                </button>
+                                <button
+                                  onClick={() => handleMachine(item.id, item.serial_no || undefined)}
+                                  className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
+                                  title={`Machine Serial: ${item.serial_no || 'N/A'}`}
+                                >
+                                  M/C
+                                </button>
+                                <button
+                                  onClick={() => handleWelding(item.id, item.serial_no || undefined)}
+                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                  title={`Welding Serial: ${item.serial_no || 'N/A'}`}
+                                >
+                                  WLD
+                                </button>
+                                <button
+                                  onClick={() => handleVendor(item.id, item.serial_no || undefined)}
+                                  className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
+                                  title={`Vendor Serial: ${item.serial_no || 'N/A'}`}
+                                >
+                                  VEN
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
               </>
             ) : (
               <>
@@ -461,63 +509,86 @@ export default function QcMainPage() {
                     : "Jobs Review"}
                 </h2>
 
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-[#999999]">
-                    <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">
-                        {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
-                      </th>
-                      <th className="px-2 py-0 border border-tableBorder">Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total JO</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">Loading...</p>
-                        </td>
-                      </tr>
-                    ) : jobIdentifiers.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
-                          <p className="text-[#666666] text-base">No data found</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      jobIdentifiers.map((identifier) => {
-                        const summary = jobSummary[identifier];
-
-                        return (
-                          <tr
-                            key={identifier}
-                            className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
-                            onClick={() => setSelectedJobNo(identifier)}
-                          >
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-blue-600 text-base leading-normal">{identifier}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.jobCategory}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.uniqueJoCount}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.totalQty}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-base">{summary.assigningDate || "-"}</p>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                {/* Jobs Summary Table */}
+                <div className="relative overflow-x-auto sm:rounded-lg">
+                  <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                    <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
+                      <tr className="border border-tableBorder">
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">
+                              {filterParam === "TSO_SERVICE" ? "TSO No" : filterParam === "KANBAN" ? "J/O Number" : "Job No"}
+                            </div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Category</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Total JO</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Total Quantity</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Assigning Date</div>
+                          </div>
+                        </th>
+                       </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                            <p className="text-[#666666] text-base">Loading...</p>
+                          </td>
+                        </tr>
+                      ) : jobIdentifiers.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                            <p className="text-[#666666] text-base">No data found</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        jobIdentifiers.map((identifier) => {
+                          const summary = jobSummary[identifier];
+                          return (
+                            <tr
+                              key={identifier}
+                              className="border border-tableBorder bg-white hover:bg-primary-100 cursor-pointer"
+                              onClick={() => setSelectedJobNo(identifier)}
+                            >
+                              <td className="px-4 py-3 border border-tableBorder">
+                                <p className="text-blue-600 text-sm font-medium leading-normal cursor-pointer underline">
+                                  {identifier}
+                                </p>
+                              </td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                <p className="text-[#232323] text-sm leading-normal">{summary.jobCategory}</p>
+                              </td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                <p className="text-[#232323] text-sm leading-normal">{summary.uniqueJoCount}</p>
+                              </td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{summary.totalQty}</p>
+                              </td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                <p className="text-[#232323] text-sm leading-normal">{summary.assigningDate || "-"}</p>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </div>
