@@ -20,6 +20,24 @@ const hasPermission = (permissions: any[] | null, permissionName: string): boole
   return permissions.some(p => p.name === permissionName);
 };
 
+// Client-based permission check for Amar clients
+const canEditForClient = (permissions: any[] | null, clientName: string): boolean => {
+  if (!permissions) return false;
+  
+  // Amar Biosystem client specific permission
+  if (clientName === "Amar Biosystem" && hasPermission(permissions, "pp.bio.notok.edit")) {
+    return true;
+  }
+  
+  // Amar Equipment client specific permission
+  if (clientName === "Amar Equipment" && hasPermission(permissions, "pp.eqp.notok.edit")) {
+    return true;
+  }
+  
+  // Default permission for other clients
+  return hasPermission(permissions, "not-ok.edit");
+};
+
 // TSO Service Categories
 const tsoServiceCategory = [
   { value: "drawing", label: "Drawing" },
@@ -83,7 +101,8 @@ export default function NotokMainPage() {
   const client = searchParams.get("client") || "";
 
   const permissions = storage.getUserPermissions();
-  const canEditNotOk = hasPermission(permissions, "not-ok.edit");
+  // Use client-based permission check for Amar clients
+  const canEditNotOk = canEditForClient(permissions, client);
 
   const fetchCategories = async () => {
     try {
@@ -384,7 +403,7 @@ export default function NotokMainPage() {
           <div className="mb-4 px-2">
             <h1 className="text-xl font-semibold text-firstBlack">
               Not Ok • {filterParam.replace("_", " ")}
-              {client && ` • ${client}`}
+              {client && ` • ${client === "BIO" ? "Amar Biosystem" : client === "EQUIPMENT" ? "Amar Equipment" : client}`}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Status: <span className="font-semibold">not-ok</span>
