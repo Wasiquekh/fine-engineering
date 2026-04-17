@@ -37,6 +37,9 @@ interface JobDetail {
   urgent: boolean;
   assign_to?: string;
   assign_date?: string;
+  product_desc?: string | null;
+  product_item_no?: string | null;
+  product_qty?: number | string | null;
 }
 
 export default function JobDetailsPage() {
@@ -201,27 +204,83 @@ export default function JobDetailsPage() {
 
           <div className="flex flex-col gap-8">
             <div className="w-full">
-              <h2 className="text-xl font-semibold mb-4">Material Received From Amar</h2>
+              <h2 className="text-xl font-semibold mb-4">Material Received From {client || "Client"}</h2>
               <div className="relative overflow-x-auto sm:rounded-lg">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">J/O No</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Job Category</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Description</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Quantity</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign To</th>
-                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Assign Date</th>
-                      {canEdit && <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Action</th>}
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">J/O No</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Job Category</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Product Description</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Product Item No</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Product Qty</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Item Description</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Item No</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">MOC</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Assign To</div>
+                        </div>
+                      </th>
+                      <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="font-semibold">Assign Date</div>
+                        </div>
+                      </th>
+                      {canEdit && (
+                        <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold">Action</div>
+                          </div>
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={canEdit ? 9 : 8} className="text-center py-4 border border-tableBorder">Loading...</td></tr>
+                      <tr>
+                        <td colSpan={canEdit ? 11 : 10} className="text-center py-4 border border-tableBorder">
+                          <p className="text-[#666666] text-base">Loading...</p>
+                        </td>
+                      </tr>
                     ) : uniqueJobDetails.length === 0 ? (
-                      <tr><td colSpan={canEdit ? 9 : 8} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td></tr>
+                      <tr>
+                        <td colSpan={canEdit ? 11 : 10} className="text-center py-4 border border-tableBorder">
+                          <p className="text-[#666666] text-base">No items to assign for this job.</p>
+                        </td>
+                      </tr>
                     ) : (
                       uniqueJobDetails.map((item) => (
                         <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
@@ -229,20 +288,36 @@ export default function JobDetailsPage() {
                             {item.jo_number ? (
                               <Link
                                 href={`/section_production/machine_category/${encodeURIComponent(item.jo_number)}`}
-                                className="text-blue-600 hover:underline"
+                                className="text-blue-600 hover:underline text-sm font-medium"
                               >
                                 {item.jo_number}
                               </Link>
                             ) : "N/A"}
                           </td>
-                          <td className="px-4 py-3 border border-tableBorder">{item.job_category}</td>
-                          <td className="px-4 py-3 border border-tableBorder">{item.item_description}</td>
-                          <td className="px-4 py-3 border border-tableBorder">{item.item_no}</td>
-                          <td className="px-4 py-3 border border-tableBorder">{item.moc}</td>
-                          <td className="px-4 py-3 border border-tableBorder font-semibold text-yellow-600">{item.qty}</td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.job_category}</p>
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.product_desc || "-"}</p>
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.product_item_no || "-"}</p>
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.product_qty || "-"}</p>
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.item_description}</p>
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.item_no}</p>
+                          </td>
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <p className="text-[#232323] text-sm leading-normal">{item.moc}</p>
+                          </td>
                           <td className="px-4 py-3 border border-tableBorder">
                             {!canEdit ? (
-                              <p className="text-[#232323]">{item.assign_to || "Not Assigned"}</p>
+                              <p className="text-[#232323] text-sm leading-normal">{item.assign_to || "Not Assigned"}</p>
                             ) : assignments[item.id]?.assignTo === "Others" ? (
                               <div className="flex items-center gap-1">
                                 <input
@@ -280,7 +355,7 @@ export default function JobDetailsPage() {
                                 disabled={!!item.assign_to}
                               />
                             ) : (
-                              <p className="text-[#232323]">{item.assign_date || "-"}</p>
+                              <p className="text-[#232323] text-sm leading-normal">{item.assign_date || "-"}</p>
                             )}
                           </td>
                           {canEdit && (
