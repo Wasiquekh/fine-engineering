@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { FiFilter } from "react-icons/fi";
+import { FiFilter, FiSearch } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
 import { FaChevronDown, FaPlus, FaRegEdit } from "react-icons/fa";
 import { HiTrash } from "react-icons/hi";
@@ -220,9 +220,12 @@ export default function Home() {
   const [editingJob, setEditingJob] = useState<any | null>(null);
   const [data, setData] = useState<any[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
+  const [searchInput, setSearchInput] = useState<string>("");
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Get user permissions
   const permissions = storage.getUserPermissions();
@@ -230,13 +233,16 @@ export default function Home() {
   // ALL buttons (Add Job Service, Add TSO Service, Add Kanban, Delete) controlled by material.data.edit
   const canEditInventory = hasPermission(permissions, "material.data.edit");
 
-  const fetchData = useCallback(async (filter: string, page: number) => {
+  const fetchData = useCallback(async (filter: string, page: number, search: string = "") => {
     try {
       let query = `?page=${page}&limit=${pageSize}`;
       if (filter !== "ALL" && filter !== "REJECTED") {
         query += `&job_type=${filter}`;
       } else if (filter === "REJECTED") {
         query += `&rejected=true`;
+      }
+      if (search) {
+        query += `&jo_number=${encodeURIComponent(search)}`;
       }
       const response = await axiosProvider.get(`/fineengg_erp/system/jobs${query}`);
       setData(response.data.data);
@@ -253,6 +259,23 @@ export default function Home() {
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
     setCurrentPage(1);
+  };
+
+    // Debounced search handler 👈 ADD THIS ENTIRE FUNCTION
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    
+    // Clear previous timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+    
+    // Set new timeout for debouncing
+    debounceTimeout.current = setTimeout(() => {
+      setSearchTerm(value);
+      setCurrentPage(1);
+    }, 500); // Wait 500ms after user stops typing
   };
 
   const handleEdit = async (item: any) => {
@@ -600,8 +623,16 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData(activeFilter, currentPage);
-  }, [fetchData, activeFilter, currentPage]);
+    fetchData(activeFilter, currentPage,searchTerm);
+  }, [activeFilter, currentPage,searchTerm]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -636,70 +667,84 @@ export default function Home() {
             <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
               {/* Search and filter table row */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
-                <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
-                  <button
-                    onClick={() => handleFilterChange("ALL")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeFilter === "ALL"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => handleFilterChange("JOB_SERVICE")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeFilter === "JOB_SERVICE"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Job Service
-                  </button>
-                  <button
-                    onClick={() => handleFilterChange("TSO_SERVICE")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeFilter === "TSO_SERVICE"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    TSO Service
-                  </button>
-                  <button
-                    onClick={() => handleFilterChange("KANBAN")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeFilter === "KANBAN"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Kanban
-                  </button>
-                  <button
-                    onClick={() => handleFilterChange("REJECTED")}
-                    className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      activeFilter === "REJECTED"
-                        ? "bg-primary-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Rejected
-                  </button>
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+                    <button
+                      onClick={() => handleFilterChange("ALL")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeFilter === "ALL"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange("JOB_SERVICE")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeFilter === "JOB_SERVICE"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Job Service
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange("TSO_SERVICE")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeFilter === "TSO_SERVICE"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      TSO Service
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange("KANBAN")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeFilter === "KANBAN"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Kanban
+                    </button>
+                    <button
+                      onClick={() => handleFilterChange("REJECTED")}
+                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeFilter === "REJECTED"
+                          ? "bg-primary-600 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      Rejected
+                    </button>
+                  </div>
+
+                  <div className="relative min-w-[200px]">
+                    <input
+                      type="text"
+                      placeholder="Search J/O Number..."
+                      value={searchInput}
+                      onChange={handleSearchChange}
+                      className="w-full py-2 px-4 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 bg-white"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <FiSearch className="w-4 h-4" />
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-center items-center gap-4">
                   {/* Add Job Service Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
-                      className={`flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
+                      className={`flex items-center gap-2 py-[9px] px-4 rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
                         canEditInventory ? "bg-blue-600 group hover:bg-blue-500" : "bg-gray-400 cursor-not-allowed"
                       }`}
                       onClick={() => canEditInventory && setJobServiceDropdownOpen(!isJobServiceDropdownOpen)}
                     >
                       <FiFilter className="w-4 h-4 text-white" />
-                      <p className="text-white text-sm font-medium">Add Job Service</p>
-                      <FaChevronDown className="w-3 h-3 text-white ml-2" />
+                      <p className="text-white text-sm font-medium">Add Job</p>
                     </div>
                     {canEditInventory && isJobServiceDropdownOpen && (
                       <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
@@ -722,14 +767,13 @@ export default function Home() {
                   {/* Add TSO Service Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
-                      className={`flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
+                      className={`flex items-center gap-2 py-[9px] px-4 rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
                         canEditInventory ? "bg-green-600 group hover:bg-green-500" : "bg-gray-400 cursor-not-allowed"
                       }`}
                       onClick={() => canEditInventory && setTsoServiceDropdownOpen(!isTsoServiceDropdownOpen)}
                     >
                       <FiFilter className="w-4 h-4 text-white" />
-                      <p className="text-white text-sm font-medium">Add TSO Service</p>
-                      <FaChevronDown className="w-3 h-3 text-white ml-2" />
+                      <p className="text-white text-sm font-medium">Add TSO</p>
                     </div>
                     {canEditInventory && isTsoServiceDropdownOpen && (
                       <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
@@ -752,14 +796,13 @@ export default function Home() {
                   {/* Add Kanban Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
-                      className={`flex items-center gap-2 py-[9px] px-[21px] rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
+                      className={`flex items-center gap-2 py-[9px] px-4 rounded-[4px] border border-[#E7E7E7] cursor-pointer ${
                         canEditInventory ? "bg-purple-600 group hover:bg-purple-500" : "bg-gray-400 cursor-not-allowed"
                       }`}
                       onClick={() => canEditInventory && setKanbanDropdownOpen(!isKanbanDropdownOpen)}
                     >
                       <FiFilter className="w-4 h-4 text-white" />
                       <p className="text-white text-sm font-medium">Add Kanban</p>
-                      <FaChevronDown className="w-3 h-3 text-white ml-2" />
                     </div>
                     {canEditInventory && isKanbanDropdownOpen && (
                       <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg z-10">
@@ -782,103 +825,103 @@ export default function Home() {
               </div>
 
               {/* ----------------Table----------------------- */}
-              <div className="relative overflow-x-auto sm:rounded-lg">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                  <thead className="text-xs text-[#999999]">
+              <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg max-h-[500px] border border-tableBorder">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border-separate border-spacing-0">
+                  <thead className="text-xs text-[#999999] sticky top-0 z-20 bg-gray-50">
                     <tr className="border border-tableBorder">
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Client Name
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Job No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         J/O Number
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Product Desc
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Product Item No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Product Qty
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Item Desc
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Item No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Qty
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         MOC
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Job Order Date
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Mtl Rcd Date
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Mtl Challan No
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Bin Location
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Mtl Remark
                       </th>
                       <th
                         scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap"
+                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
                       >
                         Actions
                       </th>
