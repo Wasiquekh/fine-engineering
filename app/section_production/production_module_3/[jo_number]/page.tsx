@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AxiosProvider from "../../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
 import LeftSideBar from "../../../component/LeftSideBar";
@@ -47,7 +47,11 @@ export default function KanbanDetailsPage() {
   }>({});
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const jo_number = params.jo_number as string;
+  const clientParam = searchParams.get("client");
+  const filterParam = searchParams.get("filter");
+  const assignToParam = searchParams.get("assign_to");
 
   const permissions = storage.getUserPermissions();
 
@@ -191,7 +195,7 @@ export default function KanbanDetailsPage() {
                           <td className="px-4 py-3 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
-                                href={`/section_production/machine_category(kanban)/${encodeURIComponent(item.jo_number)}`}
+                                href={`/section_production/machine_category(kanban)/${encodeURIComponent(item.jo_number)}?filter=${encodeURIComponent(filterParam || "")}&client=${encodeURIComponent(clientParam || "")}&assign_to=${encodeURIComponent(assignToParam || "")}`}
                                 className="text-blue-600 hover:underline"
                               >
                                 {item.jo_number}

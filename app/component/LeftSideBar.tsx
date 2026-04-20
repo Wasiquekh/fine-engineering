@@ -1546,8 +1546,18 @@ const LeftSideBar: React.FC = () => {
     <div className="w-full hidden md:w-[17%] md:flex flex-col justify-between py-4 px-1 border-r-2 border-customBorder shadow-borderShadow mt-0 h-screen fixed top-0 left-0">
       <div className="z-10 overflow-y-auto custom-scrollbar">
         <Link href="/customer">
-          <div className="flex gap-2 mb-12 px-0 py-2">
-            <Image src="/images/fine-engineering-logo.jpeg" alt="Fine Engineering" width={500} height={500} className="w-full h-auto" />
+          <div className="mb-6 px-2 pt-6 pb-1 flex justify-center">
+            <div className="relative w-full max-w-[250px] h-[100px] overflow-hidden">
+              <Image
+                src="/images/logo-fine.png"
+                alt="Fine Engineering"
+                width={250}
+                height={250}
+                className="absolute left-1/2 -translate-x-1/2 w-[250px] h-auto max-w-none"
+                style={{ top: "-94px" }}
+                priority
+              />
+            </div>
           </div>
         </Link>
 

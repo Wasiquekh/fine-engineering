@@ -15,6 +15,46 @@ import PageGuard from "../component/PageGuard";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some((p) => p.name === permissionName);
+};
+
+const canPerformQcAction = (
+  permissions: any[] | null,
+  clientName: string,
+  filterType: string
+): boolean => {
+  if (!permissions) return false;
+
+  const normalizedClient = String(clientName || "").toLowerCase();
+  const clientKey = normalizedClient.includes("equip")
+    ? "eqp"
+    : normalizedClient.includes("bio")
+    ? "bio"
+    : null;
+
+  const filterKeyMap: Record<string, string> = {
+    JOB_SERVICE: "job",
+    TSO_SERVICE: "tso",
+    KANBAN: "kanban",
+  };
+  const filterKey = filterKeyMap[filterType];
+
+  if (!filterKey) return false;
+
+  if (clientKey) {
+    // Strict check: only exact QC edit permission for current client + tab
+    return hasPermission(permissions, `qc.${clientKey}.${filterKey}.edit`);
+  }
+
+  // No client in URL: allow if user has either client's QC edit for this tab
+  return (
+    hasPermission(permissions, `qc.eqp.${filterKey}.edit`) ||
+    hasPermission(permissions, `qc.bio.${filterKey}.edit`)
+  );
+};
+
 const tsoServiceCategory = [
   { value: "drawing", label: "Drawing" },
   { value: "sample", label: "Sample" },
@@ -84,6 +124,8 @@ export default function QcMainPage() {
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
+  const permissions = storage.getUserPermissions();
+  const canQcEdit = canPerformQcAction(permissions, client, filterParam);
 
   const fetchCategories = async () => {
     try {
@@ -182,7 +224,23 @@ export default function QcMainPage() {
     return currentData;
   }, [data, filterParam, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter]);
 
-  // Group by Job Number first
+  const getCurrentIdentifier = (item: QcRow): string | null => {
+    if (filterParam === "TSO_SERVICE") {
+      return item.tso_no || item.job?.tso_no || null;
+    }
+    if (filterParam === "KANBAN") {
+      return (
+        item.jo_no ||
+        item.job?.jo_number ||
+        item.job_no ||
+        item.job?.job_no ||
+        null
+      );
+    }
+    return item.job_no || item.job?.job_no || null;
+  };
+
+  // Group by current tab identifier first
   const jobsGrouped = useMemo(() => {
     const jobMap = new Map<string, {
       jobNo: string;
@@ -195,11 +253,11 @@ export default function QcMainPage() {
     }>();
     
     filteredData.forEach((item) => {
-      const jobNo = item.job?.job_no;
-      if (jobNo) {
-        if (!jobMap.has(jobNo)) {
-          jobMap.set(jobNo, {
-            jobNo,
+      const identifier = getCurrentIdentifier(item);
+      if (identifier) {
+        if (!jobMap.has(identifier)) {
+          jobMap.set(identifier, {
+            jobNo: identifier,
             jobCategory: item.job_category || item.job?.job_category || "N/A",
             clientName: item.job?.client_name || "N/A",
             productDesc: item.job?.product_desc || "N/A",
@@ -208,7 +266,7 @@ export default function QcMainPage() {
             uniqueJOs: new Set(),
           });
         }
-        const jobData = jobMap.get(jobNo)!;
+        const jobData = jobMap.get(identifier)!;
         jobData.items.push(item);
         jobData.totalQty += Number(item.quantity_no) || 0;
         if (item.job?.jo_number) {
@@ -218,7 +276,7 @@ export default function QcMainPage() {
     });
     
     return Array.from(jobMap.values());
-  }, [filteredData]);
+  }, [filteredData, filterParam]);
 
   // Group by JO Number for a specific Job
   const getJOsForJob = (jobNo: string) => {
@@ -234,7 +292,9 @@ export default function QcMainPage() {
       itemNos: string[];
     }>();
     
-    const jobItems = filteredData.filter(item => item.job?.job_no === jobNo);
+    const jobItems = filteredData.filter(
+      (item) => getCurrentIdentifier(item) === jobNo
+    );
     
     jobItems.forEach((item) => {
       const joNumber = item.job?.jo_number;
@@ -296,6 +356,10 @@ export default function QcMainPage() {
   };
 
   const handleBulkDispatch = async (selectedJOList: string[], currentJobNo: string) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission to dispatch");
+      return;
+    }
     if (selectedJOList.length === 0) {
       toast.error("Please select at least one JO to dispatch");
       return;
@@ -460,6 +524,10 @@ export default function QcMainPage() {
   };
 
   const handleJoOK = async (items: QcRow[]) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission to dispatch");
+      return;
+    }
     if (!items || items.length === 0) {
       toast.error("No items to dispatch.");
       return;
@@ -747,6 +815,10 @@ export default function QcMainPage() {
   };
 
   const handleJoNotOk = async (items: QcRow[]) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission to mark NOT OK");
+      return;
+    }
     if (!items || items.length === 0) {
       toast.error("No items to process.");
       return;
@@ -888,6 +960,10 @@ export default function QcMainPage() {
   };
 
   const handleJoRework = async (items: QcRow[]) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission to send rework");
+      return;
+    }
     if (!items || items.length === 0) {
       toast.error("No items to process.");
       return;
@@ -947,6 +1023,10 @@ export default function QcMainPage() {
   };
 
   const handleSingleItemRework = async (item: QcRow) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission to send rework");
+      return;
+    }
     if (!item) return;
 
     const joNo = item.job?.jo_number || "Unknown";
@@ -1094,16 +1174,20 @@ export default function QcMainPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
+                          if (!canQcEdit) return;
                           setIsMultiSelectMode(!isMultiSelectMode);
                           if (isMultiSelectMode) {
                             setSelectedJOs(new Set());
                           }
                         }}
                         className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                          isMultiSelectMode 
-                            ? 'bg-red-500 text-white hover:bg-red-600' 
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                          !canQcEdit
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : isMultiSelectMode
+                            ? "bg-red-500 text-white hover:bg-red-600"
+                            : "bg-blue-500 text-white hover:bg-blue-600"
                         }`}
+                        disabled={!canQcEdit}
                       >
                         {isMultiSelectMode ? 'Exit Multi-Select' : 'Multi-Select Mode'}
                       </button>
@@ -1111,7 +1195,12 @@ export default function QcMainPage() {
                       {isMultiSelectMode && selectedJOs.size > 0 && (
                         <button
                           onClick={() => handleBulkDispatch(Array.from(selectedJOs), selectedJobNo)}
-                          className="px-4 py-2 bg-green-500 text-white rounded text-sm font-medium hover:bg-green-600 flex items-center gap-2"
+                          className={`px-4 py-2 rounded text-sm font-medium flex items-center gap-2 ${
+                            canQcEdit
+                              ? "bg-green-500 text-white hover:bg-green-600"
+                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
+                          disabled={!canQcEdit}
                         >
                           🚚 Dispatch Selected ({selectedJOs.size})
                         </button>
@@ -1122,7 +1211,11 @@ export default function QcMainPage() {
               </div>
 
               <h2 className="text-xl font-bold mb-4">
-                Job: {selectedJobNo}
+                {filterParam === "TSO_SERVICE"
+                  ? "TSO"
+                  : filterParam === "KANBAN"
+                  ? "J/O Number"
+                  : "Job"}: {selectedJobNo}
               </h2>
 
               {isMultiSelectMode && selectedJOs.size > 0 && (
@@ -1247,19 +1340,34 @@ export default function QcMainPage() {
                                 <div className="flex items-center gap-2 justify-center flex-wrap">
                                   <button
                                     onClick={() => handleJoOK(jo.items)}
-                                    className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
+                                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                                      canQcEdit
+                                        ? "bg-green-500 text-white hover:bg-green-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                    disabled={!canQcEdit}
                                   >
                                     Dispatch
                                   </button>
                                   <button
                                     onClick={() => handleJoNotOk(jo.items)}
-                                    className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 transition-colors"
+                                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                                      canQcEdit
+                                        ? "bg-yellow-500 text-white hover:bg-yellow-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                    disabled={!canQcEdit}
                                   >
                                     Not OK
                                   </button>
                                   <button
                                     onClick={() => handleJoRework(jo.items)}
-                                    className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                                      canQcEdit
+                                        ? "bg-red-500 text-white hover:bg-red-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                    disabled={!canQcEdit}
                                   >
                                     Rework
                                   </button>
@@ -1291,7 +1399,13 @@ export default function QcMainPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border border-tableBorder bg-gray-50">
-                      <th className="p-3 border border-tableBorder font-semibold">Job No</th>
+                      <th className="p-3 border border-tableBorder font-semibold">
+                        {filterParam === "TSO_SERVICE"
+                          ? "TSO No"
+                          : filterParam === "KANBAN"
+                          ? "J/O Number"
+                          : "Job No"}
+                      </th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Job Category</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Product Description</th>

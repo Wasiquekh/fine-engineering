@@ -287,7 +287,7 @@ export default function JobDetailsPage() {
                           <td className="px-4 py-3 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
-                                href={`/section_production/machine_category/${encodeURIComponent(item.jo_number)}`}
+                                href={`/section_production/machine_category/${encodeURIComponent(item.jo_number)}?filter=${encodeURIComponent(filter || "")}&client=${encodeURIComponent(client || "")}&assign_to=${encodeURIComponent(assign_to || "")}`}
                                 className="text-blue-600 hover:underline text-sm font-medium"
                               >
                                 {item.jo_number}
