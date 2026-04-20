@@ -36,6 +36,7 @@ interface AssignedJob {
   id: string;
   jo_no: string | number;
   item_no: number;
+  item_description?: string;
   machine_category: string;
   machine_size: string;
   machine_code: string;
@@ -242,6 +243,16 @@ export default function JoNumberPage() {
     });
   }, [selectedJob]);
 
+  const itemDescriptionBySerialNo = useMemo(() => {
+    const descriptionMap = new Map<string, string>();
+    jobs.forEach((job) => {
+      if (job.serial_no) {
+        descriptionMap.set(String(job.serial_no), job.item_description || "-");
+      }
+    });
+    return descriptionMap;
+  }, [jobs]);
+
   const handleAssign = async () => {
     if (!canEdit) {
       toast.error("You don't have permission to assign jobs");
@@ -252,6 +263,7 @@ export default function JoNumberPage() {
     const payload = {
       jo_no: jo_number,
       item_no: selectedJob.item_no,
+      item_description: selectedJob.item_description,
       machine_category: selectedOption,
       machine_size: machineSize,
       machine_code: subSize || machineSize,
@@ -498,6 +510,7 @@ export default function JoNumberPage() {
                   <tr className="border border-tableBorder">
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Serial No</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item No</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Item Description</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Category</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Size</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Machine Code</th>
@@ -508,12 +521,13 @@ export default function JoNumberPage() {
                 </thead>
                 <tbody>
                   {assignedJobs.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-4 border border-tableBorder">No assigned jobs found.</td></tr>
+                    <tr><td colSpan={9} className="text-center py-4 border border-tableBorder">No assigned jobs found.</td></tr>
                   ) : (
                     assignedJobs.map((job) => (
                       <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                         <td className="px-4 py-3 border border-tableBorder text-[#232323] font-mono">{job.serial_no || "N/A"}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_no}</td>
+                        <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.item_description}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.machine_category}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.machine_size}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.machine_code}</td>

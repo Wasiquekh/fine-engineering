@@ -5,8 +5,10 @@ import LeftSideBar from "../../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import { FiSearch } from "react-icons/fi";
 
 const axiosProvider = new AxiosProvider();
+const ITEMS_PER_PAGE = 20;
 
 // Options for TSO Service Category
 const tsoServiceCategory = [
@@ -54,6 +56,8 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ options, activeTab, onTabClick,
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const activeFilter = "TSO_SERVICE";
   const [tsoSubFilter, setTsoSubFilter] = useState<string>("ALL");
 
@@ -87,6 +91,33 @@ export default function Home() {
 
     return uniqueData;
   }, [data, tsoSubFilter]);
+
+  const searchedData = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (!normalizedSearch) return filteredData;
+
+    return filteredData.filter((item: any) => {
+      const searchableValues = [
+        item.tso_no,
+        item.jo_number,
+        item.job_type,
+        item.job_category,
+        item.item_description,
+        item.item_no,
+        item.qty,
+        item.moc,
+        item.bin_location,
+      ];
+      return searchableValues.some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
+    });
+  }, [filteredData, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(searchedData.length / ITEMS_PER_PAGE));
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return searchedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [searchedData, currentPage]);
 
   useEffect(() => {
     let isMounted = true;
@@ -130,6 +161,14 @@ export default function Home() {
     };
   }, [clientParam, assignToParam /*, urgentParam */]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tsoSubFilter, searchTerm, clientParam, assignToParam]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -161,12 +200,24 @@ export default function Home() {
                   onTabClick={setTsoSubFilter}
                 />
               </div>
+              <div className="flex items-center w-full sm:w-[320px] rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
+                <input
+                  type="text"
+                  placeholder="Search TSO no, J/O no, category..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
+                />
+                <div className="pr-3 text-gray-400">
+                  <FiSearch className="w-4 h-4" />
+                </div>
+              </div>
             </div>
 
             {/* ----------------Table----------------------- */}
-            <div className="relative overflow-x-auto sm:rounded-lg">
+            <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg max-h-[500px] border border-tableBorder">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999]">
+                <thead className="text-xs text-[#999999] [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-gray-50">
                   <tr className="border border-tableBorder">
                     <th scope="col" className="p-3 border border-tableBorder">
                       <div className="flex items-center gap-2">
@@ -268,7 +319,7 @@ export default function Home() {
                    </tr>
                 </thead>
                 <tbody>
-                  {filteredData.length === 0 ? (
+                  {searchedData.length === 0 ? (
                     <tr>
                       <td
                         colSpan={11}
@@ -280,7 +331,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item: any) => (
+                    paginatedData.map((item: any) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -358,6 +409,31 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
+            {searchedData.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <p className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
     </div>
