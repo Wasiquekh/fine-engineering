@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { FiFilter } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
+import { FiFilter, FiSearch } from "react-icons/fi";
 import { HiOutlineBookOpen } from "react-icons/hi2";
 import { IoCloseOutline } from "react-icons/io5";
 import { RxAvatar } from "react-icons/rx";
@@ -98,6 +98,9 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const storage = new StorageManager();
   const userID = storage.getUserId();
@@ -137,7 +140,7 @@ export default function Home() {
         toast.success("Category added successfully");
       }
 
-      fetchData(activeClient, currentPage);
+      fetchData(activeClient, currentPage, searchTerm);
       setFlyoutOpen(false);
       resetFormState();
     } catch (error: any) {
@@ -193,7 +196,7 @@ export default function Home() {
 
         if (response.data.success) {
           toast.success("Category deleted successfully");
-          fetchData(activeClient, currentPage);
+          fetchData(activeClient, currentPage, searchTerm);
         } else {
           toast.error("Failed to delete category");
         }
@@ -206,11 +209,18 @@ export default function Home() {
 
   const [editValues, setEditValues] = useState(initialValues);
 
-  const fetchData = async (client: string = activeClient, page: number = currentPage) => {
+  const fetchData = async (
+    client: string = activeClient,
+    page: number = currentPage,
+    search: string = searchTerm
+  ) => {
     try {
       let query = `?page=${page}&limit=${pageSize}`;
       if (client !== "All") {
         query += `&client_name=${encodeURIComponent(client)}`;
+      }
+      if (search) {
+        query += `&job_no=${encodeURIComponent(search)}`;
       }
 
       const response = await axiosProvider.get(`/fineengg_erp/system/categories${query}`);
@@ -234,6 +244,20 @@ export default function Home() {
     setCurrentPage(1);
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      setSearchTerm(value);
+      setCurrentPage(1);
+    }, 500);
+  };
+
   const resetFormState = () => {
     setIsEditMode(false);
     setEditId(null);
@@ -241,8 +265,16 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData(activeClient, currentPage);
-  }, [activeClient, currentPage]);
+    fetchData(activeClient, currentPage, searchTerm);
+  }, [activeClient, currentPage, searchTerm]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -281,8 +313,9 @@ export default function Home() {
             {/* ----------------Table----------------------- */}
             <div className="relative overflow-x-auto sm:rounded-lg">
               {/* Search and filter table row */}
-              <div className="flex justify-between items-center mb-6 w-full mx-auto">
-                <div className="flex gap-3">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
+                <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                  <div className="flex gap-3">
                   {["All", "Amar Equipment", "Amar Biosystem"].map((client) => (
                     <button
                       key={client}
@@ -296,6 +329,19 @@ export default function Home() {
                       {client}
                     </button>
                   ))}
+                  </div>
+                  <div className="relative w-full md:w-[280px]">
+                    <input
+                      type="text"
+                      placeholder="Search Job No..."
+                      value={searchInput}
+                      onChange={handleSearchChange}
+                      className="w-full py-2 px-4 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 bg-white"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <FiSearch className="w-4 h-4" />
+                    </div>
+                  </div>
                 </div>
                 {canEditCategory && (
                   <div className="flex justify-center items-center gap-4">
