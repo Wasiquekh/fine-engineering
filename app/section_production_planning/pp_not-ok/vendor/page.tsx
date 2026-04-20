@@ -15,6 +15,40 @@ import DesktopHeader from "../../../component/DesktopHeader";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some((p) => p.name === permissionName);
+};
+
+const canEditForClient = (permissions: any[] | null, clientName: string): boolean => {
+  if (!permissions) return false;
+
+  const normalizedClient = String(clientName || "").toLowerCase();
+
+  // Match LeftSidebar client visibility first, then apply vendor edit for same client
+  if (normalizedClient.includes("bio")) {
+    return (
+      hasPermission(permissions, "pp.bio.notok.view") &&
+      (
+        hasPermission(permissions, "pp.bio.notok.vendor.edit") ||
+        hasPermission(permissions, "pp.bio.notok.edit")
+      )
+    );
+  }
+
+  if (normalizedClient.includes("equip")) {
+    return (
+      hasPermission(permissions, "pp.eqp.notok.view") &&
+      (
+        hasPermission(permissions, "pp.eqp.notok.vendor.edit") ||
+        hasPermission(permissions, "pp.eqp.notok.edit")
+      )
+    );
+  }
+
+  return hasPermission(permissions, "not-ok.edit");
+};
+
 type Row = {
   id: string;
   jo_no?: string | null;
@@ -63,6 +97,8 @@ export default function NotOkVendorPage() {
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
   const REVIEW_FOR = "vendor";
+  const permissions = storage.getUserPermissions();
+  const canEditNotOk = canEditForClient(permissions, client);
 
   const fetchCategories = async () => {
     try {
@@ -171,6 +207,7 @@ export default function NotOkVendorPage() {
 
   // Auto-detect - No tab parameter needed, backend will handle
   const handleJobBackToQC = async (item: Row) => {
+    if (!canEditNotOk) return;
     const tabDisplay = item.original_tab === "incoming" ? "Incoming" : "Outgoing";
     
     if (!(await actionConfirm(
@@ -186,6 +223,7 @@ export default function NotOkVendorPage() {
   };
 
   const handleRework = async (item: Row) => {
+    if (!canEditNotOk) return;
     if (!item) return;
 
     if (!(await actionConfirm(
@@ -215,6 +253,7 @@ export default function NotOkVendorPage() {
   };
 
   const handleJobRejected = async (item: Row) => {
+    if (!canEditNotOk) return;
     if (!(await actionConfirm("Reject this serial?", "This will reject the selected Not OK serial.", "Yes, Reject"))) return;
     await postAction(item, "reject-not-ok", "Serial rejected successfully", { review_for: REVIEW_FOR });
   };
@@ -480,13 +519,15 @@ export default function NotOkVendorPage() {
                       <th className="px-2 py-0 border border-tableBorder">Quantity</th>
                       <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
                       <th className="px-2 py-0 border border-tableBorder">Reason</th>
-                      <th className="px-2 py-0 border border-tableBorder">Actions</th>
+                      {canEditNotOk && (
+                        <th className="px-2 py-0 border border-tableBorder">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).length === 0 ? (
                       <tr>
-                        <td colSpan={12} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={canEditNotOk ? 12 : 11} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No JO data found</p>
                         </td>
                       </tr>
@@ -494,7 +535,7 @@ export default function NotOkVendorPage() {
                       Object.entries(getJoGroupsForIdentifier(selectedIdentifier)).map(([jo, items]) => (
                         <Fragment key={jo}>
                           <tr className="border border-tableBorder bg-gray-100">
-                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={12}>
+                            <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={canEditNotOk ? 12 : 11}>
                               JO: {jo} ({items.length} item(s))
                             </td>
                           </tr>
@@ -520,28 +561,30 @@ export default function NotOkVendorPage() {
                                   {item.job?.reason || "-"}
                                 </span>
                               </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <div className="flex flex-col gap-1">
-                                  <button
-                                    onClick={() => handleJobBackToQC(item)}
-                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
-                                  >
-                                    Back to QC
-                                  </button>
-                                  <button
-                                    onClick={() => handleRework(item)}
-                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                  >
-                                    Rework
-                                  </button>
-                                  <button
-                                    onClick={() => handleJobRejected(item)}
-                                    className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
-                                  >
-                                    Reject
-                                  </button>
-                                </div>
-                              </td>
+                              {canEditNotOk && (
+                                <td className="px-2 py-2 border border-tableBorder">
+                                  <div className="flex flex-col gap-1">
+                                    <button
+                                      onClick={() => handleJobBackToQC(item)}
+                                      className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                    >
+                                      Back to QC
+                                    </button>
+                                    <button
+                                      onClick={() => handleRework(item)}
+                                      className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                    >
+                                      Rework
+                                    </button>
+                                    <button
+                                      onClick={() => handleJobRejected(item)}
+                                      className="px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </Fragment>

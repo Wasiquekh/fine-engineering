@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
@@ -11,9 +11,9 @@ import StorageManager from "../../../../provider/StorageManager";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
-const hasAnyPermission = (permissions: any[] | null, permissionNames: string[]): boolean => {
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
   if (!permissions) return false;
-  return permissionNames.some(name => permissions.some(p => p.name === name));
+  return permissions.some(p => p.name === permissionName);
 };
 
 interface JobData {
@@ -48,8 +48,11 @@ interface AssignedJob {
 export default function KanbanMachineCategoryPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const raw_jo_number = Array.isArray(params.jo_number) ? params.jo_number[0] : params.jo_number;
   const jo_number = raw_jo_number ? decodeURIComponent(raw_jo_number) : "";
+  const clientName = searchParams.get("client") || "";
+  const assignTo = searchParams.get("assign_to") || "";
 
   const [selectedOption, setSelectedOption] = useState("");
   const [machineSize, setMachineSize] = useState("");
@@ -63,19 +66,45 @@ export default function KanbanMachineCategoryPage() {
 
   const permissions = storage.getUserPermissions();
   
-  // Edit permission for Production KANBAN (Production 2 & 3 only)
-  const canEdit = hasAnyPermission(permissions, [
-    "production2.eqp.kanban.edit", "production3.eqp.kanban.edit",
-    "production2.bio.kanban.edit", "production3.bio.kanban.edit"
-  ]);
+  const getProductionPrefix = () => {
+    if (assignTo === "Usmaan") return "production1";
+    if (assignTo === "Riyaaz") return "production2";
+    if (assignTo === "Ramzaan") return "production3";
+    return null;
+  };
+
+  // Edit permission must match exact production + client for this route context
+  const getCanEdit = () => {
+    if (!permissions) return false;
+
+    const prodPrefix = getProductionPrefix();
+    if (!prodPrefix) return false;
+
+    const normalizedClient = String(clientName).toLowerCase();
+    const clientKey = normalizedClient.includes("equip")
+      ? "eqp"
+      : normalizedClient.includes("bio")
+      ? "bio"
+      : null;
+
+    if (!clientKey) return false;
+
+    return hasPermission(permissions, `${prodPrefix}.${clientKey}.kanban.edit`);
+  };
+  
+  const canEdit = getCanEdit();
 
   const fetchJobs = useCallback(async () => {
     if (!jo_number) return;
     setLoading(true);
     try {
-      const response = await axiosProvider.get(
-        `/fineengg_erp/system/jobs?job_type=KANBAN&jo_number=${encodeURIComponent(jo_number)}`
-      );
+      const params = new URLSearchParams({
+        job_type: "KANBAN",
+        jo_number: encodeURIComponent(jo_number),
+      });
+      if (clientName) params.append("client_name", clientName);
+
+      const response = await axiosProvider.get(`/fineengg_erp/system/jobs?${params.toString()}`);
       if (response.data && Array.isArray(response.data.data)) {
         const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
         setJobs(validJobs);
@@ -89,12 +118,15 @@ export default function KanbanMachineCategoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [jo_number]);
+  }, [jo_number, clientName]);
 
   const fetchAssignedJobs = useCallback(async () => {
     if (!jo_number) return;
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker");
+      const params = new URLSearchParams();
+      if (clientName) params.append("client_name", clientName);
+      
+      const response = await axiosProvider.get(`/fineengg_erp/system/assign-to-worker?${params.toString()}`);
       if (response.data && Array.isArray(response.data.data)) {
         const filtered = response.data.data.filter(
           (job: AssignedJob) => String(job.jo_no) === String(jo_number)
@@ -104,7 +136,7 @@ export default function KanbanMachineCategoryPage() {
     } catch (error) {
       console.error("Error fetching assigned jobs:", error);
     }
-  }, [jo_number]);
+  }, [jo_number, clientName]);
 
   useEffect(() => {
     if (jo_number) {
@@ -214,12 +246,18 @@ export default function KanbanMachineCategoryPage() {
       updated_by: storage.getUserId(),
       serial_no: selectedJob.serial_no,
       job_id: selectedJob.id,
+      client_name: clientName,
     };
 
     try {
       await axiosProvider.post("/fineengg_erp/system/assign-to-worker", payload);
       toast.success("Job assigned successfully");
       setSelectedSerialNo("");
+      setSelectedOption("");
+      setMachineSize("");
+      setSubSize("");
+      setWorker("");
+      setSelectedQuantity("");
       fetchJobs();
       fetchAssignedJobs();
     } catch (error) {
@@ -238,7 +276,12 @@ export default function KanbanMachineCategoryPage() {
         <DesktopHeader />
         <div className="rounded-3xl shadow-lastTransaction bg-white px-4 py-6 md:p-6 relative">
           <button onClick={() => router.back()} className="text-blue-600 hover:underline mb-4">← Back</button>
-          <h1 className="text-xl font-semibold mb-6">Machine Category (KANBAN) - {jo_number}</h1>
+          
+          <h1 className="text-xl font-semibold mb-6">
+            Machine Category (KANBAN) - {jo_number}
+            {clientName && <span className="text-sm text-gray-500 ml-2">({clientName})</span>}
+            {!canEdit && <span className="text-sm text-red-500 ml-2">(View Only Mode)</span>}
+          </h1>
 
           {/* Jobs Table */}
           <div className="mt-6 mb-8">
@@ -252,11 +295,12 @@ export default function KanbanMachineCategoryPage() {
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Qty</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
+                    <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? <tr><td colSpan={6} className="text-center py-4 border border-tableBorder">Loading...</td></tr>
-                  : jobs.length === 0 ? <tr><td colSpan={6} className="text-center py-4 border border-tableBorder">No jobs found.</td></tr>
+                  {loading ? <tr><td colSpan={7} className="text-center py-4 border border-tableBorder">Loading...</td></tr>
+                  : jobs.length === 0 ? <tr><td colSpan={7} className="text-center py-4 border border-tableBorder">No jobs found.</td></tr>
                   : jobs.map((job) => (
                     <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                       <td className="px-4 py-3 border border-tableBorder">{job.item_no}</td>
@@ -265,6 +309,13 @@ export default function KanbanMachineCategoryPage() {
                       <td className="px-4 py-3 border border-tableBorder font-semibold text-yellow-600">{job.qty}</td>
                       <td className="px-4 py-3 border border-tableBorder">{job.moc}</td>
                       <td className="px-4 py-3 border border-tableBorder">{job.bin_location}</td>
+                      <td className="px-4 py-3 border border-tableBorder">
+                        {job.is_approved ? (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Approved</span>
+                        ) : (
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Pending</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,68 +323,140 @@ export default function KanbanMachineCategoryPage() {
             </div>
           </div>
 
-          {/* Assignment Form - Disabled if no edit permission */}
-          <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-6 gap-4 w-full max-w-full items-end">
-            <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Serial No</label>
-              <select value={selectedSerialNo} onChange={(e) => setSelectedSerialNo(e.target.value)} className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed" disabled={serialNoOptions.length === 0 || !canEdit}>
-                <option value="">Select</option>
-                {serialNoOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-              </select>
-            </div>
-
-            <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Machine Category</label>
-              <select value={selectedOption} onChange={(e) => { const val = e.target.value; setSelectedOption(val); if (val === "vmc") setMachineSize("FVMC01"); else if (val === "Milling") setMachineSize("FML01"); else if (val === "Drilling") setMachineSize("FDL01"); else setMachineSize(""); setSubSize(""); setWorker(""); }} disabled={!selectedSerialNo || !selectedJob?.is_approved || !canEdit} className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed">
-                <option value="">Select</option>
-                <option value="Lathe">Lathe</option><option value="cnc">CNC</option><option value="vmc">VMC</option><option value="Milling">Milling</option><option value="Drilling">Drilling</option>
-              </select>
-            </div>
-
-            <div className="col-span-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Machine Size</label>
-              <select value={machineSize} onChange={(e) => { setMachineSize(e.target.value); setSubSize(""); setWorker(""); }} className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed" disabled={!selectedOption || !selectedJob?.is_approved || !canEdit}>
-                <option value="">Select</option>
-                {getSizeOptions().map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-              </select>
-            </div>
-
-            {(machineSize === "small" || machineSize === "medium" || machineSize === "large") && (
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">{machineSize} Machine Type</label>
-                <select value={subSize} onChange={(e) => setSubSize(e.target.value)} disabled={!machineSize || !selectedJob?.is_approved || !canEdit} className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed">
-                  <option value="">Select</option>
-                  {getSubSizeOptions().map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-                </select>
-              </div>
-            )}
-
-            {workerOptions.length > 0 && (
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Worker</label>
-                <select value={worker} onChange={(e) => setWorker(e.target.value)} disabled={!machineSize || !selectedJob?.is_approved || !canEdit} className="w-full px-4 py-2 border rounded-md disabled:bg-gray-100 disabled:cursor-not-allowed">
-                  <option value="">Select</option>
-                  {workerOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-                </select>
-              </div>
-            )}
-
-            <div className="col-span-1">
-              {selectedJob && <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>}
-              <div className="flex gap-2">
-                {selectedJob && (
-                  <select value={selectedQuantity} onChange={(e) => setSelectedQuantity(e.target.value)} className="flex-1 px-3 py-1.5 border rounded-md text-sm disabled:bg-gray-100 disabled:cursor-not-allowed" disabled={!selectedSerialNo || quantityOptions.length === 0 || !selectedJob?.is_approved || !canEdit}>
+          {/* Assignment Form - Only show if canEdit is true */}
+          {canEdit && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold mb-4">Assign to Worker</h2>
+              <div className="grid grid-cols-1 md:grid-cols-5 xl:grid-cols-6 gap-4 w-full max-w-full items-end">
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Serial No</label>
+                  <select
+                    value={selectedSerialNo}
+                    onChange={(e) => setSelectedSerialNo(e.target.value)}
+                    className="w-full px-4 py-2 border rounded-md"
+                    disabled={serialNoOptions.length === 0}
+                  >
                     <option value="">Select</option>
-                    {quantityOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                    {serialNoOptions.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
+                </div>
+
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Machine Category</label>
+                  <select
+                    value={selectedOption}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedOption(val);
+                      if (val === "vmc") setMachineSize("FVMC01");
+                      else if (val === "Milling") setMachineSize("FML01");
+                      else if (val === "Drilling") setMachineSize("FDL01");
+                      else setMachineSize("");
+                      setSubSize("");
+                      setWorker("");
+                    }}
+                    disabled={!selectedSerialNo || !selectedJob?.is_approved}
+                    className="w-full px-4 py-2 border rounded-md"
+                  >
+                    <option value="">Select</option>
+                    <option value="Lathe">Lathe</option>
+                    <option value="cnc">CNC</option>
+                    <option value="vmc">VMC</option>
+                    <option value="Milling">Milling</option>
+                    <option value="Drilling">Drilling</option>
+                  </select>
+                </div>
+
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Machine Size</label>
+                  <select
+                    value={machineSize}
+                    onChange={(e) => {
+                      setMachineSize(e.target.value);
+                      setSubSize("");
+                      setWorker("");
+                    }}
+                    className="w-full px-4 py-2 border rounded-md"
+                    disabled={!selectedOption || !selectedJob?.is_approved}
+                  >
+                    <option value="">Select</option>
+                    {getSizeOptions().map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {(machineSize === "small" || machineSize === "medium" || machineSize === "large") && (
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 capitalize">
+                      {machineSize} Machine Type
+                    </label>
+                    <select
+                      value={subSize}
+                      onChange={(e) => setSubSize(e.target.value)}
+                      disabled={!machineSize || !selectedJob?.is_approved}
+                      className="w-full px-4 py-2 border rounded-md"
+                    >
+                      <option value="">Select</option>
+                      {getSubSizeOptions().map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 )}
-                <button className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`} disabled={!selectedSerialNo || !worker || !selectedQuantity || !selectedJob?.is_approved || !canEdit} onClick={handleAssign}>Assign</button>
+
+                {workerOptions.length > 0 && (
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Worker</label>
+                    <select
+                      value={worker}
+                      onChange={(e) => setWorker(e.target.value)}
+                      disabled={!machineSize || !selectedJob?.is_approved}
+                      className="w-full px-4 py-2 border rounded-md"
+                    >
+                      <option value="">Select</option>
+                      {workerOptions.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="col-span-1">
+                  {selectedJob && (
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                  )}
+                  <div className="flex gap-2">
+                    {selectedJob && (
+                      <select
+                        value={selectedQuantity}
+                        onChange={(e) => setSelectedQuantity(e.target.value)}
+                        className="flex-1 px-3 py-1.5 border rounded-md text-sm"
+                        disabled={!selectedSerialNo || quantityOptions.length === 0 || !selectedJob?.is_approved}
+                      >
+                        <option value="">Select</option>
+                        {quantityOptions.map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      className={`${selectedJob ? "w-auto" : "w-full"} px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 text-sm`}
+                      disabled={!selectedSerialNo || !worker || !selectedQuantity || !selectedJob?.is_approved}
+                      onClick={handleAssign}
+                    >
+                      Assign
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Assigned Jobs Table */}
-          <div className="mt-12 mb-8">
+          <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">Assigned Jobs History</h2>
             <div className="relative overflow-x-auto sm:rounded-lg">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500">

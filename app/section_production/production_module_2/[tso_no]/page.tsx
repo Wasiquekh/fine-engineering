@@ -209,7 +209,7 @@ export default function TsoDetailsPage() {
                           <td className="px-4 py-3 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
-                                href={`/section_production/machine_category(tso)/${encodeURIComponent(item.jo_number)}?filter=${encodeURIComponent(filterParam || "")}&client=${encodeURIComponent(clientParam || "")}`}
+                                href={`/section_production/machine_category(tso)/${encodeURIComponent(item.jo_number)}?filter=${encodeURIComponent(filterParam || "")}&client=${encodeURIComponent(clientParam || "")}&assign_to=${encodeURIComponent(assignToParam || "")}`}
                                 className="text-blue-600 hover:underline"
                               >
                                 {item.jo_number}
