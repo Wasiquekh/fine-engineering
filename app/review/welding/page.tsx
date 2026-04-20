@@ -14,6 +14,52 @@ import { FaArrowLeft } from "react-icons/fa";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some((p) => p.name === permissionName);
+};
+
+const canPerformReviewAction = (
+  permissions: any[] | null,
+  clientName: string,
+  reviewType: "welding" | "vendor",
+  assignTo: string
+): boolean => {
+  if (!permissions) return false;
+
+  const normalizedClient = String(clientName || "").toLowerCase();
+  const clientKey = normalizedClient.includes("equip")
+    ? "eqp"
+    : normalizedClient.includes("bio")
+    ? "bio"
+    : null;
+
+  if (!clientKey) return false;
+
+  const normalizedAssignTo = String(assignTo || "").trim().toLowerCase();
+  const productionKey =
+    normalizedAssignTo === "usmaan"
+      ? "production1"
+      : normalizedAssignTo === "riyaaz"
+      ? "production2"
+      : normalizedAssignTo === "ramzaan"
+      ? "production3"
+      : null;
+
+  if (productionKey) {
+    return hasPermission(
+      permissions,
+      `${productionKey}.${clientKey}.review.${reviewType}.edit`
+    );
+  }
+
+  return (
+    hasPermission(permissions, `production1.${clientKey}.review.${reviewType}.edit`) ||
+    hasPermission(permissions, `production2.${clientKey}.review.${reviewType}.edit`) ||
+    hasPermission(permissions, `production3.${clientKey}.review.${reviewType}.edit`)
+  );
+};
+
 type QcRow = {
   id: string;
   job_id?: string | null;
@@ -64,6 +110,8 @@ export default function ReviewWeldingPage() {
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
   const assignTo = searchParams.get("assign_to") || "";
+  const permissions = storage.getUserPermissions();
+  const canReview = canPerformReviewAction(permissions, client, "welding", assignTo);
 
   const fetchCategories = async () => {
     try {
@@ -251,6 +299,10 @@ export default function ReviewWeldingPage() {
   };
 
   const postAction = async (id: string, endpoint: string, successMsg: string, serialNo?: string) => {
+    if (!canReview) {
+      toast.error("You don't have permission to perform this action");
+      return;
+    }
     try {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
       const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
@@ -263,21 +315,37 @@ export default function ReviewWeldingPage() {
   };
 
   const handleQc = async (id: string, serialNo?: string) => {
+    if (!canReview) {
+      toast.error("You don't have permission to perform QC action");
+      return;
+    }
     if (!(await actionConfirm("QC?", "Mark Ready for QC?", "Yes, QC", serialNo))) return;
     postAction(id, "ready-for-qc", "Moved to Ready for QC", serialNo);
   };
 
   const handleMachine = async (id: string, serialNo?: string) => {
+    if (!canReview) {
+      toast.error("You don't have permission to perform Machine action");
+      return;
+    }
     if (!(await actionConfirm("Machine?", "Send back to In-Progress?", "Yes, Machine", serialNo))) return;
     postAction(id, "reject", "Moved to In-Progress", serialNo);
   };
 
   const handleWelding = async (id: string, serialNo?: string) => {
+    if (!canReview) {
+      toast.error("You don't have permission to perform Welding action");
+      return;
+    }
     if (!(await actionConfirm("Welding?", "Send to QC Welding queue?", "Yes, Welding", serialNo))) return;
     postAction(id, "welding", "Moved to QC Welding", serialNo);
   };
 
   const handleVendor = async (id: string, serialNo?: string) => {
+    if (!canReview) {
+      toast.error("You don't have permission to perform Vendor action");
+      return;
+    }
     if (!(await actionConfirm("Vendor?", "Send to Vendor Outsource queue?", "Yes, Vendor", serialNo))) return;
     postAction(id, "vendor", "Moved to Vendor Outsource", serialNo);
   };
@@ -497,29 +565,49 @@ export default function ReviewWeldingPage() {
                               <div className="flex items-center gap-1 flex-wrap">
                                 <button
                                   onClick={() => handleQc(item.id, item.serial_no || undefined)}
-                                  className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    canReview
+                                      ? "bg-green-500 hover:bg-green-600 text-white"
+                                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  }`}
                                   title={`Ready for QC - Serial: ${item.serial_no || 'N/A'}`}
+                                  disabled={!canReview}
                                 >
                                   QC
                                 </button>
                                 <button
                                   onClick={() => handleMachine(item.id, item.serial_no || undefined)}
-                                  className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs"
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    canReview
+                                      ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  }`}
                                   title={`Send back to Machine - Serial: ${item.serial_no || 'N/A'}`}
+                                  disabled={!canReview}
                                 >
                                   M/C
                                 </button>
                                 <button
                                   onClick={() => handleWelding(item.id, item.serial_no || undefined)}
-                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    canReview
+                                      ? "bg-blue-500 hover:bg-blue-600 text-white"
+                                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  }`}
                                   title={`Send to Welding - Serial: ${item.serial_no || 'N/A'}`}
+                                  disabled={!canReview}
                                 >
                                   WLD
                                 </button>
                                 <button
                                   onClick={() => handleVendor(item.id, item.serial_no || undefined)}
-                                  className="px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 text-xs"
+                                  className={`px-2 py-1 rounded text-xs ${
+                                    canReview
+                                      ? "bg-purple-500 hover:bg-purple-600 text-white"
+                                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                  }`}
                                   title={`Send to Vendor - Serial: ${item.serial_no || 'N/A'}`}
+                                  disabled={!canReview}
                                 >
                                   VEN
                                 </button>
@@ -633,7 +721,7 @@ export default function ReviewWeldingPage() {
               Total Jobs: {jobIdentifiers.length} | Total Items: {filteredData.length}
             </div>
             <div className="text-xs text-gray-400">
-              Actions are per serial number - hover buttons to see serial
+              {canReview ? "Actions are per serial number - hover buttons to see serial" : "You don't have permission to review"}
             </div>
           </div>
         </div>
