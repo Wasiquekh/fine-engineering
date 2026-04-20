@@ -5,8 +5,10 @@ import LeftSideBar from "../../component/LeftSideBar";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
+import { FiSearch } from "react-icons/fi";
 
 const axiosProvider = new AxiosProvider();
+const ITEMS_PER_PAGE = 20;
 
 interface FilterTab {
   value: string;
@@ -48,6 +50,8 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ options, activeTab, onTabClick,
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const activeFilter = "JOB_SERVICE";
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
@@ -88,6 +92,31 @@ export default function Home() {
     return [...Array.from(uniqueJobs.values()), ...itemsWithoutJob];
   }, [data, jobServiceCategoryFilter]);
 
+  const searchedData = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (!normalizedSearch) return filteredData;
+
+    return filteredData.filter((item: any) => {
+      const searchableValues = [
+        item.job_no,
+        item.job_category,
+        item.description,
+        item.material_type,
+        item.qty,
+        item.bar,
+        item.tempp,
+      ];
+      return searchableValues.some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
+    });
+  }, [filteredData, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(searchedData.length / ITEMS_PER_PAGE));
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return searchedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [searchedData, currentPage]);
+
   const fetchCategories = async () => {
     try {
       const params = new URLSearchParams();
@@ -124,6 +153,14 @@ export default function Home() {
   useEffect(() => {
     fetchCategories();
   }, [clientParam, assignToParam]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [jobServiceCategoryFilter, searchTerm, clientParam, assignToParam]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   useEffect(() => {
     let isMounted = true;
@@ -194,13 +231,24 @@ export default function Home() {
                   onTabClick={setJobServiceCategoryFilter}
                 />
               </div>
-
+              <div className="flex items-center w-full sm:w-[320px] rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
+                <input
+                  type="text"
+                  placeholder="Search Job no, category, description..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
+                />
+                <div className="pr-3 text-gray-400">
+                  <FiSearch className="w-4 h-4" />
+                </div>
+              </div>
             </div>
 
             {/* ----------------Table----------------------- */}
-            <div className="relative overflow-x-auto sm:rounded-lg">
+            <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg max-h-[500px] border border-tableBorder">
               <table className="w-full text-sm text-left rtl:text-right text-gray-500">
-                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
+                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-gray-50">
                   <tr className="border border-tableBorder">
                     <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -292,7 +340,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.length === 0 ? (
+                  {searchedData.length === 0 ? (
                     <tr>
                       <td
                         colSpan={9}
@@ -304,7 +352,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item: any) => (
+                    paginatedData.map((item: any) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -367,6 +415,31 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
+            {searchedData.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <p className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
