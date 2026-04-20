@@ -431,31 +431,32 @@ export default function MaterialMovementPage() {
               <table className="w-full text-sm border-collapse">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="p-3 text-left border">Sr No</th>
+                    <th className="p-3 text-left border">Job No</th>
                     <th className="p-3 text-left border">JO No</th>
-                    <th className="p-3 text-left border">Document No</th>
-                    <th className="p-3 text-left border">Document Type</th>
-                    <th className="p-3 text-left border">
-                      Material Challan No
-                    </th>
-                    <th className="p-3 text-left border">Chalan No</th>
-                    <th className="p-3 text-left border">Chalan Date</th>
+                    <th className="p-3 text-left border">Job Type</th>
+                    <th className="p-3 text-left border">Product Item No</th>
+                    <th className="p-3 text-left border">Product Qty</th>
+                    <th className="p-3 text-left border">MOC</th>
                     <th className="p-3 text-left border">Serial No</th>
                     <th className="p-3 text-left border">Item Description</th>
-                    <th className="p-3 text-left border">Quantity</th>
-                    <th className="p-3 text-left border">Status</th>
+                    <th className="p-3 text-left border">Item No</th>
+                    <th className="p-3 text-left border">Qty</th>
+                    <th className="p-3 text-left border">Chalan No</th>
+                    <th className="p-3 text-left border">Chalan Date</th>
+                    <th className="p-3 text-left border">Job Order Date</th>
+                    <th className="p-3 text-left border">Mtl Receive Date</th>
+                    <th className="p-3 text-left border">Material Challan No</th>
                     <th className="p-3 text-left border">Machine Category</th>
                     <th className="p-3 text-left border">Machine Size</th>
                     <th className="p-3 text-left border">Machine Code</th>
-                    <th className="p-3 text-left border">Worker</th>
-                    <th className="p-3 text-left border">Vendor</th>
-                    <th className="p-3 text-left border">Review For</th>
-                    <th className="p-3 text-left border">Client Name</th>
+                    <th className="p-3 text-left border">Process</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={16} className="text-center p-6 border">
+                      <td colSpan={20} className="text-center p-6 border">
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
                           Loading...
@@ -467,7 +468,7 @@ export default function MaterialMovementPage() {
                   {!loading && rows.length === 0 && (
                     <tr>
                       <td
-                        colSpan={16}
+                        colSpan={20}
                         className="text-center p-6 text-gray-500 border"
                       >
                         No Data Found
@@ -477,38 +478,38 @@ export default function MaterialMovementPage() {
 
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border font-medium">
-                        {r.jo_no || "-"}
-                      </td>
+                      <td className="p-3 border">{r.sr_no ?? "-"}</td>
                       <td className="p-3 border font-semibold text-blue-600">
-                        {r.document_no || "-"}
+                        {r.document_no || r.job_no || r.tso_no || "-"}
+                      </td>
+                      <td className="p-3 border font-medium">
+                        {r.jo_number || r.jo_no || "-"}
                       </td>
                       <td className="p-3 border">
                         {getDocumentTypeBadge(r.job_type)}
                       </td>
-                      <td className="p-3 border">
-                        <span className="font-bold text-blue-600">
-                          {r.mtl_challan_no || 0}
-                        </span>
+                      <td className="p-3 border">{r.product_item_no || "-"}</td>
+                      <td className="p-3 border font-semibold">
+                        {r.product_qty ?? "-"}
                       </td>
-                      <td className="p-3 border">{r.chalan_no || "-"}</td>
-                      <td className="p-3 border">
-                        {formatDate(r.chalan_date)}
-                      </td>
+                      <td className="p-3 border">{r.moc || "-"}</td>
                       <td className="p-3 border">{r.serial_no || "-"}</td>
                       <td className="p-3 border">
                         {r.item_description || "-"}
                       </td>
+                      <td className="p-3 border">{r.item_no ?? "-"}</td>
                       <td className="p-3 border font-semibold">
-                        {r.quantity_no || 0}
+                        {r.quantity_no ?? "-"}
+                      </td>
+                      <td className="p-3 border">{r.chalan_no || "-"}</td>
+                      <td className="p-3 border">{formatDate(r.chalan_date)}</td>
+                      <td className="p-3 border">{formatDate(r.job_order_date)}</td>
+                      <td className="p-3 border">
+                        {formatDate(r.mtl_receive_date)}
                       </td>
                       <td className="p-3 border">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(
-                            r.status
-                          )}`}
-                        >
-                          {r.status || "-"}
+                        <span className="font-bold text-blue-600">
+                          {r.material_challan_no || r.mtl_challan_no || "-"}
                         </span>
                       </td>
                       <td className="p-3 border">
@@ -516,10 +517,15 @@ export default function MaterialMovementPage() {
                       </td>
                       <td className="p-3 border">{r.machine_size || "-"}</td>
                       <td className="p-3 border">{r.machine_code || "-"}</td>
-                      <td className="p-3 border">{r.worker_name || "-"}</td>
-                      <td className="p-3 border">{r.vendor_name || "-"}</td>
-                      <td className="p-3 border">{r.review_for || "-"}</td>
-                      <td className="p-3 border">{r.client_name || "-"}</td>
+                      <td className="p-3 border">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(
+                            r.status || r.process
+                          )}`}
+                        >
+                          {r.process || r.status || "-"}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

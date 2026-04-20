@@ -14,6 +14,36 @@ import { FaArrowLeft } from "react-icons/fa";
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
 
+const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
+  if (!permissions) return false;
+  return permissions.some((p) => p.name === permissionName);
+};
+
+const canPerformQcVendorAction = (
+  permissions: any[] | null,
+  clientName: string
+): boolean => {
+  if (!permissions) return false;
+
+  const normalizedClient = String(clientName || "").toLowerCase();
+  const clientKey = normalizedClient.includes("equip")
+    ? "eqp"
+    : normalizedClient.includes("bio")
+    ? "bio"
+    : null;
+
+  if (clientKey) {
+    // Strict check: only exact QC vendor edit permission for current client
+    return hasPermission(permissions, `qc.${clientKey}.vendor.edit`);
+  }
+
+  // No client in URL: allow if user has either vendor QC edit
+  return (
+    hasPermission(permissions, "qc.eqp.vendor.edit") ||
+    hasPermission(permissions, "qc.bio.vendor.edit")
+  );
+};
+
 type Row = {
   id: string;
   jo_no?: string | null;
@@ -55,6 +85,8 @@ export default function QcVendorPage() {
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
   const client = searchParams.get("client") || "";
   const REVIEW_FOR = "vendor";
+  const permissions = storage.getUserPermissions();
+  const canQcEdit = canPerformQcVendorAction(permissions, client);
 
   const status = useMemo(() => {
     return tab === "outgoing" ? "qc-vendor" : "in-vendor";
@@ -228,6 +260,10 @@ export default function QcVendorPage() {
 
   // ========== SERIAL-WISE REWORK ==========
   const handleSerialRework = async (item: Row) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission for Vendor QC actions");
+      return;
+    }
     if (!item) return;
 
     const { value: reason, isConfirmed } = await Swal.fire({
@@ -271,6 +307,10 @@ export default function QcVendorPage() {
 
   // ========== SERIAL-WISE NOT OK with QUANTITY ==========
   const handleSerialNotOk = async (item: Row) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission for Vendor QC actions");
+      return;
+    }
     if (!item) return;
 
     const maxQty = Number(item.quantity_no ?? 0);
@@ -372,6 +412,10 @@ export default function QcVendorPage() {
 
   // ========== SERIAL-WISE OK ==========
   const handleSerialOk = async (item: Row) => {
+    if (!canQcEdit) {
+      toast.error("You don't have permission for Vendor QC actions");
+      return;
+    }
     if (tab === "outgoing") {
       await openOutgoingForm(item);
     } else {
@@ -668,21 +712,38 @@ export default function QcVendorPage() {
                                 <div className="flex flex-col gap-1">
                                   <button
                                     onClick={() => handleSerialOk(item)}
-                                    className={`px-2 py-1 rounded text-xs text-white ${
-                                      tab === "outgoing" ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"
+                                    className={`px-2 py-1 rounded text-xs ${
+                                      canQcEdit
+                                        ? `text-white ${
+                                            tab === "outgoing"
+                                              ? "bg-blue-600 hover:bg-blue-700"
+                                              : "bg-green-600 hover:bg-green-700"
+                                          }`
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                     }`}
+                                    disabled={!canQcEdit}
                                   >
                                     {tab === "outgoing" ? "Outgoing" : "Incoming"}
                                   </button>
                                   <button
                                     onClick={() => handleSerialNotOk(item)}
-                                    className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs"
+                                    className={`px-2 py-1 rounded text-xs ${
+                                      canQcEdit
+                                        ? "bg-yellow-500 text-white hover:bg-yellow-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                    disabled={!canQcEdit}
                                   >
                                     Not OK
                                   </button>
                                   <button
                                     onClick={() => handleSerialRework(item)}
-                                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                    className={`px-2 py-1 rounded text-xs ${
+                                      canQcEdit
+                                        ? "bg-red-500 text-white hover:bg-red-600"
+                                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                    disabled={!canQcEdit}
                                   >
                                     Rework
                                   </button>
