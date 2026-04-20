@@ -95,12 +95,9 @@ export default function Home() {
   const [editId, setEditId] = useState<string | null>(null);
   const [data, setData] = useState<any | []>([]);
   const [activeClient, setActiveClient] = useState<string>("All");
-
-  const filteredData =
-    activeClient === "All"
-      ? data
-      : data.filter((item: any) => item.client_name === activeClient);
-  console.log("DDDDDDDDDDDDDDDD", filteredData);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const pageSize = 10;
 
   const storage = new StorageManager();
   const userID = storage.getUserId();
@@ -140,7 +137,7 @@ export default function Home() {
         toast.success("Category added successfully");
       }
 
-      fetchData();
+      fetchData(activeClient, currentPage);
       setFlyoutOpen(false);
       resetFormState();
     } catch (error: any) {
@@ -196,7 +193,7 @@ export default function Home() {
 
         if (response.data.success) {
           toast.success("Category deleted successfully");
-          fetchData();
+          fetchData(activeClient, currentPage);
         } else {
           toast.error("Failed to delete category");
         }
@@ -209,14 +206,32 @@ export default function Home() {
 
   const [editValues, setEditValues] = useState(initialValues);
 
-  const fetchData = async () => {
+  const fetchData = async (client: string = activeClient, page: number = currentPage) => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories");
-      setData(response.data.data);
+      let query = `?page=${page}&limit=${pageSize}`;
+      if (client !== "All") {
+        query += `&client_name=${encodeURIComponent(client)}`;
+      }
+
+      const response = await axiosProvider.get(`/fineengg_erp/system/categories${query}`);
+      setData(response.data.data || []);
+
+      if (response.data.meta) {
+        setTotalPages(response.data.meta.totalPages || 1);
+        setCurrentPage(response.data.meta.page || page);
+      } else {
+        setTotalPages(1);
+        setCurrentPage(page);
+      }
     } catch (error: any) {
       console.error("Error fetching categories:", error);
       toast.error("Failed to load categories");
     }
+  };
+
+  const handleClientChange = (client: string) => {
+    setActiveClient(client);
+    setCurrentPage(1);
   };
 
   const resetFormState = () => {
@@ -226,8 +241,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(activeClient, currentPage);
+  }, [activeClient, currentPage]);
 
   return (
     <>
@@ -271,7 +286,7 @@ export default function Home() {
                   {["All", "Amar Equipment", "Amar Biosystem"].map((client) => (
                     <button
                       key={client}
-                      onClick={() => setActiveClient(client)}
+                      onClick={() => handleClientChange(client)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                         activeClient === client
                           ? "bg-primary-600 text-white"
@@ -405,7 +420,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.length === 0 ? (
+                  {data.length === 0 ? (
                     <tr>
                       <td
                         colSpan={canEditCategory ? 10 : 9}
@@ -417,7 +432,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item) => (
+                    data.map((item) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -488,6 +503,28 @@ export default function Home() {
                   )}
                 </tbody>
               </table>
+            </div>
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 px-2">
+              <p className="text-[#666666] text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
           {/* ----------------End table--------------------------- */}
