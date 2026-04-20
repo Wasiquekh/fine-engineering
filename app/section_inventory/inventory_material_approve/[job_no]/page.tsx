@@ -1,7 +1,8 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HiCheck, HiArrowLeft, HiX } from "react-icons/hi";
+import { FiSearch } from "react-icons/fi";
 import LeftSideBar from "../../../component/LeftSideBar";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
@@ -14,11 +15,27 @@ const axiosProvider = new AxiosProvider();
 export default function JobDetailsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [jobInfo, setJobInfo] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const isVendorTab = !!searchParams.get("assign_to_not");
   const jobNo = params.job_no ? decodeURIComponent(params.job_no as string) : "";
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      setSearchTerm(value.trim().toLowerCase());
+    }, 500);
+  };
 
   const handleApprove = async (id: string) => {
     const result = await Swal.fire({
@@ -126,6 +143,24 @@ export default function JobDetailsPage() {
     fetchData();
   }, [jobNo, searchParams]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
+
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return items;
+
+    return items.filter((item: any) => {
+      return String(item.jo_number ?? "")
+        .toLowerCase()
+        .includes(searchTerm);
+    });
+  }, [items, searchTerm]);
+
   return (
     <>
       <div className="flex justify-end min-h-screen">
@@ -150,8 +185,20 @@ export default function JobDetailsPage() {
               <HiArrowLeft />
               Back
             </button>
-            <div className="mb-6">
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <h1 className="text-2xl font-bold text-gray-800">Job Details: {jobNo}</h1>
+              <div className="relative w-full md:w-[320px]">
+                <input
+                  type="text"
+                  placeholder="Search items..."
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  className="w-full py-2 px-4 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 bg-white"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <FiSearch className="w-4 h-4" />
+                </div>
+              </div>
               {/* {jobInfo && (
                   <div className="text-sm text-gray-500 mt-1">
                       <span>Job Type: {jobInfo.job_type}</span>
@@ -176,14 +223,14 @@ export default function JobDetailsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.length === 0 ? (
+                  {filteredItems.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-4 py-6 text-center border border-tableBorder">
-                        <p className="text-[#666666] text-base">No items found for this job.</p>
+                        <p className="text-[#666666] text-base">No items found.</p>
                       </td>
                     </tr>
                   ) : (
-                    items.map((item: any) => (
+                    filteredItems.map((item: any) => (
                       <tr className="border border-tableBorder bg-white hover:bg-primary-100" key={item.id}>
                         <td className="px-2 py-2 border border-tableBorder">{item.jo_number || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder">{item.item_description}</td>
