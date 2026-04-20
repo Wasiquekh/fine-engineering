@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useState, useMemo, useRef } from "react";
-import { FiFilter } from "react-icons/fi";
+import { FiFilter, FiSearch } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
 import { HiTrash, HiLightningBolt } from "react-icons/hi";
 import LeftSideBar from "../../component/LeftSideBar";
@@ -48,6 +48,7 @@ const kanbanCategory = [
   { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
   { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
+const ITEMS_PER_PAGE = 20;
 
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
@@ -84,6 +85,8 @@ const isItemUrgent = (item: any): boolean => {
 export default function Home() {
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
   const [data, setData] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [currentDataset, setCurrentDataset] = useState<"JOBS" | "CATEGORIES">("JOBS");
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
@@ -230,6 +233,51 @@ export default function Home() {
     
     return currentData.filter((item) => item.job_type === activeFilter);
   }, [data, activeFilter, tsoSubFilter, kanbanSubFilter, jobServiceCategoryFilter, currentDataset]);
+
+  const searchedData = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    if (!normalizedSearch) return filteredData;
+
+    return filteredData.filter((item: any) => {
+      const searchableValues =
+        currentDataset === "CATEGORIES"
+          ? [item.job_no, item.job_category, item.description, item.material_type, item.qty]
+          : [
+              item.job_no,
+              item.tso_no,
+              item.jo_number,
+              item.job_type,
+              item.job_category,
+              item.item_description,
+              item.item_no,
+              item.moc,
+              item.bin_location,
+              item.qty,
+            ];
+
+      return searchableValues.some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
+    });
+  }, [filteredData, searchTerm, currentDataset]);
+
+  const totalPages = Math.max(1, Math.ceil(searchedData.length / ITEMS_PER_PAGE));
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return searchedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [searchedData, currentPage]);
+
+  const searchPlaceholder = useMemo(() => {
+    if (activeFilter === "TSO_SERVICE") {
+      return "Search TSO no, J/O no, category...";
+    }
+    if (activeFilter === "KANBAN") {
+      return "Search J/O no, category, item...";
+    }
+    if (activeFilter === "JOB_SERVICE") {
+      return "Search Job no, category, description...";
+    }
+    return "Search...";
+  }, [activeFilter]);
 
   const handleSubmit = async (values: any) => {
     if (!canEdit) {
@@ -517,6 +565,14 @@ export default function Home() {
     };
   }, [activeFilter, clientParam]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, currentDataset, jobServiceCategoryFilter, tsoSubFilter, kanbanSubFilter, searchTerm, clientParam]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   const canViewCurrentData = () => {
     if (clientParam === "Amar Equipment") {
       if (activeFilter === "JOB_SERVICE") return canViewEqpJob;
@@ -601,17 +657,32 @@ export default function Home() {
                 )}
               </div>
 
-              {canAddPending && (
-                <button onClick={openPendingMaterialFlyout} className="flex items-center gap-2 py-3 px-6 rounded-[4px] bg-primary-600 text-white hover:bg-primary-500">
-                  <FiFilter className="w-4 h-4" />
-                  <p className="text-sm font-medium">Add Pending</p>
-                </button>
-              )}
+              <div className="flex flex-wrap justify-start xl:justify-end items-center gap-3 w-full xl:w-auto">
+                <div className="flex items-center w-full sm:w-[300px] rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
+                  <input
+                    type="text"
+                    placeholder={searchPlaceholder}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
+                  />
+                  <div className="pr-3 text-gray-400">
+                    <FiSearch className="w-4 h-4" />
+                  </div>
+                </div>
+
+                {canAddPending && (
+                  <button onClick={openPendingMaterialFlyout} className="flex items-center gap-2 py-3 px-6 rounded-[4px] bg-primary-600 text-white hover:bg-primary-500">
+                    <FiFilter className="w-4 h-4" />
+                    <p className="text-sm font-medium">Add Pending</p>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="relative overflow-x-auto sm:rounded-lg">
+            <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg max-h-[500px] border border-tableBorder">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-[#999999]">
+                <thead className="text-xs text-[#999999] [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-gray-50">
                   <tr className="border border-tableBorder">
                     {currentDataset === "CATEGORIES" ? (
                       <>
@@ -644,10 +715,10 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.length === 0 ? (
+                  {searchedData.length === 0 ? (
                     <tr><td colSpan={100} className="px-4 py-6 text-center">No data found</td></tr>
                   ) : (
-                    filteredData.map((item: any) => {
+                    paginatedData.map((item: any) => {
                       const isUrgent = isItemUrgent(item);
                       return (
                         currentDataset === "CATEGORIES" ? (
@@ -664,7 +735,7 @@ export default function Home() {
                             <td className="px-2 py-2 border border-tableBorder">{item.bar}</td>
                             <td className="px-2 py-2 border border-tableBorder">{item.tempp}</td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <input type="date" className="border border-gray-300 rounded px-1 disabled:bg-gray-100" value={item.urgent_due_date ? item.urgent_due_date.replace(/\//g, "-") : ""} onChange={(e) => updateDueDate(item.job_no, e.target.value)} disabled={!canEdit} />
+                              <input type="date" className="border border-gray-300 rounded px-1 disabled:bg-gray-100" value={item.urgent_due_date ? item.urgent_due_date.replace(/\//g, "-") : ""} onChange={(e) => updateDueDate(item.job_no, e.target.value)} disabled={!canEdit} title="Urgent due date" aria-label="Urgent due date" />
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <span className={`px-2 py-1 rounded text-sm ${isUrgent ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
@@ -724,6 +795,32 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
+
+            {searchedData.length > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+                <p className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -754,7 +851,7 @@ export default function Home() {
                               <div key={index} className="border border-gray-200 p-4 rounded-lg">
                                 <div className="flex justify-between items-center mb-4">
                                   <p className="font-semibold">Item #{index + 1}</p>
-                                  {values.pending_items.length > 1 && <button type="button" onClick={() => remove(index)} className="p-1.5 bg-red-100 text-red-600 rounded-full"><HiTrash className="w-4 h-4" /></button>}
+                                  {values.pending_items.length > 1 && <button type="button" onClick={() => remove(index)} className="p-1.5 bg-red-100 text-red-600 rounded-full" title={`Remove item ${index + 1}`} aria-label={`Remove item ${index + 1}`}><HiTrash className="w-4 h-4" /></button>}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div><p className="font-medium text-sm mb-2">Item No</p><input type="text" name={`pending_items.${index}.item_no`} value={item.item_no} onChange={(e) => setFieldValue(`pending_items.${index}.item_no`, e.target.value)} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]" placeholder="Enter Item No" /><ErrorMessage name={`pending_items.${index}.item_no`} component="div" className="text-red-500 text-sm" /></div>

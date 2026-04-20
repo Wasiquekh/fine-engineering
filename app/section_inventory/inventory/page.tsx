@@ -225,6 +225,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const pageSize = 10;
   const [searchInput, setSearchInput] = useState<string>("");
+  const [searchField, setSearchField] = useState<string>("jo_number");
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Get user permissions
@@ -233,7 +234,43 @@ export default function Home() {
   // ALL buttons (Add Job Service, Add TSO Service, Add Kanban, Delete) controlled by material.data.edit
   const canEditInventory = hasPermission(permissions, "material.data.edit");
 
-  const fetchData = useCallback(async (filter: string, page: number, search: string = "") => {
+  const getSearchConfig = (filter: string) => {
+    switch (filter) {
+      case "JOB_SERVICE":
+        return { key: "job_no", placeholder: "Search Job No..." };
+      case "TSO_SERVICE":
+        return { key: "tso_no", placeholder: "Search TSO No..." };
+      case "KANBAN":
+        return { key: "jo_number", placeholder: "Search J/O Number..." };
+      default:
+        return { key: "jo_number", placeholder: "Search Job/TSO/JO No..." };
+    }
+  };
+  const getSearchFieldOptions = (filter: string) => {
+    if (filter === "JOB_SERVICE") {
+      return [{ value: "job_no", label: "Job No" }];
+    }
+    if (filter === "TSO_SERVICE") {
+      return [{ value: "tso_no", label: "TSO No" }];
+    }
+    if (filter === "KANBAN") {
+      return [{ value: "jo_number", label: "J/O Number" }];
+    }
+    return [
+      { value: "job_no", label: "Job No" },
+      { value: "tso_no", label: "TSO No" },
+      { value: "jo_number", label: "J/O Number" },
+    ];
+  };
+  const isAllOrRejectedTab = activeFilter === "ALL" || activeFilter === "REJECTED";
+  const selectedSearchFieldLabel =
+    getSearchFieldOptions(activeFilter).find((option) => option.value === searchField)?.label ||
+    getSearchConfig(activeFilter).placeholder;
+  const showJobNoColumn = activeFilter !== "TSO_SERVICE" && activeFilter !== "KANBAN";
+  const showTsoNoColumn = activeFilter !== "JOB_SERVICE" && activeFilter !== "KANBAN";
+  const tableColSpan = 15 + (showJobNoColumn ? 1 : 0) + (showTsoNoColumn ? 1 : 0);
+
+  const fetchData = useCallback(async (filter: string, page: number, search: string = "", field: string = searchField) => {
     try {
       let query = `?page=${page}&limit=${pageSize}`;
       if (filter !== "ALL" && filter !== "REJECTED") {
@@ -241,8 +278,8 @@ export default function Home() {
       } else if (filter === "REJECTED") {
         query += `&rejected=true`;
       }
-      if (search) {
-        query += `&jo_number=${encodeURIComponent(search)}`;
+      if (search && field) {
+        query += `&${field}=${encodeURIComponent(search)}`;
       }
       const response = await axiosProvider.get(`/fineengg_erp/system/jobs${query}`);
       setData(response.data.data);
@@ -254,7 +291,7 @@ export default function Home() {
       console.error("Error fetching jobs:", error);
       toast.error("Failed to load jobs");
     }
-  }, [pageSize]);
+  }, [pageSize, searchField]);
 
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
@@ -623,8 +660,20 @@ export default function Home() {
   };
 
   useEffect(() => {
-    fetchData(activeFilter, currentPage,searchTerm);
-  }, [activeFilter, currentPage,searchTerm]);
+    fetchData(activeFilter, currentPage, searchTerm, searchField);
+  }, [activeFilter, currentPage, searchTerm, searchField]);
+
+  useEffect(() => {
+    if (activeFilter === "ALL" || activeFilter === "REJECTED") {
+      setSearchField("");
+      setSearchInput("");
+      setSearchTerm("");
+      return;
+    }
+
+    const defaultKey = getSearchConfig(activeFilter).key;
+    setSearchField(defaultKey);
+  }, [activeFilter]);
 
   useEffect(() => {
     return () => {
@@ -668,10 +717,10 @@ export default function Home() {
               {/* Search and filter table row */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+                  <div className="flex items-center gap-1 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
                     <button
                       onClick={() => handleFilterChange("ALL")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      className={`py-2 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         activeFilter === "ALL"
                           ? "bg-primary-600 text-white"
                           : "text-gray-600 hover:bg-gray-100"
@@ -681,7 +730,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => handleFilterChange("JOB_SERVICE")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      className={`py-2 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         activeFilter === "JOB_SERVICE"
                           ? "bg-primary-600 text-white"
                           : "text-gray-600 hover:bg-gray-100"
@@ -691,7 +740,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => handleFilterChange("TSO_SERVICE")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      className={`py-2 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         activeFilter === "TSO_SERVICE"
                           ? "bg-primary-600 text-white"
                           : "text-gray-600 hover:bg-gray-100"
@@ -701,7 +750,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => handleFilterChange("KANBAN")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      className={`py-2 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         activeFilter === "KANBAN"
                           ? "bg-primary-600 text-white"
                           : "text-gray-600 hover:bg-gray-100"
@@ -711,7 +760,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => handleFilterChange("REJECTED")}
-                      className={`py-2 px-4 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
+                      className={`py-2 px-3 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                         activeFilter === "REJECTED"
                           ? "bg-primary-600 text-white"
                           : "text-gray-600 hover:bg-gray-100"
@@ -721,20 +770,62 @@ export default function Home() {
                     </button>
                   </div>
 
-                  <div className="relative min-w-[200px]">
-                    <input
-                      type="text"
-                      placeholder="Search J/O Number..."
-                      value={searchInput}
-                      onChange={handleSearchChange}
-                      className="w-full py-2 px-4 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 bg-white"
-                    />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <FiSearch className="w-4 h-4" />
-                    </div>
+                  <div className="w-full lg:w-[340px] xl:w-[280px]">
+                    {isAllOrRejectedTab && !searchField ? (
+                      <select
+                        value={searchField}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSearchField(value);
+                          setSearchInput("");
+                          setSearchTerm("");
+                          setCurrentPage(1);
+                        }}
+                        aria-label="Select search field"
+                        title="Select search field"
+                        className="w-full py-2.5 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      >
+                        <option value="">Select search type</option>
+                        {getSearchFieldOptions(activeFilter).map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex items-center w-full rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
+                        {isAllOrRejectedTab && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchField("");
+                              setSearchInput("");
+                              setSearchTerm("");
+                              setCurrentPage(1);
+                            }}
+                            className="py-2.5 px-3 text-sm text-primary-600 border-r border-gray-200 whitespace-nowrap"
+                            title="Change search field"
+                          >
+                            Change
+                          </button>
+                        )}
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            placeholder={`Search ${selectedSearchFieldLabel}...`}
+                            value={searchInput}
+                            onChange={handleSearchChange}
+                            className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <FiSearch className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="flex justify-center items-center gap-4">
+                <div className="flex flex-wrap justify-start xl:justify-end items-center gap-3 w-full xl:w-auto">
                   {/* Add Job Service Button - Disabled if no edit permission */}
                   <div className="relative">
                     <div
@@ -835,12 +926,22 @@ export default function Home() {
                       >
                         Client Name
                       </th>
-                      <th
-                        scope="col"
-                        className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
-                      >
-                        Job No
-                      </th>
+                      {showJobNoColumn && (
+                        <th
+                          scope="col"
+                          className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
+                        >
+                          Job No
+                        </th>
+                      )}
+                      {showTsoNoColumn && (
+                        <th
+                          scope="col"
+                          className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
+                        >
+                          TSO No
+                        </th>
+                      )}
                       <th
                         scope="col"
                         className="p-3 border border-tableBorder font-semibold text-firstBlack text-sm leading-normal whitespace-nowrap bg-gray-50 sticky top-0"
@@ -931,7 +1032,7 @@ export default function Home() {
                     {data.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={16}
+                          colSpan={tableColSpan}
                           className="px-4 py-6 text-center border border-tableBorder"
                         >
                           <p className="text-[#666666] text-sm">
@@ -957,9 +1058,16 @@ export default function Home() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
-                            {item.job_no || "N/A"}
-                          </td>
+                          {showJobNoColumn && (
+                            <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
+                              {item.job_no || "N/A"}
+                            </td>
+                          )}
+                          {showTsoNoColumn && (
+                            <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
+                              {item.tso_no || "N/A"}
+                            </td>
+                          )}
                           <td className="px-2 py-2 border border-tableBorder text-[#232323] text-sm leading-normal">
                             {item.jo_number || "N/A"}
                           </td>
@@ -1519,6 +1627,8 @@ export default function Home() {
                                                 type="button"
                                                 className="p-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
                                                 onClick={() => remove(index)}
+                                                aria-label={`Remove item ${index + 1}`}
+                                                title={`Remove item ${index + 1}`}
                                               >
                                                 <HiTrash className="w-4 h-4" />
                                               </button>
