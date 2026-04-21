@@ -48,7 +48,6 @@ const kanbanCategory = [
   { value: "HOLLOW_SHAFT", label: "HOLLOW SHAFT" },
   { value: "STIRRER_SHAFT", label: "STIRRER SHAFT" },
 ];
-const ITEMS_PER_PAGE = 20;
 
 const validationSchema = Yup.object().shape({
   job_type: Yup.string().required("Job Type is required"),
@@ -86,7 +85,9 @@ export default function Home() {
   const [isFlyoutOpen, setFlyoutOpen] = useState<boolean>(false);
   const [data, setData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [currentDataset, setCurrentDataset] = useState<"JOBS" | "CATEGORIES">("JOBS");
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
@@ -95,6 +96,7 @@ export default function Home() {
   const [categories, setCategories] = useState<any[]>([]);
 
   const router = useRouter();
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter");
   const clientParam = searchParams.get("client");
@@ -134,6 +136,26 @@ export default function Home() {
   
   const canEdit = getCurrentEditPermission();
   const canAddPending = canEdit && activeFilter === "JOB_SERVICE";
+
+  const getPaginationFromResponse = (response: any, requestedPage: number) => {
+    const meta = response?.data?.meta || {};
+    const resolvedTotalPages =
+      Number(meta.totalPages) ||
+      Number(meta.total_pages) ||
+      Number(meta.lastPage) ||
+      Number(meta.last_page) ||
+      1;
+    const resolvedPage =
+      Number(meta.page) ||
+      Number(meta.currentPage) ||
+      Number(meta.current_page) ||
+      requestedPage;
+
+    return {
+      totalPages: Math.max(1, resolvedTotalPages),
+      page: Math.max(1, resolvedPage),
+    };
+  };
 
   useEffect(() => {
     if (filterParam) {
@@ -259,13 +281,6 @@ export default function Home() {
     });
   }, [filteredData, searchTerm, currentDataset]);
 
-  const totalPages = Math.max(1, Math.ceil(searchedData.length / ITEMS_PER_PAGE));
-
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return searchedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [searchedData, currentPage]);
-
   const searchPlaceholder = useMemo(() => {
     if (activeFilter === "TSO_SERVICE") {
       return "Search TSO no, J/O no, category...";
@@ -278,6 +293,37 @@ export default function Home() {
     }
     return "Search...";
   }, [activeFilter]);
+
+  const appendSearchParam = (params: URLSearchParams, searchValue: string) => {
+    const trimmed = searchValue.trim();
+    if (!trimmed) return;
+
+    if (activeFilter === "TSO_SERVICE") {
+      params.set("tso_no", trimmed);
+      return;
+    }
+
+    if (activeFilter === "KANBAN") {
+      params.set("jo_number", trimmed);
+      return;
+    }
+
+    params.set("job_no", trimmed);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      setSearchTerm(value);
+      setCurrentPage(1);
+    }, 500);
+  };
 
   const handleSubmit = async (values: any) => {
     if (!canEdit) {
@@ -469,9 +515,14 @@ export default function Home() {
       if (clientParam) {
         params.set("client_name", clientParam);
       }
+      appendSearchParam(params, searchTerm);
+      params.set("page", String(currentPage));
       const url = `${baseUrl}?${params.toString()}`;
       const response = await axiosProvider.get(url);
       setData(Array.isArray(response.data.data) ? response.data.data : []);
+      const pagination = getPaginationFromResponse(response, currentPage);
+      setTotalPages(pagination.totalPages);
+      setCurrentPage(pagination.page);
 
     } catch (error: any) {
       console.error("Error fetching jobs:", error);
@@ -541,6 +592,8 @@ export default function Home() {
       if (clientParam) {
         params.set("client_name", clientParam);
       }
+      appendSearchParam(params, searchTerm);
+      params.set("page", String(currentPage));
       const endpoint = `${baseUrl}?${params.toString()}`;
 
       if (currentDataset !== dataset) {
@@ -552,6 +605,9 @@ export default function Home() {
         const response = await axiosProvider.get(endpoint);
         if (isMounted) {
           setData(Array.isArray(response.data.data) ? response.data.data : []);
+          const pagination = getPaginationFromResponse(response, currentPage);
+          setTotalPages(pagination.totalPages);
+          setCurrentPage(pagination.page);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -563,7 +619,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter, clientParam]);
+  }, [activeFilter, clientParam, currentPage, searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -572,6 +628,14 @@ export default function Home() {
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
 
   const canViewCurrentData = () => {
     if (clientParam === "Amar Equipment") {
@@ -662,8 +726,8 @@ export default function Home() {
                   <input
                     type="text"
                     placeholder={searchPlaceholder}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={searchInput}
+                    onChange={handleSearchChange}
                     className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
                   />
                   <div className="pr-3 text-gray-400">
@@ -718,7 +782,7 @@ export default function Home() {
                   {searchedData.length === 0 ? (
                     <tr><td colSpan={100} className="px-4 py-6 text-center">No data found</td></tr>
                   ) : (
-                    paginatedData.map((item: any) => {
+                    searchedData.map((item: any) => {
                       const isUrgent = isItemUrgent(item);
                       return (
                         currentDataset === "CATEGORIES" ? (
@@ -796,31 +860,29 @@ export default function Home() {
               </table>
             </div>
 
-            {searchedData.length > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-                <p className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 text-sm rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Next
-                  </button>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 px-2">
+              <p className="text-[#666666] text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

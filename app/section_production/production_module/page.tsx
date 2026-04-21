@@ -8,7 +8,6 @@ import AxiosProvider from "../../../provider/AxiosProvider";
 import { FiSearch } from "react-icons/fi";
 
 const axiosProvider = new AxiosProvider();
-const ITEMS_PER_PAGE = 20;
 
 interface FilterTab {
   value: string;
@@ -51,16 +50,39 @@ const FilterTabs: React.FC<FilterTabsProps> = ({ options, activeTab, onTabClick,
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const activeFilter = "JOB_SERVICE";
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState<string>("ALL");
   const [categories, setCategories] = useState<any[]>([]);
 
   const router = useRouter();
+  const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchParams = useSearchParams();
   const clientParam = searchParams.get("client");
   //const urgentParam = searchParams.get("urgent");
   const assignToParam = searchParams.get("assign_to");
+
+  const getPaginationFromResponse = (response: any, requestedPage: number) => {
+    const meta = response?.data?.meta || {};
+    const resolvedTotalPages =
+      Number(meta.totalPages) ||
+      Number(meta.total_pages) ||
+      Number(meta.lastPage) ||
+      Number(meta.last_page) ||
+      1;
+    const resolvedPage =
+      Number(meta.page) ||
+      Number(meta.currentPage) ||
+      Number(meta.current_page) ||
+      requestedPage;
+
+    return {
+      totalPages: Math.max(1, resolvedTotalPages),
+      page: Math.max(1, resolvedPage),
+    };
+  };
 
   const filteredData = useMemo(() => {
     let dataToFilter = data;
@@ -110,12 +132,19 @@ export default function Home() {
     });
   }, [filteredData, searchTerm]);
 
-  const totalPages = Math.max(1, Math.ceil(searchedData.length / ITEMS_PER_PAGE));
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return searchedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [searchedData, currentPage]);
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      setSearchTerm(value);
+      setCurrentPage(1);
+    }, 500);
+  };
 
   const fetchCategories = async () => {
     try {
@@ -163,6 +192,14 @@ export default function Home() {
   }, [totalPages]);
 
   useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
       const endpoint = "/fineengg_erp/system/categories";
@@ -174,6 +211,10 @@ export default function Home() {
       if (assignToParam) {
         params.append("assign_to", assignToParam);
       }
+      if (searchTerm.trim()) {
+        params.append("job_no", searchTerm.trim());
+      }
+      params.append("page", String(currentPage));
       // if (urgentParam === "true") {
       //   params.append("is_urgent", "true");
       // }
@@ -187,6 +228,9 @@ export default function Home() {
         if (isMounted) {
           const fetchedData = Array.isArray(response.data.data) ? response.data.data : [];
           setData(fetchedData);
+          const pagination = getPaginationFromResponse(response, currentPage);
+          setTotalPages(pagination.totalPages);
+          setCurrentPage(pagination.page);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -199,7 +243,7 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [clientParam, assignToParam /*, urgentParam */]);
+  }, [clientParam, assignToParam, currentPage, searchTerm /*, urgentParam */]);
 
   return (
     <>
@@ -235,8 +279,8 @@ export default function Home() {
                 <input
                   type="text"
                   placeholder="Search Job no, category, description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={handleSearchChange}
                   className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
                 />
                 <div className="pr-3 text-gray-400">
@@ -352,7 +396,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedData.map((item: any) => (
+                    searchedData.map((item: any) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
