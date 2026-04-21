@@ -114,24 +114,6 @@ export default function Home() {
     return [...Array.from(uniqueJobs.values()), ...itemsWithoutJob];
   }, [data, jobServiceCategoryFilter]);
 
-  const searchedData = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    if (!normalizedSearch) return filteredData;
-
-    return filteredData.filter((item: any) => {
-      const searchableValues = [
-        item.job_no,
-        item.job_category,
-        item.description,
-        item.material_type,
-        item.qty,
-        item.bar,
-        item.tempp,
-      ];
-      return searchableValues.some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
-    });
-  }, [filteredData, searchTerm]);
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchInput(value);
@@ -221,7 +203,6 @@ export default function Home() {
 
       const queryString = params.toString();
       const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-      setData([]);
 
       try {
         const response = await axiosProvider.get(url);
@@ -278,7 +259,7 @@ export default function Home() {
               <div className="flex items-center w-full sm:w-[320px] rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
                 <input
                   type="text"
-                  placeholder="Search Job no, category, description..."
+                  placeholder="Search Job no..."
                   value={searchInput}
                   onChange={handleSearchChange}
                   className="w-full py-2.5 px-4 pr-10 text-sm focus:outline-none bg-transparent"
@@ -384,7 +365,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {searchedData.length === 0 ? (
+                  {filteredData.length === 0 ? (
                     <tr>
                       <td
                         colSpan={9}
@@ -396,7 +377,7 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    searchedData.map((item: any) => (
+                    filteredData.map((item: any) => (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -459,7 +440,7 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
-            {searchedData.length > 0 && (
+            {filteredData.length > 0 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
                 <p className="text-sm text-gray-600">
                   Page {currentPage} of {totalPages}
