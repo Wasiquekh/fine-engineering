@@ -4,8 +4,6 @@ import axios, {
   InternalAxiosRequestConfig,
   AxiosError,
 } from "axios";
-import { getToken } from "firebase/app-check";
-import { appCheck } from "../app/firebase-config";
 import StorageManager from "./StorageManager";
 
 const isServer = typeof window === "undefined";
@@ -26,6 +24,23 @@ export default class AxiosProvider {
     '/worker/login',
     '/worker/verify'
   ];
+
+  private async getAppCheckToken(): Promise<string | null> {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const [{ getToken }, { appCheck }] = await Promise.all([
+        import("firebase/app-check"),
+        import("../app/firebase-config"),
+      ]);
+
+      if (!appCheck) return null;
+      const appCheckTokenResponse = await getToken(appCheck, true);
+      return appCheckTokenResponse?.token || null;
+    } catch {
+      return null;
+    }
+  }
 
   constructor(baseURL: string = defaultBaseURL) {
     this.baseURL = isServer
@@ -78,15 +93,10 @@ export default class AxiosProvider {
         config.headers.set("Authorization", `Bearer ${accessToken}`);
       }
 
-      // Add AppCheck token (optional)
-      try {
-        const appCheckTokenResponse = await getToken(appCheck, true);
-        const appCheckToken = appCheckTokenResponse.token;
-        if (appCheckToken) {
-          config.headers.set("X-Firebase-AppCheck", appCheckToken);
-        }
-      } catch (appCheckError) {
-        // Ignore app check errors
+      // Add AppCheck token (optional, browser only)
+      const appCheckToken = await this.getAppCheckToken();
+      if (appCheckToken) {
+        config.headers.set("X-Firebase-AppCheck", appCheckToken);
       }
 
       // Debug logging
