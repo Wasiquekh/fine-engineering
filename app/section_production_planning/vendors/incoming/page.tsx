@@ -75,6 +75,18 @@ type RevertVendorSuccess = {
   message: string;
 };
 
+type IncomingToQcRequest = {
+  updated_by?: string;
+};
+
+type IncomingToQcSuccess = {
+  success: true;
+  data?: {
+    assignment?: VendorIncomingAssignment;
+  } | VendorIncomingAssignment;
+  message?: string;
+};
+
 type ApiError = {
   success: false;
   error: string;
@@ -125,6 +137,7 @@ export default function VendorIncomingPage() {
   const [selectedJO, setSelectedJO] = useState<string | null>(null);
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [processingQcAssignmentId, setProcessingQcAssignmentId] = useState<string | null>(null);
 
   const client = searchParams.get("client") || "";
   const permissions = storage.getUserPermissions();
@@ -242,6 +255,42 @@ export default function VendorIncomingPage() {
         ? `: ${apiError.details.join(", ")}`
         : "";
       toast.error(`${apiError?.error || "Failed to revert vendor assignment"}${validationDetails}`);
+    }
+  };
+
+  const handleMoveToQc = async (item: VendorIncomingAssignment) => {
+    if (!item.id) {
+      toast.error("Assignment ID not found");
+      return;
+    }
+
+    setProcessingQcAssignmentId(item.id);
+    try {
+      const payload: IncomingToQcRequest = {};
+      const updatedBy = storage.getUserId();
+      if (updatedBy) {
+        payload.updated_by = updatedBy;
+      }
+
+      const response = await axiosProvider.post<IncomingToQcSuccess | ApiError>(
+        `/fineengg_erp/system/assign-to-worker/${item.id}/incomming-to-qc`,
+        payload
+      );
+
+      const responseData = response?.data;
+      if (!responseData || responseData.success === false) {
+        const apiError = responseData as ApiError | undefined;
+        toast.error(apiError?.error || "Failed to move to ready-for-qc");
+        return;
+      }
+
+      toast.success("Moved to ready-for-qc");
+      setData((prevData) => prevData.filter((d) => d.id !== item.id));
+    } catch (error: any) {
+      const apiError = error?.response?.data as ApiError | undefined;
+      toast.error(apiError?.error || "Failed to move to ready-for-qc");
+    } finally {
+      setProcessingQcAssignmentId((prev) => (prev === item.id ? null : prev));
     }
   };
 
@@ -534,6 +583,16 @@ export default function VendorIncomingPage() {
                               </td>
                               <td className="p-3 border text-center">
                                 <div className="flex flex-col gap-2 items-center">
+                                  {String(item.status || "").toLowerCase() === "in-review" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveToQc(item)}
+                                      disabled={processingQcAssignmentId === item.id}
+                                      className="px-3 py-1 rounded text-xs transition-colors bg-green-100 text-green-700 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                    >
+                                      {processingQcAssignmentId === item.id ? "Processing..." : "QC"}
+                                    </button>
+                                  )}
                                   <div className="relative">
                                     <details>
                                       <summary
