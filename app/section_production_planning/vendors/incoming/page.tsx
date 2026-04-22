@@ -9,8 +9,6 @@ import AxiosProvider from "../../../../provider/AxiosProvider";
 import StorageManager from "../../../../provider/StorageManager";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
-import { MdOutlineVerified } from "react-icons/md";
-import { FaBan } from "react-icons/fa";
 import PageGuard from "../../../component/PageGuard";
 import Swal from "sweetalert2";
 
@@ -62,6 +60,29 @@ interface VendorIncomingAssignment {
   } | null;
 }
 
+type RevertVendorRequest = {
+  assign_to: string;
+  qty: number;
+  updated_by?: string;
+};
+
+type RevertVendorSuccess = {
+  success: true;
+  data: {
+    assignment: VendorIncomingAssignment;
+    job: any;
+  };
+  message: string;
+};
+
+type ApiError = {
+  success: false;
+  error: string;
+  details?: string[];
+};
+
+const ASSIGN_OPTIONS = ["Usmaan", "Riyaaz", "Ramzaan"] as const;
+
 const getAssignmentDedupKey = (item: VendorIncomingAssignment): string => {
   if (item.id) return `id:${item.id}`;
   return [
@@ -87,6 +108,14 @@ const dedupeAssignments = (items: VendorIncomingAssignment[]): VendorIncomingAss
   return Array.from(uniqueMap.values());
 };
 
+const isVisibleVendorIncomingRow = (item: any): boolean => {
+  const reviewFor = String(item?.review_for || "").toLowerCase();
+  const status = String(item?.status || "").toLowerCase();
+  const qty = Number(item?.quantity_no ?? 0);
+
+  return reviewFor === "vendor" && status === "in-review" && qty > 0;
+};
+
 export default function VendorIncomingPage() {
   const searchParams = useSearchParams();
   
@@ -96,8 +125,6 @@ export default function VendorIncomingPage() {
   const [selectedJO, setSelectedJO] = useState<string | null>(null);
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
-  const [showOtherInput, setShowOtherInput] = useState<{ [key: string]: boolean }>({});
-  const [otherNameValue, setOtherNameValue] = useState<{ [key: string]: string }>({});
 
   const client = searchParams.get("client") || "";
   const permissions = storage.getUserPermissions();
@@ -129,32 +156,25 @@ export default function VendorIncomingPage() {
   const fetchVendorIncoming = async () => {
     setLoading(true);
     try {
-      const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
-      let allData: VendorIncomingAssignment[] = [];
+      const params: any = { review_for: "vendor" };
+      if (client) params.client_name = client;
 
-      for (const jobType of jobTypes) {
-        const params: any = { job_type: jobType };
-        if (client) params.client_name = client;
-        
-        const response = await axiosProvider.get("/fineengg_erp/system/assignments/in-review/vendor", {
-            params,
-            headers: undefined
-        });
-        const fetchedData = response?.data?.data || [];
-        
-        const dataWithType = fetchedData.map((item: any) => ({
-          ...item,
-          job_type: jobType,
-          tso_no: item.tso_no || item.job?.tso_no,
-          job_category: item.job_category || item.job?.job_category,
-          assign_to: item.assign_to || item.job?.assign_to,
-          assign_date: item.assign_date,
-        }));
-        
-        allData = [...allData, ...dataWithType];
-      }
-      
-      const dedupedData = dedupeAssignments(allData);
+      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+        params,
+        headers: undefined,
+      });
+      const fetchedData = (response?.data?.data || []).filter(isVisibleVendorIncomingRow);
+
+      const normalizedData = fetchedData.map((item: any) => ({
+        ...item,
+        job_type: item.job_type || item.job?.job_type || "JOB_SERVICE",
+        tso_no: item.tso_no || item.job?.tso_no,
+        job_category: item.job_category || item.job?.job_category,
+        assign_to: item.assign_to || item.job?.assign_to,
+        assign_date: item.assign_date,
+      }));
+
+      const dedupedData = dedupeAssignments(normalizedData);
       setData(dedupedData);
     } catch (error) {
       console.error("Error fetching vendor incoming:", error);
@@ -170,52 +190,58 @@ export default function VendorIncomingPage() {
   }, [client]);
 
   useEffect(() => {
+    setJobServiceCategoryFilter("ALL");
     setSelectedIdentifier(null);
     setSelectedJO(null);
     fetchVendorIncoming();
   }, [client]);
 
-  // Assign to Usmaan/Ramzaan/Riyaaz/Other
-  const handleAssign = async (item: VendorIncomingAssignment, workerName: string) => {
-    if (!canEditProductionPlanning) {
-      toast.error("You don't have permission to assign");
+  // Revert vendor assignment and send item back to production queue with new assignee
+  const handleRevertVendorAssign = async (item: VendorIncomingAssignment, assignTo: string) => {
+    if (!item.id) {
+      toast.error("Assignment ID not found");
       return;
     }
 
-    if (!item.job_id) {
-      toast.error("Job ID not found");
+    const qty = Number(item.quantity_no || 0);
+    if (!Number.isInteger(qty) || qty < 1) {
+      toast.error("Invalid assignment quantity for revert");
       return;
     }
-
-    const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
 
     try {
-      // Using the existing job assign API
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/assign`, {
-        assign_to: workerName,
-        assign_date: today
-      });
-      
-      toast.success(`Assigned to ${workerName} successfully`);
-      
-      // Update local state
-      setData((prevData) =>
-        prevData.map((d) =>
-          d.id === item.id ? { 
-            ...d, 
-            assign_to: workerName, 
-            assign_date: today,
-            job: d.job ? { ...d.job, assign_to: workerName, assign_date: today } : d.job
-          } : d
-        )
+      const updatedBy = storage.getUserId();
+      const payload: RevertVendorRequest = {
+        assign_to: assignTo,
+        qty,
+        ...(updatedBy ? { updated_by: updatedBy } : {}),
+      };
+
+      const response = await axiosProvider.post<RevertVendorSuccess | ApiError>(
+        `/fineengg_erp/system/assign-to-worker/${item.id}/revert-vendor`,
+        payload
       );
-      
-      setShowOtherInput(prev => ({ ...prev, [item.id]: false }));
-      setOtherNameValue(prev => ({ ...prev, [item.id]: "" }));
-      
+
+      const responseData = response?.data;
+      if (!responseData || responseData.success === false) {
+        const apiError = responseData as ApiError | undefined;
+        const validationDetails = apiError?.details?.length
+          ? `: ${apiError.details.join(", ")}`
+          : "";
+        toast.error(`${apiError?.error || "Failed to revert vendor assignment"}${validationDetails}`);
+        return;
+      }
+
+      toast.success(responseData.message || "Vendor assignment reverted successfully");
+      // Avoid full refetch here because backend in-review filter can hide sibling rows
+      // for the same JO/job after one revert. Remove only the acted row from UI.
+      setData((prevData) => prevData.filter((d) => d.id !== item.id));
     } catch (error: any) {
-      console.error("Error assigning item:", error);
-      toast.error(error?.response?.data?.error || "Failed to assign item");
+      const apiError = error?.response?.data as ApiError | undefined;
+      const validationDetails = apiError?.details?.length
+        ? `: ${apiError.details.join(", ")}`
+        : "";
+      toast.error(`${apiError?.error || "Failed to revert vendor assignment"}${validationDetails}`);
     }
   };
 
@@ -314,7 +340,11 @@ export default function VendorIncomingPage() {
       } else if (jobType === "KANBAN") {
         identifier = item.jo_no;
       } else {
-        identifier = item.job?.job_no;
+        identifier =
+          item.job?.job_no ||
+          item.jo_no ||
+          item.job?.jo_number ||
+          item.serial_no;
       }
       
       if (identifier && !ids.has(identifier)) {
@@ -348,7 +378,11 @@ export default function VendorIncomingPage() {
       } else if (jobType === "KANBAN") {
         itemIdentifier = item.jo_no;
       } else {
-        itemIdentifier = item.job?.job_no;
+        itemIdentifier =
+          item.job?.job_no ||
+          item.jo_no ||
+          item.job?.jo_number ||
+          item.serial_no;
       }
       
       return itemIdentifier === identifier;
@@ -499,93 +533,29 @@ export default function VendorIncomingPage() {
                                 </span>
                               </td>
                               <td className="p-3 border text-center">
-                                {canEditProductionPlanning && (
-                                  <div className="flex flex-col gap-2 items-center">
-                                    {/* Assign Buttons - Usmaan, Ramzaan, Riyaaz */}
-                                    <div className="flex gap-1 flex-wrap justify-center">
-                                      <button
-                                        onClick={() => handleAssign(item, "Usmaan")}
-                                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
-                                        title="Assign to Usmaan"
+                                <div className="flex flex-col gap-2 items-center">
+                                  <div className="relative">
+                                    <details>
+                                      <summary
+                                        className="list-none px-3 py-1 rounded text-xs transition-colors cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
                                       >
-                                        Usmaan
-                                      </button>
-                                      <button
-                                        onClick={() => handleAssign(item, "Ramzaan")}
-                                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
-                                        title="Assign to Ramzaan"
-                                      >
-                                        Ramzaan
-                                      </button>
-                                      <button
-                                        onClick={() => handleAssign(item, "Riyaaz")}
-                                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
-                                        title="Assign to Riyaaz"
-                                      >
-                                        Riyaaz
-                                      </button>
-                                      {!showOtherInput[item.id] ? (
-                                        <button
-                                          onClick={() => setShowOtherInput(prev => ({ ...prev, [item.id]: true }))}
-                                          className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 transition-colors"
-                                          title="Assign to Other"
-                                        >
-                                          Other
-                                        </button>
-                                      ) : (
-                                        <div className="flex gap-1">
-                                          <input
-                                            type="text"
-                                            placeholder="Name"
-                                            className="px-1 py-0.5 text-xs border rounded w-20 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            value={otherNameValue[item.id] || ""}
-                                            onChange={(e) => setOtherNameValue(prev => ({ ...prev, [item.id]: e.target.value }))}
-                                            autoFocus
-                                          />
+                                        Assign
+                                      </summary>
+                                      <div className="absolute z-10 mt-1 w-28 bg-white border rounded-md shadow-md">
+                                        {ASSIGN_OPTIONS.map((assignee) => (
                                           <button
-                                            onClick={() => {
-                                              const name = otherNameValue[item.id];
-                                              if (name && name.trim()) {
-                                                handleAssign(item, name.trim());
-                                              } else {
-                                                toast.error("Enter a name");
-                                              }
-                                            }}
-                                            className="px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
+                                            key={assignee}
+                                            type="button"
+                                            onClick={() => handleRevertVendorAssign(item, assignee)}
+                                            className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100"
                                           >
-                                            OK
+                                            {assignee}
                                           </button>
-                                          <button
-                                            onClick={() => setShowOtherInput(prev => ({ ...prev, [item.id]: false }))}
-                                            className="px-1 py-0.5 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                          >
-                                            ✕
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                    
-                                    {/* Ready for QC and Reject Buttons */}
-                                    <div className="flex gap-1 justify-center mt-1">
-                                      <button
-                                        onClick={() => handleReadyForQC(item)}
-                                        className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200 flex items-center gap-1 transition-colors"
-                                        title="Ready for QC"
-                                      >
-                                        <MdOutlineVerified className="w-3 h-3" />
-                                        Ready QC
-                                      </button>
-                                      <button
-                                        onClick={() => handleReject(item)}
-                                        className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200 flex items-center gap-1 transition-colors"
-                                        title="Reject"
-                                      >
-                                        <FaBan className="w-3 h-3" />
-                                        Reject
-                                      </button>
-                                    </div>
+                                        ))}
+                                      </div>
+                                    </details>
                                   </div>
-                                )}
+                                </div>
                               </td>
                             </tr>
                           );
