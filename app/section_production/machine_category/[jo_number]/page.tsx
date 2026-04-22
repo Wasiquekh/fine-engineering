@@ -104,7 +104,8 @@ export default function JoNumberPage() {
     try {
       const params = new URLSearchParams({
         job_type: "JOB_SERVICE",
-        jo_number: encodeURIComponent(jo_number),
+        // URLSearchParams handles encoding; manual encoding causes % to be encoded again.
+        jo_number,
       });
       if (clientName) params.append("client_name", clientName);
 
