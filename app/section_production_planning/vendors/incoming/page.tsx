@@ -62,6 +62,31 @@ interface VendorIncomingAssignment {
   } | null;
 }
 
+const getAssignmentDedupKey = (item: VendorIncomingAssignment): string => {
+  if (item.id) return `id:${item.id}`;
+  return [
+    item.job_id || "",
+    item.serial_no || "",
+    item.jo_no || "",
+    item.item_no || "",
+    String(item.quantity_no ?? ""),
+    item.vendor_name || "",
+  ].join("|");
+};
+
+const dedupeAssignments = (items: VendorIncomingAssignment[]): VendorIncomingAssignment[] => {
+  const uniqueMap = new Map<string, VendorIncomingAssignment>();
+
+  items.forEach((item) => {
+    const key = getAssignmentDedupKey(item);
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  });
+
+  return Array.from(uniqueMap.values());
+};
+
 export default function VendorIncomingPage() {
   const searchParams = useSearchParams();
   
@@ -129,7 +154,8 @@ export default function VendorIncomingPage() {
         allData = [...allData, ...dataWithType];
       }
       
-      setData(allData);
+      const dedupedData = dedupeAssignments(allData);
+      setData(dedupedData);
     } catch (error) {
       console.error("Error fetching vendor incoming:", error);
       toast.error("Failed to load vendor incoming data");
