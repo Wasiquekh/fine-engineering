@@ -9,6 +9,7 @@ import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
 import { FaChevronDown, FaBan } from "react-icons/fa";
 import { MdOutlineVerified } from "react-icons/md";
+import { IoCloseOutline } from "react-icons/io5";
 import Swal from "sweetalert2";
 import StorageManager from "../../../../provider/StorageManager";
 
@@ -66,19 +67,40 @@ interface CategoryDetail {
 interface PendingMaterial {
   id: string;
   job_no: string;
+  jo_number?: string;
   item_no: number;
   size: string;
   moc: string;
   qty: number;
   description: string;
+  status?: string;
   is_completed: boolean;
 }
 
+type PendingEditForm = {
+  description: string;
+  size: string;
+  moc: string;
+  qty: string;
+};
+
 export default function JobDetailsPage() {
   const [pendingData, setPendingData] = useState<PendingMaterial[]>([]);
+  const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
+  const [savingPendingEdit, setSavingPendingEdit] = useState(false);
+  const [deletingPendingId, setDeletingPendingId] = useState<string | null>(null);
+  const [editingPendingForm, setEditingPendingForm] = useState<PendingEditForm>({
+    description: "",
+    size: "",
+    moc: "",
+    qty: "",
+  });
   const [jobDetails, setJobDetails] = useState<JobDetail[]>([]);
   const [categoryDetails, setCategoryDetails] = useState<CategoryDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joNumberSearch, setJoNumberSearch] = useState("");
+  const [currentJoPage, setCurrentJoPage] = useState(1);
+  const joPageSize = 10;
   const [assignments, setAssignments] = useState<{
     [key: string]: { assignTo: string; otherName: string; assignDate: string };
   }>({});
@@ -106,6 +128,24 @@ export default function JobDetailsPage() {
     }, {} as Record<string, JobDetail[]>);
   }, [jobDetails]);
 
+  const filteredGroupedJobEntries = useMemo(() => {
+    const searchText = joNumberSearch.trim().toLowerCase();
+    const entries = Object.entries(groupedJobDetails);
+    if (!searchText) return entries;
+    return entries.filter(([joNumber]) => joNumber.toLowerCase().includes(searchText));
+  }, [groupedJobDetails, joNumberSearch]);
+
+  const totalJoPages = Math.max(1, Math.ceil(filteredGroupedJobEntries.length / joPageSize));
+  const paginatedGroupedJobEntries = useMemo(() => {
+    const startIndex = (currentJoPage - 1) * joPageSize;
+    return filteredGroupedJobEntries.slice(startIndex, startIndex + joPageSize);
+  }, [filteredGroupedJobEntries, currentJoPage]);
+
+  const editingPendingItem = useMemo(
+    () => pendingData.find((item) => item.id === editingPendingId) || null,
+    [pendingData, editingPendingId]
+  );
+
   const toggleJoNumberExpansion = (joNumber: string) => {
     setExpandedJoNumbers((prev) =>
       prev.includes(joNumber)
@@ -115,14 +155,26 @@ export default function JobDetailsPage() {
   };
 
   useEffect(() => {
+    setCurrentJoPage(1);
+    setExpandedJoNumbers([]);
+  }, [joNumberSearch]);
+
+  useEffect(() => {
+    if (currentJoPage > totalJoPages) {
+      setCurrentJoPage(totalJoPages);
+    }
+  }, [currentJoPage, totalJoPages]);
+
+  useEffect(() => {
     if (job_no) {
       const fetchData = async () => {
         setLoading(true);
         try {
+          const normalizedJobNo = decodeURIComponent(String(job_no || "")).trim().toLowerCase();
           const [jobsResponse, pendingResponse, categoriesResponse] = await Promise.all([
             axiosProvider.get(`/fineengg_erp/system/jobs?job_no=${encodeURIComponent(job_no)}`),
             axiosProvider.get(`/fineengg_erp/system/pending-materials?job_no=${encodeURIComponent(job_no)}`),
-            axiosProvider.get(`/fineengg_erp/system/categories`),
+            axiosProvider.get(`/fineengg_erp/system/categories?job_no=${encodeURIComponent(job_no)}`),
           ]);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
@@ -153,7 +205,10 @@ export default function JobDetailsPage() {
 
           if (categoriesResponse.data && Array.isArray(categoriesResponse.data.data)) {
             const allCategories = categoriesResponse.data.data;
-            const filteredCategories = allCategories.filter((cat: CategoryDetail) => String(cat.job_no) === String(job_no));
+            const filteredCategories = allCategories.filter((cat: CategoryDetail) => {
+              const categoryJobNo = decodeURIComponent(String(cat.job_no || "")).trim().toLowerCase();
+              return categoryJobNo === normalizedJobNo;
+            });
             setCategoryDetails(filteredCategories);
           } else {
             setCategoryDetails([]);
@@ -277,6 +332,114 @@ export default function JobDetailsPage() {
     }
   };
 
+  const handleStartEditPendingJo = (item: PendingMaterial) => {
+    const isMissingJoNumber = !String(item.jo_number || "").trim();
+    if (!isMissingJoNumber) return;
+    setEditingPendingId(item.id);
+    setEditingPendingForm({
+      description: String(item.description || ""),
+      size: String(item.size || ""),
+      moc: String(item.moc || ""),
+      qty: String(item.qty ?? ""),
+    });
+  };
+
+  const handleCancelEditPendingJo = () => {
+    setEditingPendingId(null);
+    setEditingPendingForm({
+      description: "",
+      size: "",
+      moc: "",
+      qty: "",
+    });
+  };
+
+  const handleSaveEditPendingJo = async () => {
+    if (!editingPendingId) return;
+    const qtyNumber = Number(editingPendingForm.qty);
+    if (editingPendingForm.qty.trim() === "" || Number.isNaN(qtyNumber)) {
+      toast.error("Please enter valid quantity");
+      return;
+    }
+    if (!canEdit) {
+      toast.error("You don't have permission");
+      return;
+    }
+
+    const payload = {
+      description: editingPendingForm.description.trim(),
+      size: editingPendingForm.size.trim(),
+      moc: editingPendingForm.moc.trim(),
+      qty: qtyNumber,
+    };
+
+    try {
+      setSavingPendingEdit(true);
+      await axiosProvider.put(
+        `/fineengg_erp/system/pending-materials/${editingPendingId}`,
+        payload
+      );
+
+      setPendingData((prev) =>
+        prev.map((item) =>
+          item.id === editingPendingId
+            ? {
+                ...item,
+                ...payload,
+              }
+            : item
+        )
+      );
+
+      toast.success("Pending material updated");
+      setEditingPendingId(null);
+      setEditingPendingForm({
+        description: "",
+        size: "",
+        moc: "",
+        qty: "",
+      });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to update pending material");
+    } finally {
+      setSavingPendingEdit(false);
+    }
+  };
+
+  const handleDeletePendingMaterial = async (item: PendingMaterial) => {
+    if (!canEdit) {
+      toast.error("You don't have permission");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Delete pending material?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingPendingId(item.id);
+      await axiosProvider.delete(`/fineengg_erp/system/pending-materials/${item.id}`);
+      setPendingData((prev) => prev.filter((row) => row.id !== item.id));
+      if (editingPendingId === item.id) {
+        handleCancelEditPendingJo();
+      }
+      toast.success("Pending material deleted");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to delete pending material");
+    } finally {
+      setDeletingPendingId(null);
+    }
+  };
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -321,7 +484,19 @@ export default function JobDetailsPage() {
           {/* Bottom Section */}
           <div className="flex flex-col gap-8">
             <div className="w-full">
-              <h2 className="text-xl font-semibold mb-4">Material Received From Amar</h2>
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 className="text-xl font-semibold">Material Received From Amar</h2>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-sm text-gray-600 whitespace-nowrap">Search JO:</span>
+                  <input
+                    type="text"
+                    value={joNumberSearch}
+                    onChange={(e) => setJoNumberSearch(e.target.value)}
+                    placeholder="Search by JO Number"
+                    className="w-full sm:w-72 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+              </div>
               <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg border border-tableBorder shadow-sm max-h-[550px]">
                 <table className="w-full text-sm text-left min-w-[1100px] border-separate border-spacing-0">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50 sticky top-0 z-20">
@@ -343,10 +518,10 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? (
                       <tr><td colSpan={canEdit ? 12 : 11} className="text-center py-4">Loading...</td></tr>
-                    ) : jobDetails.length === 0 ? (
+                    ) : filteredGroupedJobEntries.length === 0 ? (
                       <tr><td colSpan={canEdit ? 12 : 11} className="text-center py-4">No items to assign for this job.</td></tr>
                     ) : (
-                      Object.entries(groupedJobDetails).flatMap(([joNumber, jobs]) => {
+                      paginatedGroupedJobEntries.flatMap(([joNumber, jobs]) => {
                         const isExpanded = expandedJoNumbers.includes(joNumber);
                         const hasMultiple = jobs.length > 1;
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
@@ -354,7 +529,7 @@ export default function JobDetailsPage() {
                           const isProcessed = item.status === 'completed' || item.status === 'QC' || item.qty === 0;
                           return (
                             <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
-                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <div className="flex items-center gap-2">{joNumber}{hasMultiple && <button onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}</div>}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <div className="flex items-center gap-2">{joNumber}{hasMultiple && <button title={`Toggle rows for ${joNumber}`} aria-label={`Toggle rows for ${joNumber}`} onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}</div>}</td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
@@ -369,12 +544,12 @@ export default function JobDetailsPage() {
                                 ) : isFirst && (assignments[item.id]?.assignTo === "Others" ? (
                                   <div className="flex items-center gap-1"><input type="text" placeholder="Enter Name" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.otherName || ""} onChange={(e) => handleAssignmentChange(item.id, "otherName", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} /></div>
                                 ) : (
-                                  <select className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignTo || ""} onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit}>
+                                  <select title="Assign to" aria-label="Assign to" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignTo || ""} onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit}>
                                     <option value="">Select</option><option value="Usmaan">Usmaan</option><option value="Ramzaan">Ramzaan</option><option value="Riyaaz">Riyaaz</option><option value="Ashfaq">Ashfaq</option><option value="Others">Others</option>
                                   </select>
                                 ))}
                               </td>
-                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <input type="date" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignDate || ""} onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} />}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <input type="date" title="Assign date" aria-label="Assign date" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignDate || ""} onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} />}</td>
                               {canEdit && (
                                 <td className="px-4 py-3 border border-tableBorder">
                                   <div className="flex items-center gap-2">
@@ -385,8 +560,8 @@ export default function JobDetailsPage() {
                                     )}
                                     {(isChild || !hasMultiple) && (
                                       <>
-                                        <button onClick={() => !item.assign_to && !isRejected && !isProcessed && handleReject(item)} disabled={!!item.assign_to || !!isRejected || isProcessed} className={`p-2 rounded-md ${isRejected ? "bg-red-200 text-red-800" : (!!item.assign_to || isProcessed) ? "bg-gray-100 text-gray-400 opacity-50" : "bg-red-100 text-red-600 hover:bg-red-200"}`}><FaBan className="w-4 h-4" /></button>
-                                        <button onClick={() => !item.assign_to && !isProcessed && !isRejected && handleMarkQc(item)} disabled={!!item.assign_to || isProcessed || !!isRejected} className={`p-2 rounded-md ${(!!item.assign_to || isProcessed || !!isRejected) ? "bg-gray-100 text-gray-400 opacity-50" : "bg-green-100 text-green-600 hover:bg-green-200"}`}><MdOutlineVerified className="w-4 h-4" /></button>
+                                        <button title="Reject item" aria-label="Reject item" onClick={() => !item.assign_to && !isRejected && !isProcessed && handleReject(item)} disabled={!!item.assign_to || !!isRejected || isProcessed} className={`p-2 rounded-md ${isRejected ? "bg-red-200 text-red-800" : (!!item.assign_to || isProcessed) ? "bg-gray-100 text-gray-400 opacity-50" : "bg-red-100 text-red-600 hover:bg-red-200"}`}><FaBan className="w-4 h-4" /></button>
+                                        <button title="Mark item QC" aria-label="Mark item QC" onClick={() => !item.assign_to && !isProcessed && !isRejected && handleMarkQc(item)} disabled={!!item.assign_to || isProcessed || !!isRejected} className={`p-2 rounded-md ${(!!item.assign_to || isProcessed || !!isRejected) ? "bg-gray-100 text-gray-400 opacity-50" : "bg-green-100 text-green-600 hover:bg-green-200"}`}><MdOutlineVerified className="w-4 h-4" /></button>
                                       </>
                                     )}
                                   </div>
@@ -404,6 +579,27 @@ export default function JobDetailsPage() {
                   </tbody>
                 </table>
               </div>
+              {!loading && filteredGroupedJobEntries.length > 0 && (
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <button
+                    onClick={() => setCurrentJoPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentJoPage === 1}
+                    className="px-3 py-1.5 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <div className="text-sm text-gray-600">
+                    Page {currentJoPage} of {totalJoPages}
+                  </div>
+                  <button
+                    onClick={() => setCurrentJoPage((prev) => Math.min(totalJoPages, prev + 1))}
+                    disabled={currentJoPage === totalJoPages}
+                    className="px-3 py-1.5 rounded border border-gray-300 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="w-full">
@@ -412,29 +608,169 @@ export default function JobDetailsPage() {
                 <table className="w-full text-sm text-left min-w-[1000px]">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th className="px-4 py-4 border border-tableBorder">Job No</th><th className="px-4 py-4 border border-tableBorder">Description</th><th className="px-4 py-4 border border-tableBorder">Item No</th><th className="px-4 py-4 border border-tableBorder">Size</th><th className="px-4 py-4 border border-tableBorder">MOC</th><th className="px-4 py-4 border border-tableBorder">Qty</th><th className="px-4 py-4 border border-tableBorder">Status</th>
+                      <th className="px-4 py-4 border border-tableBorder">Job No</th><th className="px-4 py-4 border border-tableBorder">Description</th><th className="px-4 py-4 border border-tableBorder">Item No</th><th className="px-4 py-4 border border-tableBorder">Size</th><th className="px-4 py-4 border border-tableBorder">MOC</th><th className="px-4 py-4 border border-tableBorder">Qty</th><th className="px-4 py-4 border border-tableBorder">JO Number</th><th className="px-4 py-4 border border-tableBorder">Status</th><th className="px-4 py-4 border border-tableBorder">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {loading ? <tr><td colSpan={7} className="text-center py-4">Loading...</td></tr>
-                    : pendingData.filter((item) => !item.is_completed).length === 0 ? <tr><td colSpan={7} className="text-center py-4">No pending materials found.</td></tr>
-                    : pendingData.filter((item) => !item.is_completed).map((item) => (
-                      <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                    {loading ? <tr><td colSpan={9} className="text-center py-4">Loading...</td></tr>
+                    : pendingData.length === 0 ? <tr><td colSpan={9} className="text-center py-4">No pending materials found.</td></tr>
+                    : pendingData.map((item) => {
+                      const isMissingJoNumber = !String(item.jo_number || "").trim();
+                      return (
+                      <tr
+                        key={item.id}
+                        className={`border border-tableBorder ${
+                          isMissingJoNumber
+                            ? "bg-yellow-50 hover:bg-yellow-100"
+                            : "bg-white hover:bg-primary-100"
+                        }`}
+                      >
                         <td className="px-4 py-3 border border-tableBorder">{item.job_no}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.description}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.item_no}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.size}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.moc}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.qty}</td>
-                        <td className="px-4 py-3 border border-tableBorder"><span className={`px-2 py-1 rounded text-sm ${item.is_completed ? "bg-green-100 text-green-600" : "bg-yellow-100 text-yellow-600"}`}>{item.is_completed ? "Completed" : "Pending"}</span></td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.jo_number || "-"}</td>
+                        <td className="px-4 py-3 border border-tableBorder">{item.status || (item.is_completed ? "Completed" : "Pending")}</td>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          {isMissingJoNumber ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditPendingJo(item)}
+                                disabled={deletingPendingId === item.id}
+                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePendingMaterial(item)}
+                                disabled={deletingPendingId === item.id}
+                                className="px-2 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {deletingPendingId === item.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
+
+        {editingPendingId && (
+          <>
+            <div
+              className="min-h-screen w-full bg-[#1f1d1d80] fixed top-0 left-0 right-0 z-[999]"
+              onClick={handleCancelEditPendingJo}
+            />
+            <div className="flyout open">
+              <div className="w-full min-h-auto">
+                <div className="flex justify-between mb-4">
+                  <p className="text-primary-600 text-2xl font-semibold">Edit Pending Material</p>
+                  <IoCloseOutline
+                    onClick={handleCancelEditPendingJo}
+                    className="h-8 w-8 border border-[#E7E7E7] rounded cursor-pointer"
+                  />
+                </div>
+                <div className="w-full border-b border-[#E7E7E7] mb-4" />
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium text-sm mb-2">Job No</p>
+                      <input
+                        type="text"
+                        title="Job No"
+                        aria-label="Job No"
+                        value={editingPendingItem?.job_no || ""}
+                        disabled
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] bg-gray-100 text-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">Item No</p>
+                      <input
+                        type="text"
+                        title="Item No"
+                        aria-label="Item No"
+                        value={editingPendingItem?.item_no ?? ""}
+                        disabled
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] bg-gray-100 text-gray-500"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="font-medium text-sm mb-2">Description</p>
+                      <textarea
+                        value={editingPendingForm.description}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, description: e.target.value }))}
+                        placeholder="Enter Description"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] min-h-[100px]"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">Size</p>
+                      <input
+                        type="text"
+                        value={editingPendingForm.size}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, size: e.target.value }))}
+                        placeholder="Enter Size"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">MOC</p>
+                      <input
+                        type="text"
+                        value={editingPendingForm.moc}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, moc: e.target.value }))}
+                        placeholder="Enter MOC"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">Quantity</p>
+                      <input
+                        type="number"
+                        value={editingPendingForm.qty}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, qty: e.target.value }))}
+                        placeholder="Enter Quantity"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveEditPendingJo}
+                      disabled={savingPendingEdit}
+                      className="py-2.5 px-5 bg-primary-600 rounded-[4px] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingPendingEdit ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEditPendingJo}
+                      disabled={savingPendingEdit}
+                      className="py-2.5 px-5 bg-gray-200 text-gray-700 rounded-[4px]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
