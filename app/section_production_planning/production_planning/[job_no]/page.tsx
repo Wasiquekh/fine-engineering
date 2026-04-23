@@ -9,6 +9,7 @@ import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
 import { FaChevronDown, FaBan } from "react-icons/fa";
 import { MdOutlineVerified } from "react-icons/md";
+import { IoCloseOutline } from "react-icons/io5";
 import Swal from "sweetalert2";
 import StorageManager from "../../../../provider/StorageManager";
 
@@ -76,8 +77,24 @@ interface PendingMaterial {
   is_completed: boolean;
 }
 
+type PendingEditForm = {
+  description: string;
+  size: string;
+  moc: string;
+  qty: string;
+};
+
 export default function JobDetailsPage() {
   const [pendingData, setPendingData] = useState<PendingMaterial[]>([]);
+  const [editingPendingId, setEditingPendingId] = useState<string | null>(null);
+  const [savingPendingEdit, setSavingPendingEdit] = useState(false);
+  const [deletingPendingId, setDeletingPendingId] = useState<string | null>(null);
+  const [editingPendingForm, setEditingPendingForm] = useState<PendingEditForm>({
+    description: "",
+    size: "",
+    moc: "",
+    qty: "",
+  });
   const [jobDetails, setJobDetails] = useState<JobDetail[]>([]);
   const [categoryDetails, setCategoryDetails] = useState<CategoryDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +140,11 @@ export default function JobDetailsPage() {
     const startIndex = (currentJoPage - 1) * joPageSize;
     return filteredGroupedJobEntries.slice(startIndex, startIndex + joPageSize);
   }, [filteredGroupedJobEntries, currentJoPage]);
+
+  const editingPendingItem = useMemo(
+    () => pendingData.find((item) => item.id === editingPendingId) || null,
+    [pendingData, editingPendingId]
+  );
 
   const toggleJoNumberExpansion = (joNumber: string) => {
     setExpandedJoNumbers((prev) =>
@@ -310,6 +332,114 @@ export default function JobDetailsPage() {
     }
   };
 
+  const handleStartEditPendingJo = (item: PendingMaterial) => {
+    const isMissingJoNumber = !String(item.jo_number || "").trim();
+    if (!isMissingJoNumber) return;
+    setEditingPendingId(item.id);
+    setEditingPendingForm({
+      description: String(item.description || ""),
+      size: String(item.size || ""),
+      moc: String(item.moc || ""),
+      qty: String(item.qty ?? ""),
+    });
+  };
+
+  const handleCancelEditPendingJo = () => {
+    setEditingPendingId(null);
+    setEditingPendingForm({
+      description: "",
+      size: "",
+      moc: "",
+      qty: "",
+    });
+  };
+
+  const handleSaveEditPendingJo = async () => {
+    if (!editingPendingId) return;
+    const qtyNumber = Number(editingPendingForm.qty);
+    if (editingPendingForm.qty.trim() === "" || Number.isNaN(qtyNumber)) {
+      toast.error("Please enter valid quantity");
+      return;
+    }
+    if (!canEdit) {
+      toast.error("You don't have permission");
+      return;
+    }
+
+    const payload = {
+      description: editingPendingForm.description.trim(),
+      size: editingPendingForm.size.trim(),
+      moc: editingPendingForm.moc.trim(),
+      qty: qtyNumber,
+    };
+
+    try {
+      setSavingPendingEdit(true);
+      await axiosProvider.put(
+        `/fineengg_erp/system/pending-materials/${editingPendingId}`,
+        payload
+      );
+
+      setPendingData((prev) =>
+        prev.map((item) =>
+          item.id === editingPendingId
+            ? {
+                ...item,
+                ...payload,
+              }
+            : item
+        )
+      );
+
+      toast.success("Pending material updated");
+      setEditingPendingId(null);
+      setEditingPendingForm({
+        description: "",
+        size: "",
+        moc: "",
+        qty: "",
+      });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to update pending material");
+    } finally {
+      setSavingPendingEdit(false);
+    }
+  };
+
+  const handleDeletePendingMaterial = async (item: PendingMaterial) => {
+    if (!canEdit) {
+      toast.error("You don't have permission");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Delete pending material?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingPendingId(item.id);
+      await axiosProvider.delete(`/fineengg_erp/system/pending-materials/${item.id}`);
+      setPendingData((prev) => prev.filter((row) => row.id !== item.id));
+      if (editingPendingId === item.id) {
+        handleCancelEditPendingJo();
+      }
+      toast.success("Pending material deleted");
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to delete pending material");
+    } finally {
+      setDeletingPendingId(null);
+    }
+  };
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -478,12 +608,12 @@ export default function JobDetailsPage() {
                 <table className="w-full text-sm text-left min-w-[1000px]">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50">
                     <tr className="border border-tableBorder">
-                      <th className="px-4 py-4 border border-tableBorder">Job No</th><th className="px-4 py-4 border border-tableBorder">Description</th><th className="px-4 py-4 border border-tableBorder">Item No</th><th className="px-4 py-4 border border-tableBorder">Size</th><th className="px-4 py-4 border border-tableBorder">MOC</th><th className="px-4 py-4 border border-tableBorder">Qty</th><th className="px-4 py-4 border border-tableBorder">JO Number</th><th className="px-4 py-4 border border-tableBorder">Status</th>
+                      <th className="px-4 py-4 border border-tableBorder">Job No</th><th className="px-4 py-4 border border-tableBorder">Description</th><th className="px-4 py-4 border border-tableBorder">Item No</th><th className="px-4 py-4 border border-tableBorder">Size</th><th className="px-4 py-4 border border-tableBorder">MOC</th><th className="px-4 py-4 border border-tableBorder">Qty</th><th className="px-4 py-4 border border-tableBorder">JO Number</th><th className="px-4 py-4 border border-tableBorder">Status</th><th className="px-4 py-4 border border-tableBorder">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {loading ? <tr><td colSpan={8} className="text-center py-4">Loading...</td></tr>
-                    : pendingData.length === 0 ? <tr><td colSpan={8} className="text-center py-4">No pending materials found.</td></tr>
+                    {loading ? <tr><td colSpan={9} className="text-center py-4">Loading...</td></tr>
+                    : pendingData.length === 0 ? <tr><td colSpan={9} className="text-center py-4">No pending materials found.</td></tr>
                     : pendingData.map((item) => {
                       const isMissingJoNumber = !String(item.jo_number || "").trim();
                       return (
@@ -503,6 +633,30 @@ export default function JobDetailsPage() {
                         <td className="px-4 py-3 border border-tableBorder">{item.qty}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.jo_number || "-"}</td>
                         <td className="px-4 py-3 border border-tableBorder">{item.status || (item.is_completed ? "Completed" : "Pending")}</td>
+                        <td className="px-4 py-3 border border-tableBorder">
+                          {isMissingJoNumber ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditPendingJo(item)}
+                                disabled={deletingPendingId === item.id}
+                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePendingMaterial(item)}
+                                disabled={deletingPendingId === item.id}
+                                className="px-2 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {deletingPendingId === item.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
                       </tr>
                     )})}
                   </tbody>
@@ -511,6 +665,112 @@ export default function JobDetailsPage() {
             </div>
           </div>
         </div>
+
+        {editingPendingId && (
+          <>
+            <div
+              className="min-h-screen w-full bg-[#1f1d1d80] fixed top-0 left-0 right-0 z-[999]"
+              onClick={handleCancelEditPendingJo}
+            />
+            <div className="flyout open">
+              <div className="w-full min-h-auto">
+                <div className="flex justify-between mb-4">
+                  <p className="text-primary-600 text-2xl font-semibold">Edit Pending Material</p>
+                  <IoCloseOutline
+                    onClick={handleCancelEditPendingJo}
+                    className="h-8 w-8 border border-[#E7E7E7] rounded cursor-pointer"
+                  />
+                </div>
+                <div className="w-full border-b border-[#E7E7E7] mb-4" />
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-medium text-sm mb-2">Job No</p>
+                      <input
+                        type="text"
+                        title="Job No"
+                        aria-label="Job No"
+                        value={editingPendingItem?.job_no || ""}
+                        disabled
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] bg-gray-100 text-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">Item No</p>
+                      <input
+                        type="text"
+                        title="Item No"
+                        aria-label="Item No"
+                        value={editingPendingItem?.item_no ?? ""}
+                        disabled
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] bg-gray-100 text-gray-500"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="font-medium text-sm mb-2">Description</p>
+                      <textarea
+                        value={editingPendingForm.description}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, description: e.target.value }))}
+                        placeholder="Enter Description"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] min-h-[100px]"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">Size</p>
+                      <input
+                        type="text"
+                        value={editingPendingForm.size}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, size: e.target.value }))}
+                        placeholder="Enter Size"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">MOC</p>
+                      <input
+                        type="text"
+                        value={editingPendingForm.moc}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, moc: e.target.value }))}
+                        placeholder="Enter MOC"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm mb-2">Quantity</p>
+                      <input
+                        type="number"
+                        value={editingPendingForm.qty}
+                        onChange={(e) => setEditingPendingForm((prev) => ({ ...prev, qty: e.target.value }))}
+                        placeholder="Enter Quantity"
+                        className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveEditPendingJo}
+                      disabled={savingPendingEdit}
+                      className="py-2.5 px-5 bg-primary-600 rounded-[4px] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingPendingEdit ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEditPendingJo}
+                      disabled={savingPendingEdit}
+                      className="py-2.5 px-5 bg-gray-200 text-gray-700 rounded-[4px]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
