@@ -132,19 +132,33 @@ export default function KanbanDetailsPage() {
     }
 
     const assignToName = assignment.assignTo === "Others" ? assignment.otherName : assignment.assignTo;
-    const formattedDate = assignment.assignDate.replace(/-/g, '/');
+    const formattedDate = assignment.assignDate;
+    const updatedBy = storage.getUserId();
 
     try {
-      const params = new URLSearchParams();
-      params.append('assign_to', assignToName);
-      params.append('assign_date', formattedDate);
+      const payload: Record<string, any> = {
+        id,
+        assign_to: assignToName,
+        assign_date: formattedDate,
+      };
+      if (updatedBy) payload.updated_by = updatedBy;
 
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/assign`, params);
-      toast.success("Job assigned successfully");
+      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/assign`, payload);
+      const updatedIds: string[] = response?.data?.updated_ids || [];
+      const notFoundIds: string[] = response?.data?.not_found_ids || [];
+
+      if (updatedIds.length > 0) {
+        toast.success(`Job assigned successfully (${updatedIds.length})`);
+      } else {
+        toast.success("Job assigned successfully");
+      }
+      if (notFoundIds.length > 0) {
+        toast.warn(`${notFoundIds.length} selected job(s) were not found`);
+      }
 
       setJobDetails((prev) =>
         prev.map((job) =>
-          job.id === id
+          (updatedIds.length > 0 ? updatedIds.includes(job.id) : job.id === id)
             ? { ...job, assign_to: assignToName, assign_date: formattedDate }
             : job
         )

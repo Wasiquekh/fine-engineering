@@ -105,6 +105,7 @@ export default function JobDetailsPage() {
     [key: string]: { assignTo: string; otherName: string; assignDate: string };
   }>({});
   const [expandedJoNumbers, setExpandedJoNumbers] = useState<string[]>([]);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
   const params = useParams();
   const router = useRouter();
   const job_no = params.job_no ? decodeURIComponent(params.job_no as string) : "";
@@ -154,6 +155,39 @@ export default function JobDetailsPage() {
     );
   };
 
+  const isJobSelectable = (job: JobDetail) => {
+    const isRejected = job.is_rejected || job.rejected;
+    const isProcessed = job.status === "completed" || job.status === "QC" || job.qty === 0;
+    return !job.assign_to && !isRejected && !isProcessed;
+  };
+
+  const toggleSingleJobSelection = (job: JobDetail) => {
+    if (!isJobSelectable(job)) return;
+    setSelectedJobIds((prev) =>
+      prev.includes(job.id) ? prev.filter((id) => id !== job.id) : [...prev, job.id]
+    );
+  };
+
+  const toggleJoGroupSelection = (joNumber: string, jobs: JobDetail[]) => {
+    const groupIds = jobs.filter(isJobSelectable).map((job) => job.id);
+    const uniqueGroupIds = Array.from(new Set(groupIds));
+    if (uniqueGroupIds.length === 0) return;
+    const allSelected = uniqueGroupIds.every((id) => selectedJobIds.includes(id));
+
+    setSelectedJobIds((prev) => {
+      if (allSelected) {
+        return prev.filter((id) => !uniqueGroupIds.includes(id));
+      }
+      return Array.from(new Set([...prev, ...uniqueGroupIds]));
+    });
+
+    if (!allSelected) {
+      setExpandedJoNumbers((prev) =>
+        prev.includes(joNumber) ? prev : [...prev, joNumber]
+      );
+    }
+  };
+
   useEffect(() => {
     setCurrentJoPage(1);
     setExpandedJoNumbers([]);
@@ -181,9 +215,19 @@ export default function JobDetailsPage() {
             const fetchedJobs = jobsResponse.data.data;
             setJobDetails(fetchedJobs);
 
+            const joCounts = fetchedJobs.reduce((acc: Record<string, number>, job: JobDetail) => {
+              const key = job.jo_number || "N/A";
+              acc[key] = (acc[key] || 0) + 1;
+              return acc;
+            }, {});
+
             const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
             fetchedJobs.forEach((job: JobDetail) => {
-              if (job.assign_to) {
+              const joKey = job.jo_number || "N/A";
+              const isSingleRowJo = (joCounts[joKey] || 0) === 1;
+
+              // For grouped JO headers, keep parent dropdown empty ("Select") instead of prefilled assignee.
+              if (job.assign_to && isSingleRowJo) {
                 const isStandard = ["Usmaan", "Ashfaq", "Ramzaan", "Riyaaz"].includes(job.assign_to);
                 initialAssignments[job.id] = {
                   assignTo: isStandard ? job.assign_to : "Others",
@@ -235,9 +279,15 @@ export default function JobDetailsPage() {
     }));
   };
 
-  const handleAssign = async (id: string) => {
+  const handleAssign = async (sourceId: string) => {
     if (!canEdit) return;
-    const assignment = assignments[id];
+    const assignment = assignments[sourceId];
+    const uniqueSelectedIds = Array.from(new Set(selectedJobIds));
+
+    if (uniqueSelectedIds.length === 0) {
+      toast.error("Please select at least one checkbox");
+      return;
+    }
 
     if (!assignment?.assignTo) {
       toast.error("Please select who to assign to");
@@ -255,23 +305,50 @@ export default function JobDetailsPage() {
     }
 
     const assignToName = assignment.assignTo === "Others" ? assignment.otherName : assignment.assignTo;
-    const formattedDate = assignment.assignDate.replace(/-/g, '/');
+    const formattedDate = assignment.assignDate;
+    const updatedBy = storage.getUserId();
 
     try {
-      const params = new URLSearchParams();
-      params.append('assign_to', assignToName);
-      params.append('assign_date', formattedDate);
+      const payload: Record<string, any> = {
+        assign_to: assignToName,
+        assign_date: formattedDate,
+      };
+      if (uniqueSelectedIds.length === 1) {
+        payload.id = uniqueSelectedIds[0];
+      } else {
+        payload.ids = uniqueSelectedIds;
+      }
+      if (updatedBy) payload.updated_by = updatedBy;
 
-      await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/assign`, params);
-      toast.success("Job assigned successfully");
+      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/assign`, payload);
+      const updatedIds: string[] = response?.data?.updated_ids || [];
+      const notFoundIds: string[] = response?.data?.not_found_ids || [];
+
+      if (updatedIds.length > 0) {
+        toast.success(`Job assigned successfully (${updatedIds.length})`);
+      } else {
+        toast.success("Job assigned successfully");
+      }
+      if (notFoundIds.length > 0) {
+        toast.warn(`${notFoundIds.length} selected job(s) were not found`);
+      }
 
       setJobDetails((prev) =>
         prev.map((job) =>
-          job.id === id
+          (updatedIds.length > 0 ? updatedIds.includes(job.id) : uniqueSelectedIds.includes(job.id))
             ? { ...job, assign_to: assignToName, assign_date: formattedDate }
             : job
         )
       );
+      if (updatedIds.length > 0) {
+        setSelectedJobIds((prev) => prev.filter((jobId) => !updatedIds.includes(jobId)));
+      } else {
+        setSelectedJobIds([]);
+      }
+      setAssignments((prev) => ({
+        ...prev,
+        [sourceId]: { assignTo: "", otherName: "", assignDate: "" },
+      }));
     } catch (error) {
       console.error("Error assigning job:", error);
       toast.error("Failed to assign job");
@@ -501,6 +578,7 @@ export default function JobDetailsPage() {
                 <table className="w-full text-sm text-left min-w-[1100px] border-separate border-spacing-0">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50 sticky top-0 z-20">
                     <tr className="border border-tableBorder">
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Select</th>
                       <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">J/O No</th>
                       <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Product Desc</th>
                       <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Product Qty</th>
@@ -517,18 +595,50 @@ export default function JobDetailsPage() {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={canEdit ? 12 : 11} className="text-center py-4">Loading...</td></tr>
+                      <tr><td colSpan={canEdit ? 13 : 12} className="text-center py-4">Loading...</td></tr>
                     ) : filteredGroupedJobEntries.length === 0 ? (
-                      <tr><td colSpan={canEdit ? 12 : 11} className="text-center py-4">No items to assign for this job.</td></tr>
+                      <tr><td colSpan={canEdit ? 13 : 12} className="text-center py-4">No items to assign for this job.</td></tr>
                     ) : (
                       paginatedGroupedJobEntries.flatMap(([joNumber, jobs]) => {
                         const isExpanded = expandedJoNumbers.includes(joNumber);
                         const hasMultiple = jobs.length > 1;
+                        const groupSelectableIds = jobs.filter(isJobSelectable).map((job) => job.id);
+                        const allGroupSelected = groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedJobIds.includes(id));
+                        const isGroupSelectionDisabled = groupSelectableIds.length === 0;
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
                           const isProcessed = item.status === 'completed' || item.status === 'QC' || item.qty === 0;
+                          const showParentAssignControls = !hasMultiple || isFirst;
+                          const showAssignedTextOnly = !hasMultiple && !!item.assign_to;
+                          const rowJobs = hasMultiple ? jobs : [item];
+                          const isParentSelectionLocked = rowJobs.every((job) => {
+                            const jobRejected = job.is_rejected || job.rejected;
+                            const jobProcessed = job.status === "completed" || job.status === "QC" || job.qty === 0;
+                            return !!job.assign_to || !!jobRejected || jobProcessed;
+                          });
                           return (
                             <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {isFirst && hasMultiple ? (
+                                  <input
+                                    type="checkbox"
+                                    title={`Select JO group ${joNumber}`}
+                                    aria-label={`Select JO group ${joNumber}`}
+                                    checked={allGroupSelected}
+                                    disabled={isGroupSelectionDisabled}
+                                    onChange={() => toggleJoGroupSelection(joNumber, jobs)}
+                                  />
+                                ) : (
+                                  <input
+                                    type="checkbox"
+                                    title={`Select job ${item.id}`}
+                                    aria-label={`Select job ${item.id}`}
+                                    checked={item.assign_to ? true : selectedJobIds.includes(item.id)}
+                                    disabled={!isJobSelectable(item)}
+                                    onChange={() => toggleSingleJobSelection(item)}
+                                  />
+                                )}
+                              </td>
                               <td className="px-4 py-3 border border-tableBorder">{isFirst && <div className="flex items-center gap-2">{joNumber}{hasMultiple && <button title={`Toggle rows for ${joNumber}`} aria-label={`Toggle rows for ${joNumber}`} onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}</div>}</td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
@@ -541,20 +651,34 @@ export default function JobDetailsPage() {
                               <td className="px-4 py-3 border border-tableBorder">
                                 {isRejected ? (
                                   <div className="flex items-center gap-2 text-red-600 font-medium"><FaBan className="w-4 h-4" /><span>Rejected</span></div>
-                                ) : isFirst && (assignments[item.id]?.assignTo === "Others" ? (
-                                  <div className="flex items-center gap-1"><input type="text" placeholder="Enter Name" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.otherName || ""} onChange={(e) => handleAssignmentChange(item.id, "otherName", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} /></div>
+                                ) : showAssignedTextOnly ? (
+                                  item.assign_to || "-"
+                                ) : showParentAssignControls ? (
+                                  assignments[item.id]?.assignTo === "Others" ? (
+                                    <div className="flex items-center gap-1"><input type="text" placeholder="Enter Name" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.otherName || ""} onChange={(e) => handleAssignmentChange(item.id, "otherName", e.target.value)} disabled={isParentSelectionLocked || !canEdit} /></div>
+                                  ) : (
+                                    <select title="Assign to" aria-label="Assign to" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignTo || ""} onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)} disabled={isParentSelectionLocked || !canEdit}>
+                                      <option value="">Select</option><option value="Usmaan">Usmaan</option><option value="Ramzaan">Ramzaan</option><option value="Riyaaz">Riyaaz</option><option value="Ashfaq">Ashfaq</option><option value="Others">Others</option>
+                                    </select>
+                                  )
                                 ) : (
-                                  <select title="Assign to" aria-label="Assign to" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignTo || ""} onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit}>
-                                    <option value="">Select</option><option value="Usmaan">Usmaan</option><option value="Ramzaan">Ramzaan</option><option value="Riyaaz">Riyaaz</option><option value="Ashfaq">Ashfaq</option><option value="Others">Others</option>
-                                  </select>
-                                ))}
+                                  item.assign_to || "-"
+                                )}
                               </td>
-                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <input type="date" title="Assign date" aria-label="Assign date" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignDate || ""} onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)} disabled={!!item.assign_to || isProcessed || !!isRejected || !canEdit} />}</td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {showAssignedTextOnly ? (
+                                  item.assign_date || "-"
+                                ) : showParentAssignControls ? (
+                                  <input type="date" title="Assign date" aria-label="Assign date" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignDate || ""} onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)} disabled={isParentSelectionLocked || !canEdit} />
+                                ) : (
+                                  item.assign_date || "-"
+                                )}
+                              </td>
                               {canEdit && (
                                 <td className="px-4 py-3 border border-tableBorder">
                                   <div className="flex items-center gap-2">
-                                    {isFirst && !isRejected && !isProcessed && (
-                                      <button onClick={() => !item.assign_to && !isRejected && item.status !== 'completed' && handleAssign(item.id)} disabled={!!item.assign_to || !!isRejected || isProcessed} className={`px-3 py-1 rounded text-sm text-white ${item.status === 'completed' ? 'bg-indigo-500' : item.status === 'QC' ? 'bg-orange-500' : item.assign_to ? "bg-green-600" : isRejected ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+                                    {showParentAssignControls && !isRejected && !isProcessed && (
+                                      <button onClick={() => handleAssign(item.id)} disabled={isParentSelectionLocked} className={`px-3 py-1 rounded text-sm text-white ${isParentSelectionLocked ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
                                         {item.status === 'completed' ? 'Completed' : item.status === 'QC' ? 'In QC' : item.assign_to ? "Assigned" : "Assign"}
                                       </button>
                                     )}
