@@ -8,20 +8,8 @@ import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Link from "next/link";
 import Image from "next/image";
-import StorageManager from "../../../../provider/StorageManager";
 
 const axiosProvider = new AxiosProvider();
-const storage = new StorageManager();
-
-const hasPermission = (permissions: any[] | null, permissionName: string): boolean => {
-  if (!permissions) return false;
-  return permissions.some(p => p.name === permissionName);
-};
-
-const hasAnyPermission = (permissions: any[] | null, permissionNames: string[]): boolean => {
-  if (!permissions) return false;
-  return permissionNames.some(name => permissions.some(p => p.name === name));
-};
 
 interface JobDetail {
   id: string;
@@ -45,9 +33,6 @@ interface JobDetail {
 export default function JobDetailsPage() {
   const [jobDetails, setJobDetails] = useState<JobDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [assignments, setAssignments] = useState<{
-    [key: string]: { assignTo: string; otherName: string; assignDate: string };
-  }>({});
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -55,13 +40,6 @@ export default function JobDetailsPage() {
   const client = searchParams.get("client");
   const filter = searchParams.get("filter");
   const assign_to = searchParams.get("assign_to");
-
-  const permissions = storage.getUserPermissions();
-
-  // Edit permission based on client (Equipment or Biosystem)
-  const canEdit = client === "Amar Equipment" 
-    ? hasPermission(permissions, "production1.eqp.job.edit") || hasPermission(permissions, "production2.eqp.job.edit") || hasPermission(permissions, "production3.eqp.job.edit")
-    : hasPermission(permissions, "production1.bio.job.edit") || hasPermission(permissions, "production2.bio.job.edit") || hasPermission(permissions, "production3.bio.job.edit");
 
   const uniqueJobDetails = useMemo(() => {
     const seen = new Set();
@@ -96,19 +74,6 @@ export default function JobDetailsPage() {
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
             const fetchedJobs = jobsResponse.data.data;
             setJobDetails(fetchedJobs);
-
-            const initialAssignments: { [key: string]: { assignTo: string; otherName: string; assignDate: string } } = {};
-            fetchedJobs.forEach((job: JobDetail) => {
-              if (job.assign_to) {
-                const isStandard = ["Usmaan", "Ashfaq", "Ramzaan", "Riyaaz"].includes(job.assign_to);
-                initialAssignments[job.id] = {
-                  assignTo: isStandard ? job.assign_to : "Others",
-                  otherName: isStandard ? "" : job.assign_to,
-                  assignDate: job.assign_date ? job.assign_date.replace(/\//g, "-") : "",
-                };
-              }
-            });
-            setAssignments(initialAssignments);
           } else {
             setJobDetails([]);
           }
@@ -122,77 +87,6 @@ export default function JobDetailsPage() {
       fetchData();
     }
   }, [job_no, client, filter, assign_to]);
-
-  const handleAssignmentChange = (id: string, field: string, value: string) => {
-    if (!canEdit) return;
-    setAssignments((prev) => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || { assignTo: "", otherName: "", assignDate: "" }),
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleAssign = async (id: string) => {
-    if (!canEdit) {
-      toast.error("You don't have permission to assign");
-      return;
-    }
-    const assignment = assignments[id];
-
-    if (!assignment?.assignTo) {
-      toast.error("Please select who to assign to");
-      return;
-    }
-
-    if (assignment.assignTo === "Others" && !assignment.otherName) {
-      toast.error("Please enter the name");
-      return;
-    }
-
-    if (!assignment.assignDate) {
-      toast.error("Please select a date");
-      return;
-    }
-
-    const assignToName = assignment.assignTo === "Others" ? assignment.otherName : assignment.assignTo;
-    const formattedDate = assignment.assignDate;
-    const updatedBy = storage.getUserId();
-
-    try {
-      const payload: Record<string, any> = {
-        id,
-        assign_to: assignToName,
-        assign_date: formattedDate,
-      };
-      if (updatedBy) payload.updated_by = updatedBy;
-
-      const response = await axiosProvider.post(`/fineengg_erp/system/jobs/assign`, payload);
-      const updatedIds: string[] = response?.data?.updated_ids || [];
-      const notFoundIds: string[] = response?.data?.not_found_ids || [];
-
-      if (updatedIds.length > 0) {
-        toast.success(`Job assigned successfully (${updatedIds.length})`);
-      } else {
-        toast.success("Job assigned successfully");
-      }
-      if (notFoundIds.length > 0) {
-        toast.warn(`${notFoundIds.length} selected job(s) were not found`);
-      }
-
-      setJobDetails((prev) =>
-        prev.map((job) =>
-          (updatedIds.length > 0 ? updatedIds.includes(job.id) : job.id === id)
-            ? { ...job, assign_to: assignToName, assign_date: formattedDate }
-            : job
-        )
-      );
-    } catch (error) {
-      console.error("Error assigning job:", error);
-      toast.error("Failed to assign job");
-    }
-  };
 
   return (
     <div className="flex justify-end min-h-screen">
@@ -273,25 +167,18 @@ export default function JobDetailsPage() {
                           <div className="font-semibold">Assign Date</div>
                         </div>
                       </th>
-                      {canEdit && (
-                        <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold">Action</div>
-                          </div>
-                        </th>
-                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={canEdit ? 11 : 10} className="text-center py-4 border border-tableBorder">
+                        <td colSpan={10} className="text-center py-4 border border-tableBorder">
                           <p className="text-[#666666] text-base">Loading...</p>
                         </td>
                       </tr>
                     ) : uniqueJobDetails.length === 0 ? (
                       <tr>
-                        <td colSpan={canEdit ? 11 : 10} className="text-center py-4 border border-tableBorder">
+                        <td colSpan={10} className="text-center py-4 border border-tableBorder">
                           <p className="text-[#666666] text-base">No items to assign for this job.</p>
                         </td>
                       </tr>
@@ -330,61 +217,11 @@ export default function JobDetailsPage() {
                             <p className="text-[#232323] text-sm leading-normal">{item.moc}</p>
                           </td>
                           <td className="px-4 py-3 border border-tableBorder">
-                            {!canEdit ? (
-                              <p className="text-[#232323] text-sm leading-normal">{item.assign_to || "Not Assigned"}</p>
-                            ) : assignments[item.id]?.assignTo === "Others" ? (
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="text"
-                                  placeholder="Enter Name"
-                                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                  value={assignments[item.id]?.otherName || ""}
-                                  onChange={(e) => handleAssignmentChange(item.id, "otherName", e.target.value)}
-                                  disabled={!!item.assign_to}
-                                />
-                              </div>
-                            ) : (
-                              <select
-                                className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                value={assignments[item.id]?.assignTo || ""}
-                                onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)}
-                                disabled={!!item.assign_to}
-                              >
-                                <option value="">Select</option>
-                                <option value="Usmaan">Usmaan</option>
-                                <option value="Ashfaq">Ashfaq</option>
-                                <option value="Ramzaan">Ramzaan</option>
-                                <option value="Riyaaz">Riyaaz</option>
-                                <option value="Others">Others</option>
-                              </select>
-                            )}
+                            <p className="text-[#232323] text-sm leading-normal">{item.assign_to || "Not Assigned"}</p>
                           </td>
                           <td className="px-4 py-3 border border-tableBorder">
-                            {canEdit ? (
-                              <input
-                                type="date"
-                                className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                                value={assignments[item.id]?.assignDate || ""}
-                                onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
-                                disabled={!!item.assign_to}
-                              />
-                            ) : (
-                              <p className="text-[#232323] text-sm leading-normal">{item.assign_date || "-"}</p>
-                            )}
+                            <p className="text-[#232323] text-sm leading-normal">{item.assign_date || "-"}</p>
                           </td>
-                          {canEdit && (
-                            <td className="px-4 py-3 border border-tableBorder">
-                              <button
-                                onClick={() => !item.assign_to && handleAssign(item.id)}
-                                disabled={!!item.assign_to}
-                                className={`px-3 py-1 rounded text-sm transition-colors text-white ${
-                                  item.assign_to ? "bg-green-600 cursor-default" : "bg-blue-600 hover:bg-blue-700"
-                                }`}
-                              >
-                                {item.assign_to ? "Assigned" : "Assign"}
-                              </button>
-                            </td>
-                          )}
                         </tr>
                       ))
                     )}
