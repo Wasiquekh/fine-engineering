@@ -245,7 +245,7 @@ export default function Home() {
       if (!item.is_rejected) {
         acc[groupKey].is_rejected = 0;
       }
-      acc[groupKey].total_qty += Number(item.qty) || 0;
+      acc[groupKey].total_qty += Number(item.qty_history ?? item.qty) || 0;
       if (item.jo_number) {
         acc[groupKey].jo_numbers_list.add(item.jo_number);
       }

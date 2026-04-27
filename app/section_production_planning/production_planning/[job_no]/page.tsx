@@ -36,6 +36,7 @@ interface JobDetail {
   item_no: number;
   serial_no: string;
   qty: number;
+  qty_history?: number | string;
   moc: string;
   bin_location: string;
   urgent: boolean;
@@ -651,7 +652,7 @@ export default function JobDetailsPage() {
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (isRejected ? "true" : item.qty) : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.qty_history ?? item.qty ?? "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">
                                 {isRejected ? (
