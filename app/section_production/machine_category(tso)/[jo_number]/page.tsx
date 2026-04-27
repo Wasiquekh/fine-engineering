@@ -29,6 +29,7 @@ interface JobData {
   moc: string;
   bin_location: string;
   is_approved: boolean | number;
+  assign_to?: string;
 }
 
 interface AssignedJob {
@@ -103,10 +104,13 @@ export default function TsoMachineCategoryPage() {
         jo_number: encodeURIComponent(jo_number),
       });
       if (clientName) params.append("client_name", clientName);
+      if (assignTo) params.append("assign_to", assignTo);
 
       const response = await axiosProvider.get(`/fineengg_erp/system/jobs?${params.toString()}`);
       if (response.data && Array.isArray(response.data.data)) {
-        const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
+        const validJobs = response.data.data
+          .filter((job: JobData) => job.qty > 0)
+          .filter((job: JobData) => !assignTo || job.assign_to === assignTo);
         setJobs(validJobs);
       } else {
         setJobs([]);
@@ -118,14 +122,14 @@ export default function TsoMachineCategoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [jo_number, clientName]);
+  }, [jo_number, clientName, assignTo]);
 
   const fetchAssignedJobs = useCallback(async () => {
     if (!jo_number) return;
     try {
       const params = new URLSearchParams();
       if (clientName) params.append("client_name", clientName);
-      
+
       const response = await axiosProvider.get(`/fineengg_erp/system/assign-to-worker?${params.toString()}`);
       if (response.data && Array.isArray(response.data.data)) {
         const filtered = response.data.data.filter(

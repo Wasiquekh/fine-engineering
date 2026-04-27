@@ -30,6 +30,7 @@ interface JobData {
   moc: string;
   bin_location: string;
   is_approved: boolean | number;
+  assign_to?: string;
 }
 
 interface AssignedJob {
@@ -108,10 +109,14 @@ export default function JoNumberPage() {
         jo_number,
       });
       if (clientName) params.append("client_name", clientName);
+      if (assignTo) params.append("assign_to", assignTo);
 
       const response = await axiosProvider.get(`/fineengg_erp/system/jobs?${params.toString()}`);
       if (response.data && Array.isArray(response.data.data)) {
-        const validJobs = response.data.data.filter((job: JobData) => job.qty > 0);
+        const validJobs = response.data.data
+          .filter((job: JobData) => job.qty > 0)
+          // Tab filter: each Usmaan / Ramzaan / Riyaaz list must only show that assignee (fallback if API ignores param)
+          .filter((job: JobData) => !assignTo || job.assign_to === assignTo);
         setJobs(validJobs);
       } else {
         setJobs([]);
@@ -123,7 +128,7 @@ export default function JoNumberPage() {
     } finally {
       setLoading(false);
     }
-  }, [jo_number, clientName]);
+  }, [jo_number, clientName, assignTo]);
 
   const fetchAssignedJobs = useCallback(async () => {
     if (!jo_number) return;
