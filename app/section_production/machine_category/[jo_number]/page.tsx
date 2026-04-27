@@ -7,6 +7,7 @@ import Image from "next/image";
 import AxiosProvider from "../../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
 import StorageManager from "../../../../provider/StorageManager";
+import Swal from "sweetalert2";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -27,9 +28,13 @@ interface JobData {
   item_no: number;
   serial_no: string;
   qty: number;
+  qty_history?: number;
   moc: string;
   bin_location: string;
   is_approved: boolean | number;
+  is_rejected?: boolean | number;
+  rejected?: boolean | number;
+  status?: string;
   assign_to?: string;
 }
 
@@ -300,6 +305,43 @@ export default function JoNumberPage() {
     }
   };
 
+  const handleReject = async (job: JobData) => {
+    if (!canEdit) {
+      toast.error("You don't have permission to reject jobs");
+      return;
+    }
+
+    const qtyHistory = Number(job.qty_history ?? job.qty);
+    const qty = Number(job.qty);
+    if (qtyHistory !== qty) {
+      toast.error("Few quantity already assigned");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you want to reject this job?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, reject it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${job.id}/reject`, {});
+      toast.success("Job rejected successfully");
+      fetchJobs();
+      fetchAssignedJobs();
+    } catch (error) {
+      console.error("Error rejecting job:", error);
+      toast.error("Failed to reject job");
+    }
+  };
+
   return (
     <div className="flex justify-end min-h-screen">
       <LeftSideBar />
@@ -344,13 +386,14 @@ export default function JoNumberPage() {
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">MOC</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Bin Location</th>
                     <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Status</th>
+                    {canEdit && <th className="px-4 py-4 border border-tableBorder whitespace-nowrap">Action</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={7} className="text-center py-4 border border-tableBorder">Loading...</td></tr>
+                    <tr><td colSpan={canEdit ? 8 : 7} className="text-center py-4 border border-tableBorder">Loading...</td></tr>
                   ) : jobs.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-4 border border-tableBorder">No jobs found for this J/O number.</td></tr>
+                    <tr><td colSpan={canEdit ? 8 : 7} className="text-center py-4 border border-tableBorder">No jobs found for this J/O number.</td></tr>
                   ) : (
                     jobs.map((job) => (
                       <tr key={job.id} className="border border-tableBorder bg-white hover:bg-primary-100">
@@ -361,12 +404,30 @@ export default function JoNumberPage() {
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.moc}</td>
                         <td className="px-4 py-3 border border-tableBorder text-[#232323]">{job.bin_location}</td>
                         <td className="px-4 py-3 border border-tableBorder">
-                          {job.is_approved ? (
+                          {(job.is_rejected || job.rejected) ? (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Rejected</span>
+                          ) : job.is_approved ? (
                             <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">Approved</span>
                           ) : (
                             <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">Pending</span>
                           )}
                         </td>
+                        {canEdit && (
+                          <td className="px-4 py-3 border border-tableBorder">
+                            <button
+                              type="button"
+                              onClick={() => handleReject(job)}
+                              disabled={!!job.is_rejected || !!job.rejected || job.status === "completed" || job.status === "QC" || job.qty === 0}
+                              className={`px-3 py-1 rounded text-sm text-white ${
+                                (!!job.is_rejected || !!job.rejected || job.status === "completed" || job.status === "QC" || job.qty === 0)
+                                  ? "bg-gray-400 cursor-not-allowed"
+                                  : "bg-red-600 hover:bg-red-700"
+                              }`}
+                            >
+                              Reject
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))
                   )}
