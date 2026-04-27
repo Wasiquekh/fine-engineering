@@ -206,9 +206,9 @@ export default function JobDetailsPage() {
         try {
           const normalizedJobNo = decodeURIComponent(String(job_no || "")).trim().toLowerCase();
           const [jobsResponse, pendingResponse, categoriesResponse] = await Promise.all([
-            axiosProvider.get(`/fineengg_erp/system/jobs?job_no=${encodeURIComponent(job_no)}`),
-            axiosProvider.get(`/fineengg_erp/system/pending-materials?job_no=${encodeURIComponent(job_no)}`),
-            axiosProvider.get(`/fineengg_erp/system/categories?job_no=${encodeURIComponent(job_no)}`),
+            axiosProvider.get(`/fineengg_erp/system/jobs?job_no=${encodeURIComponent(job_no)}&limit=1000`),
+            axiosProvider.get(`/fineengg_erp/system/pending-materials?job_no=${encodeURIComponent(job_no)}&limit=1000`),
+            axiosProvider.get(`/fineengg_erp/system/categories?job_no=${encodeURIComponent(job_no)}&limit=1000`),
           ]);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
@@ -242,7 +242,12 @@ export default function JobDetailsPage() {
           }
 
           if (pendingResponse.data && Array.isArray(pendingResponse.data.data)) {
-            setPendingData(pendingResponse.data.data);
+            const fetchedPendingData = pendingResponse.data.data;
+            const filteredPendingData = fetchedPendingData.filter((item: PendingMaterial) => {
+              const pendingJobNo = decodeURIComponent(String(item.job_no || "")).trim().toLowerCase();
+              return pendingJobNo === normalizedJobNo;
+            });
+            setPendingData(filteredPendingData);
           } else {
             setPendingData([]);
           }
