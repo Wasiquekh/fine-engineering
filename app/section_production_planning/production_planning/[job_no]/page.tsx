@@ -148,6 +148,44 @@ export default function JobDetailsPage() {
     [pendingData, editingPendingId]
   );
 
+  const orderedPendingData = useMemo(() => {
+    const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
+    const isMissingJoNumber = (item: PendingMaterial) => !normalize(item.jo_number);
+    const makeGroupKey = (item: PendingMaterial) => normalize(item.item_no);
+
+    const highlightedRows = pendingData.filter(isMissingJoNumber);
+    const nonHighlightedRows = pendingData.filter((item) => !isMissingJoNumber(item));
+    const nonHighlightedByKey = new Map<string, PendingMaterial[]>();
+
+    nonHighlightedRows.forEach((item) => {
+      const key = makeGroupKey(item);
+      const bucket = nonHighlightedByKey.get(key) || [];
+      bucket.push(item);
+      nonHighlightedByKey.set(key, bucket);
+    });
+
+    const usedNonHighlightedIds = new Set<string>();
+    const orderedRows: PendingMaterial[] = [];
+
+    highlightedRows.forEach((baseRow) => {
+      orderedRows.push(baseRow);
+      const relatedRows = nonHighlightedByKey.get(makeGroupKey(baseRow)) || [];
+      relatedRows.forEach((relatedRow) => {
+        if (usedNonHighlightedIds.has(relatedRow.id)) return;
+        orderedRows.push(relatedRow);
+        usedNonHighlightedIds.add(relatedRow.id);
+      });
+    });
+
+    nonHighlightedRows.forEach((row) => {
+      if (!usedNonHighlightedIds.has(row.id)) {
+        orderedRows.push(row);
+      }
+    });
+
+    return orderedRows;
+  }, [pendingData]);
+
   const toggleJoNumberExpansion = (joNumber: string) => {
     setExpandedJoNumbers((prev) =>
       prev.includes(joNumber)
@@ -744,7 +782,7 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? <tr><td colSpan={9} className="text-center py-4">Loading...</td></tr>
                     : pendingData.length === 0 ? <tr><td colSpan={9} className="text-center py-4">No pending materials found.</td></tr>
-                    : pendingData.map((item) => {
+                    : orderedPendingData.map((item) => {
                       const isMissingJoNumber = !String(item.jo_number || "").trim();
                       return (
                       <tr
