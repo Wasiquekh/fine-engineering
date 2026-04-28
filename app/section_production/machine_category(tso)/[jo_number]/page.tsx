@@ -295,7 +295,7 @@ export default function TsoMachineCategoryPage() {
           <button onClick={() => router.back()} className="text-blue-600 hover:underline mb-4">← Back</button>
           
           <h1 className="text-xl font-semibold mb-6">
-            Machine Category (TSO) - {jo_number}
+            JO Number - {jo_number}
             {clientName && <span className="text-sm text-gray-500 ml-2">({clientName})</span>}
             {!canEdit && <span className="text-sm text-red-500 ml-2">(View Only Mode)</span>}
           </h1>
