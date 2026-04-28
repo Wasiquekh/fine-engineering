@@ -183,7 +183,7 @@ export default function ProductionPlanningDashboard() {
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [selectedTab, setSelectedTab] = useState<"overview" | "category" | "jobs" | "tso" | "kanban" | "welding" | "vendor">("overview");
   const [selectedClient, setSelectedClient] = useState<"all" | "Amar Equipment" | "Amar Biosystem">("all");
-  const [selectedAssignee, setSelectedAssignee] = useState<"all" | "Usmaan" | "Riyaaz" | "Ramzaan">("all");
+  const [selectedAssignee, setSelectedAssignee] = useState<"all" | "Usmaan" | "Riyaaz" | "Ramzan">("all");
 
   const permissions = storage.getUserPermissions();
   const canCreateJob = hasPermission(permissions, "job.create");
@@ -347,7 +347,7 @@ export default function ProductionPlanningDashboard() {
       // Process Assignee Stats
       const allJobsData = assigneeRes?.data?.data || [];
       const assigneeMap = new Map();
-      ["Usmaan", "Riyaaz", "Ramzaan"].forEach(assignee => {
+      ["Usmaan", "Riyaaz", "Ramzan"].forEach(assignee => {
         assigneeMap.set(assignee, { jobServiceCount: 0, tsoServiceCount: 0, kanbanCount: 0 });
       });
       
@@ -633,7 +633,7 @@ export default function ProductionPlanningDashboard() {
                   <option value="all">All Assignees</option>
                   <option value="Usmaan">Usmaan (Production 1)</option>
                   <option value="Riyaaz">Riyaaz (Production 2)</option>
-                  <option value="Ramzaan">Ramzaan (Production 3)</option>
+                  <option value="Ramzan">Ramzan (Production 3)</option>
                 </select>
               </div>
             </div>

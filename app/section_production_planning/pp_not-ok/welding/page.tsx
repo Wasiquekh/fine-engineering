@@ -78,7 +78,12 @@ type Row = {
     client_name?: string | null;
     job_type?: string | null;
     reason?: string | null;
+    product_desc?: string | null;
+    product_item_no?: string | null;
+    product_qty?: number | string | null;
     item_description?: string | null;
+    item_no?: string | null;
+    qty?: number | string | null;
     moc?: string | null;
   } | null;
 };
@@ -93,8 +98,21 @@ export default function NotOkWeldingPage() {
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [jobServiceMetaByJobNo, setJobServiceMetaByJobNo] = useState<
+    Record<
+      string,
+      {
+        job_category?: string | null;
+        description?: string | null;
+        material_type?: string | null;
+        qty?: number | string | null;
+        bar?: string | null;
+        tempp?: string | null;
+      }
+    >
+  >({});
 
-  const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const filterParam = searchParams.get("filter") || "ALL";
   const client = searchParams.get("client") || "";
   const REVIEW_FOR = "welding";
   const permissions = storage.getUserPermissions();
@@ -103,26 +121,51 @@ export default function NotOkWeldingPage() {
   const fetchCategories = async () => {
     try {
       const response = await axiosProvider.get("/fineengg_erp/system/categories");
-      const cats = Array.isArray(response?.data?.data)
+      let cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
 
       const uniqueMap = new Map<string, { value: string; label: string }>();
+      const metaMap: Record<
+        string,
+        {
+          job_category?: string | null;
+          description?: string | null;
+          material_type?: string | null;
+          qty?: number | string | null;
+          bar?: string | null;
+          tempp?: string | null;
+        }
+      > = {};
 
       cats.forEach((cat: any) => {
         const jobCategory = String(cat?.job_category || "").trim();
+        const jobNo = String(cat?.job_no || "").trim();
         if (jobCategory && !uniqueMap.has(jobCategory)) {
           uniqueMap.set(jobCategory, {
             value: jobCategory,
             label: jobCategory,
           });
         }
+        if (jobNo && !metaMap[jobNo]) {
+          metaMap[jobNo] = {
+            job_category: cat?.job_category ?? null,
+            description: cat?.description ?? null,
+            material_type: cat?.material_type ?? null,
+            qty: cat?.qty ?? null,
+            bar: cat?.bar ?? null,
+            tempp: cat?.tempp ?? null,
+          };
+        }
       });
 
-      setCategories(Array.from(uniqueMap.values()));
+      cats = Array.from(uniqueMap.values());
+      setCategories(cats);
+      setJobServiceMetaByJobNo(metaMap);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
+      setJobServiceMetaByJobNo({});
     }
   };
 
@@ -503,16 +546,16 @@ export default function NotOkWeldingPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999] uppercase font-semibold">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">JO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Type</th>
-                      <th className="px-2 py-0 border border-tableBorder">Original Tab</th>
-                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
+                      <th className="p-3 border border-tableBorder">J/O No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Job Category</th>
+                      <th className="px-2 py-0 border border-tableBorder">Product Desc</th>
+                      <th className="px-2 py-0 border border-tableBorder">Product Item No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Product Qty</th>
                       <th className="px-2 py-0 border border-tableBorder">Item Description</th>
+                      <th className="px-2 py-0 border border-tableBorder">Item No</th>
                       <th className="px-2 py-0 border border-tableBorder">MOC</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">Qty</th>
+                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Reason</th>
                       {canEditNotOk && (
                         <th className="px-2 py-0 border border-tableBorder">Actions</th>
@@ -538,24 +581,16 @@ export default function NotOkWeldingPage() {
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
                               <td className="px-2 py-2 border border-tableBorder">{jo}</td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                {getOriginalTabBadge(item.original_tab)}
-                              </td>
-                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job_category || item.job?.job_category || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.product_desc || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.product_item_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.product_qty || "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.job?.item_description || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? item.job?.item_no ?? "-"}</td>
                               <td className="px-2 py-2 border border-tableBorder">{item.job?.moc || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <span className="text-red-600 text-xs font-medium">
-                                  {item.job?.reason || "-"}
-                                </span>
-                              </td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? item.job?.qty ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.reason || "-"}</td>
                               {canEditNotOk && (
                                 <td className="px-2 py-2 border border-tableBorder">
                                   <div className="flex flex-col gap-1">
@@ -599,29 +634,33 @@ export default function NotOkWeldingPage() {
                       <th className="p-3 border border-tableBorder">Job/TSO No</th>
                       <th className="px-2 py-0 border border-tableBorder">Type</th>
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total JO</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
+                      <th className="px-2 py-0 border border-tableBorder">Description</th>
+                      <th className="px-2 py-0 border border-tableBorder">Material Type</th>
+                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
+                      <th className="px-2 py-0 border border-tableBorder">Bar</th>
+                      <th className="px-2 py-0 border border-tableBorder">Temperature</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={8} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={8} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No data found</p>
                         </td>
                       </tr>
                     ) : (
                       jobIdentifiers.map((identifier) => {
                         const summary = identifierSummary[identifier];
+                        const [identifierType, identifierNo] = identifier.split(":");
+                        const isJobIdentifier = identifierType === "JOB";
+                        const meta = isJobIdentifier ? jobServiceMetaByJobNo[identifierNo] : undefined;
 
                         return (
                           <tr
@@ -641,16 +680,19 @@ export default function NotOkWeldingPage() {
                               <p className="text-[#232323] text-sm">{summary.jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.uniqueJoCount}</p>
+                              <p className="text-[#232323] text-sm">{isJobIdentifier ? (meta?.description || "-") : "-"}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.totalQty}</p>
+                              <p className="text-[#232323] text-sm">{isJobIdentifier ? (meta?.material_type || "-") : "-"}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
+                              <p className="text-[#232323] text-sm">{isJobIdentifier ? (meta?.qty ?? summary.totalQty) : summary.totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-red-600 text-xs font-medium">{summary.reason}</p>
+                              <p className="text-[#232323] text-sm">{isJobIdentifier ? (meta?.bar || "-") : "-"}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-sm">{isJobIdentifier ? (meta?.tempp || "-") : "-"}</p>
                             </td>
                           </tr>
                         );

@@ -19,6 +19,10 @@ const AppProvider = dynamic(
   () => import("./AppContext").then((mod) => mod.AppProvider),
   { ssr: false }
 );
+const PushNotificationBootstrap = dynamic(
+  () => import("./component/PushNotificationBootstrap"),
+  { ssr: false }
+);
 
 // Dynamically import ToastContainer to avoid SSR
 const ToastContainer = dynamic(
@@ -38,6 +42,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className={inter.className}>
         <ErrorBoundary>
           <AppProvider>
+            <PushNotificationBootstrap />
             <RouteGuard>
               {children}
             </RouteGuard>

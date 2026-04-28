@@ -155,9 +155,10 @@ export default function JobDetailsPage() {
     if (!searchTerm) return items;
 
     return items.filter((item: any) => {
-      return String(item.jo_number ?? "")
-        .toLowerCase()
-        .includes(searchTerm);
+      const joNumber = String(item.jo_number ?? "").toLowerCase();
+      const itemNo = String(item.item_no ?? "").toLowerCase();
+
+      return joNumber.includes(searchTerm) || itemNo.includes(searchTerm);
     });
   }, [items, searchTerm]);
 

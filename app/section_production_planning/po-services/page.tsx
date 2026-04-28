@@ -193,7 +193,7 @@ export default function POServices() {
   const filteredData = useMemo(() => {
     const filterParam = searchParams.get("filter"); // Re-fetch filterParam here if needed for assign_to
     const filtered = data.filter((item) => {
-      // Filter by Assignment (if 'filter' param is a name like 'Ramzaan')
+      // Filter by Assignment (if 'filter' param is a name like 'Ramzan')
       const assignParam = filterParam ? filterParam.toLowerCase() : null;
       // Assuming "fine", "press_flow", "all" are category filters, not assign_to names
       const isNameFilter = assignParam && !["fine", "press_flow", "all"].includes(assignParam);
@@ -549,7 +549,7 @@ export default function POServices() {
                                       <Field as="select" name={`assembly_items.${index}.assign_to`} className="w-full px-4 py-3 rounded-[4px] border border-[#E7E7E7] focus:outline-none focus:ring-1 focus:ring-primary-600 focus:border-transparent text-[#0A0A0A] text-base leading-6">
                                         <option value="">Select Assignment</option>
                                         <option value="Riyaaz">Riyaaz</option>
-                                        <option value="Ramzaan">Ramzaan</option>
+                                        <option value="Ramzan">Ramzan</option>
                                       </Field>
                                       <ErrorMessage name={`assembly_items.${index}.assign_to`} component="div" className="text-red-500 text-sm mt-1" />
                                     </div>

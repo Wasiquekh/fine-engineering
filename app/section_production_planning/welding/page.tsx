@@ -183,6 +183,11 @@ export default function WeldingPage() {
     return { totalQty, uniqueJoCount };
   };
 
+  const getJobNoForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    return items[0]?.job?.job_no || items[0]?.job_no || "-";
+  };
+
   const getJobTypeBadge = (jobType: string | null | undefined) => {
     switch(jobType) {
       case "TSO_SERVICE": return <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">TSO</span>;
@@ -286,7 +291,7 @@ export default function WeldingPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]"><tr className="border bg-gray-50">
-                    <th className="p-3 border">Identifier</th><th className="p-3 border">Type</th><th className="p-3 border">Client Name</th>
+                    <th className="p-3 border">Job No</th><th className="p-3 border">Type</th><th className="p-3 border">Client Name</th>
                     <th className="p-3 border text-center">Total JOs</th><th className="p-3 border text-center">Total Quantity</th><th className="p-3 border text-center">Action</th>
                   </tr></thead>
                   <tbody>
@@ -299,7 +304,7 @@ export default function WeldingPage() {
                         const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
                         return (
                           <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
-                            <td className="p-3 border text-blue-600 font-medium">{identifier}</td>
+                            <td className="p-3 border text-blue-600 font-medium">{getJobNoForIdentifier(identifier)}</td>
                             <td className="p-3 border">{getJobTypeBadge(type)}</td>
                             <td className="p-3 border">{clientName}</td>
                             <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{uniqueJoCount}</span></td>

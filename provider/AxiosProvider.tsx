@@ -43,9 +43,7 @@ export default class AxiosProvider {
   }
 
   constructor(baseURL: string = defaultBaseURL) {
-    this.baseURL = isServer
-      ? process.env.NEXT_PUBLIC_API_URL || baseURL
-      : baseURL;
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || baseURL;
 
     this.storage = new StorageManager();
     this.instance = axios.create({

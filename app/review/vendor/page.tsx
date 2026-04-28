@@ -10,6 +10,7 @@ import StorageManager from "../../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
+import { sendRoleNotificationByEvent } from "../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -106,19 +107,39 @@ export default function ReviewVendorPage() {
 
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [jobServiceMetaByJobNo, setJobServiceMetaByJobNo] = useState<
+    Record<
+      string,
+      {
+        job_category?: string | null;
+        description?: string | null;
+        material_type?: string | null;
+        qty?: number | string | null;
+        bar?: string | null;
+        tempp?: string | null;
+      }
+    >
+  >({});
 
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const filterParam = searchParams.get("filter") || "ALL";
   const client = searchParams.get("client") || "";
   const assignTo = searchParams.get("assign_to") || "";
   const permissions = storage.getUserPermissions();
+  const currentUserName = storage.getUserName() || storage.getUserEmail() || "";
   const canReview = canPerformReviewAction(permissions, client, "vendor", assignTo);
 
   console.log("Review Vendor Page - URL Params:", { filterParam, client, assignTo });
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
+      let url = "/fineengg_erp/system/categories";
+      if (filterParam === "TSO_SERVICE") {
+        url = "/fineengg_erp/system/tso-service-categories";
+      } else if (filterParam === "KANBAN") {
+        url = "/fineengg_erp/system/kanban-categories";
+      }
+      const response = await axiosProvider.get(url, {
         params: {
           ...(client ? { client_name: client } : {}),
         },
@@ -128,29 +149,53 @@ export default function ReviewVendorPage() {
         : response?.data?.data?.categories || [];
 
       const uniqueMap = new Map<string, { value: string; label: string }>();
+      const metaMap: Record<
+        string,
+        {
+          job_category?: string | null;
+          description?: string | null;
+          material_type?: string | null;
+          qty?: number | string | null;
+          bar?: string | null;
+          tempp?: string | null;
+        }
+      > = {};
 
       cats.forEach((cat: any) => {
         const jobCategory = String(cat?.job_category || "").trim();
+        const jobNo = String(cat?.job_no || "").trim();
         if (jobCategory && !uniqueMap.has(jobCategory)) {
           uniqueMap.set(jobCategory, {
             value: jobCategory,
             label: jobCategory,
           });
         }
+        if (jobNo && !metaMap[jobNo]) {
+          metaMap[jobNo] = {
+            job_category: cat?.job_category ?? null,
+            description: cat?.description ?? null,
+            material_type: cat?.material_type ?? null,
+            qty: cat?.qty ?? null,
+            bar: cat?.bar ?? null,
+            tempp: cat?.tempp ?? null,
+          };
+        }
       });
 
       setCategories(Array.from(uniqueMap.values()));
+      setJobServiceMetaByJobNo(metaMap);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
+      setJobServiceMetaByJobNo({});
     }
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch ALL job types for vendor review
-      const jobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
+      const allowedJobTypes = ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"];
+      const jobTypes = allowedJobTypes;
       let allData: QcRow[] = [];
 
       for (const jobType of jobTypes) {
@@ -194,21 +239,23 @@ export default function ReviewVendorPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, [client]);
+  }, [client, filterParam]);
 
   useEffect(() => {
     setSelectedJobNo(null);
     fetchData();
-  }, [client]);
+  }, [client, assignTo]);
 
   const filteredData = useMemo(() => {
-    if (jobServiceCategoryFilter === "ALL") return data;
+    let current = [...data];
 
-    return data.filter((item) => {
+    if (jobServiceCategoryFilter === "ALL") return current;
+
+    return current.filter((item) => {
       const category = item.job_category || item.job?.job_category || "";
       return category === jobServiceCategoryFilter;
     });
-  }, [data, jobServiceCategoryFilter]);
+  }, [data, jobServiceCategoryFilter, filterParam]);
 
   // Get unique identifiers based on job type
   const jobIdentifiers = useMemo(() => {
@@ -321,6 +368,44 @@ export default function ReviewVendorPage() {
     }
     try {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
+
+      const selectedRow = data.find((x) => String(x.id) === String(id));
+      const notifyPayload = {
+        joNo: String(selectedRow?.jo_no || selectedRow?.job?.jo_number || selectedRow?.job_no || ""),
+        joNumber: String(selectedRow?.job?.jo_number || selectedRow?.jo_no || ""),
+        jobNo: String(selectedRow?.job_no || selectedRow?.job?.job_no || ""),
+        clientName: String(selectedRow?.job?.client_name || client || ""),
+        jobType: String(selectedRow?.job_type || selectedRow?.job?.job_type || filterParam || "JOB_SERVICE"),
+        assignedBy: currentUserName,
+        sendAll: false as const,
+      };
+
+      if (endpoint === "ready-for-qc") {
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_qc",
+          ...notifyPayload,
+          source: "review_vendor_ready_for_qc",
+        });
+      } else if (endpoint === "vendor") {
+        await sendRoleNotificationByEvent({
+          eventKey: "sent_to_vendor",
+          ...notifyPayload,
+          source: "review_vendor_sent_to_vendor",
+        });
+      } else if (endpoint === "welding") {
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_welding",
+          ...notifyPayload,
+          source: "review_vendor_sent_to_welding",
+        });
+      } else if (endpoint === "reject") {
+        await sendRoleNotificationByEvent({
+          eventKey: "returned_to_in_progress",
+          ...notifyPayload,
+          source: "review_vendor_returned_to_in_progress",
+        });
+      }
+
       const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
       toast.success(msg);
       fetchData();
@@ -495,6 +580,11 @@ export default function ReviewVendorPage() {
                         </th>
                         <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                           <div className="flex items-center gap-2">
+                            <div className="font-semibold">Job Category</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
                             <div className="font-semibold">Product Desc</div>
                           </div>
                         </th>
@@ -541,7 +631,7 @@ export default function ReviewVendorPage() {
                         if (items.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={9} className="px-4 py-6 text-center border border-tableBorder">
+                              <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                                 <p className="text-[#666666] text-base">No data found</p>
                               </td>
                             </tr>
@@ -554,6 +644,11 @@ export default function ReviewVendorPage() {
                           >
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm leading-normal">{item.jo_no || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">
+                                {item.job_category || item.job?.job_category || "-"}
+                              </p>
                             </td>
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm leading-normal">{item.job?.product_desc || "-"}</p>
@@ -649,26 +744,61 @@ export default function ReviewVendorPage() {
                             <div className="font-semibold">Job/TSO No</div>
                           </div>
                         </th>
-                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold">Type</div>
-                          </div>
-                        </th>
+                        {filterParam !== "JOB_SERVICE" && (
+                          <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold">Type</div>
+                            </div>
+                          </th>
+                        )}
                         <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <div className="font-semibold">Category</div>
                           </div>
                         </th>
-                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold">Total JO</div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold">Total Quantity</div>
-                          </div>
-                        </th>
+                        {filterParam === "JOB_SERVICE" && (
+                          <>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Description</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Material Type</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Quantity</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Bar</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Temperature</div>
+                              </div>
+                            </th>
+                          </>
+                        )}
+                        {filterParam !== "JOB_SERVICE" && (
+                          <>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Total JO</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Total Quantity</div>
+                              </div>
+                            </th>
+                          </>
+                        )}
                         <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <div className="font-semibold">Assigning Date</div>
@@ -679,13 +809,13 @@ export default function ReviewVendorPage() {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                          <td colSpan={filterParam === "JOB_SERVICE" ? 8 : 6} className="px-4 py-6 text-center border border-tableBorder">
                             <p className="text-[#666666] text-base">Loading...</p>
                           </td>
                         </tr>
                       ) : jobIdentifiers.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                          <td colSpan={filterParam === "JOB_SERVICE" ? 8 : 6} className="px-4 py-6 text-center border border-tableBorder">
                             <p className="text-[#666666] text-base">No vendor review data found</p>
                           </td>
                         </tr>
@@ -693,6 +823,8 @@ export default function ReviewVendorPage() {
                         jobIdentifiers.map((identifier) => {
                           const summary = jobSummary[identifier];
                           if (!summary) return null;
+                          const rawIdentifier = identifier.split(":")[1] || "";
+                          const meta = jobServiceMetaByJobNo[rawIdentifier];
 
                           return (
                             <tr
@@ -705,18 +837,43 @@ export default function ReviewVendorPage() {
                                   {getIdentifierDisplayName(identifier)}
                                 </p>
                               </td>
-                              <td className="px-4 py-3 border border-tableBorder">
-                                {getJobTypeBadge(summary.jobType)}
-                              </td>
+                              {filterParam !== "JOB_SERVICE" && (
+                                <td className="px-4 py-3 border border-tableBorder">
+                                  {getJobTypeBadge(summary.jobType)}
+                                </td>
+                              )}
                               <td className="px-4 py-3 border border-tableBorder">
                                 <p className="text-[#232323] text-sm leading-normal">{summary.jobCategory}</p>
                               </td>
-                              <td className="px-4 py-3 border border-tableBorder">
-                                <p className="text-[#232323] text-sm leading-normal">{summary.uniqueJoCount}</p>
-                              </td>
-                              <td className="px-4 py-3 border border-tableBorder">
-                                <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{summary.totalQty}</p>
-                              </td>
+                              {filterParam === "JOB_SERVICE" && (
+                                <>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.description || "-"}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.material_type || "-"}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{meta?.qty ?? summary.totalQty}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.bar || "-"}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.tempp || "-"}</p>
+                                  </td>
+                                </>
+                              )}
+                              {filterParam !== "JOB_SERVICE" && (
+                                <>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{summary.uniqueJoCount}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{summary.totalQty}</p>
+                                  </td>
+                                </>
+                              )}
                               <td className="px-4 py-3 border border-tableBorder">
                                 <p className="text-[#232323] text-sm leading-normal">{summary.assigningDate || "-"}</p>
                               </td>

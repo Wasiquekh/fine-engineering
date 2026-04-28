@@ -9,6 +9,7 @@ import DesktopHeader from "../../../component/DesktopHeader";
 import Link from "next/link";
 import Image from "next/image";
 import StorageManager from "../../../../provider/StorageManager";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -155,6 +156,22 @@ export default function KanbanDetailsPage() {
       if (notFoundIds.length > 0) {
         toast.warn(`${notFoundIds.length} selected job(s) were not found`);
       }
+
+      const notifiedIds = updatedIds.length > 0 ? updatedIds : [id];
+      notifiedIds.forEach((jobId) => {
+        const assignedJob = jobDetails.find((job) => job.id === jobId);
+        if (!assignedJob) return;
+        sendRoleNotificationByEvent({
+          eventKey: "assignment_created",
+          joNo: String(assignedJob.jo_number || ""),
+          joNumber: String(assignedJob.jo_number || ""),
+          jobNo: String(assignedJob.job_no || ""),
+          workerName: assignToName,
+          clientName: String(clientParam || ""),
+          jobType: "KANBAN",
+          sendAll: false,
+        });
+      });
 
       setJobDetails((prev) =>
         prev.map((job) =>

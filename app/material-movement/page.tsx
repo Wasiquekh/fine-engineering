@@ -307,6 +307,16 @@ export default function MaterialMovementPage() {
     }
   };
 
+  const getTextValue = (...values: any[]) => {
+    for (const value of values) {
+      if (value === 0) return "0";
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return String(value);
+      }
+    }
+    return "-";
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <LeftSideBar />
@@ -431,32 +441,33 @@ export default function MaterialMovementPage() {
               <table className="w-full text-sm border-collapse">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="p-3 text-left border">Sr No</th>
+                    <th className="p-3 text-left border">Sequence No</th>
+                    <th className="p-3 text-left border">Serial No</th>
                     <th className="p-3 text-left border">Job No</th>
-                    <th className="p-3 text-left border">JO No</th>
                     <th className="p-3 text-left border">Job Type</th>
+                    <th className="p-3 text-left border">JO No</th>
+                    <th className="p-3 text-left border">Product Description</th>
                     <th className="p-3 text-left border">Product Item No</th>
                     <th className="p-3 text-left border">Product Qty</th>
-                    <th className="p-3 text-left border">MOC</th>
-                    <th className="p-3 text-left border">Serial No</th>
                     <th className="p-3 text-left border">Item Description</th>
                     <th className="p-3 text-left border">Item No</th>
                     <th className="p-3 text-left border">Qty</th>
-                    <th className="p-3 text-left border">Chalan No</th>
-                    <th className="p-3 text-left border">Chalan Date</th>
+                    <th className="p-3 text-left border">MOC</th>
                     <th className="p-3 text-left border">Job Order Date</th>
-                    <th className="p-3 text-left border">Mtl Receive Date</th>
-                    <th className="p-3 text-left border">Material Challan No</th>
+                    <th className="p-3 text-left border">Mtl Rcd Date</th>
+                    <th className="p-3 text-left border">Mtl Challan No</th>
+                    <th className="p-3 text-left border">Delivery Challan No</th>
+                    <th className="p-3 text-left border">Challan Date</th>
                     <th className="p-3 text-left border">Machine Category</th>
                     <th className="p-3 text-left border">Machine Size</th>
                     <th className="p-3 text-left border">Machine Code</th>
-                    <th className="p-3 text-left border">Process</th>
+                    <th className="p-3 text-left border">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={20} className="text-center p-6 border">
+                      <td colSpan={22} className="text-center p-6 border">
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
                           Loading...
@@ -468,7 +479,7 @@ export default function MaterialMovementPage() {
                   {!loading && rows.length === 0 && (
                     <tr>
                       <td
-                        colSpan={20}
+                        colSpan={22}
                         className="text-center p-6 text-gray-500 border"
                       >
                         No Data Found
@@ -476,54 +487,57 @@ export default function MaterialMovementPage() {
                     </tr>
                   )}
 
-                  {rows.map((r) => (
+                  {rows.map((r, idx) => (
                     <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border">{r.sr_no ?? "-"}</td>
+                      <td className="p-3 border">{getTextValue(r.sr_no, idx + 1)}</td>
+                      <td className="p-3 border">{getTextValue(r.serial_no, r.job?.serial_no)}</td>
                       <td className="p-3 border font-semibold text-blue-600">
-                        {r.document_no || r.job_no || r.tso_no || "-"}
+                        {getTextValue(r.document_no, r.job_no, r.tso_no, r.job?.job_no, r.job?.tso_no)}
+                      </td>
+                      <td className="p-3 border">
+                        {getDocumentTypeBadge(getTextValue(r.job_type, r.job?.job_type))}
                       </td>
                       <td className="p-3 border font-medium">
-                        {r.jo_number || r.jo_no || "-"}
+                        {getTextValue(r.jo_number, r.jo_no, r.job?.jo_number)}
                       </td>
                       <td className="p-3 border">
-                        {getDocumentTypeBadge(r.job_type)}
+                        {getTextValue(r.product_desc, r.job?.product_desc)}
                       </td>
-                      <td className="p-3 border">{r.product_item_no || "-"}</td>
+                      <td className="p-3 border">{getTextValue(r.product_item_no, r.job?.product_item_no)}</td>
                       <td className="p-3 border font-semibold">
-                        {r.product_qty ?? "-"}
+                        {getTextValue(r.product_qty, r.job?.product_qty)}
                       </td>
-                      <td className="p-3 border">{r.moc || "-"}</td>
-                      <td className="p-3 border">{r.serial_no || "-"}</td>
                       <td className="p-3 border">
-                        {r.item_description || "-"}
+                        {getTextValue(r.item_description, r.job?.item_description)}
                       </td>
-                      <td className="p-3 border">{r.item_no ?? "-"}</td>
+                      <td className="p-3 border">{getTextValue(r.item_no, r.job?.item_no)}</td>
                       <td className="p-3 border font-semibold">
-                        {r.quantity_no ?? "-"}
+                        {getTextValue(r.quantity_no, r.qty, r.job?.qty)}
                       </td>
-                      <td className="p-3 border">{r.chalan_no || "-"}</td>
-                      <td className="p-3 border">{formatDate(r.chalan_date)}</td>
+                      <td className="p-3 border">{getTextValue(r.moc, r.job?.moc)}</td>
                       <td className="p-3 border">{formatDate(r.job_order_date)}</td>
                       <td className="p-3 border">
-                        {formatDate(r.mtl_receive_date)}
+                        {formatDate(getTextValue(r.mtl_receive_date, r.mtl_rcd_date))}
                       </td>
                       <td className="p-3 border">
                         <span className="font-bold text-blue-600">
-                          {r.material_challan_no || r.mtl_challan_no || "-"}
+                          {getTextValue(r.material_challan_no, r.mtl_challan_no)}
                         </span>
                       </td>
+                      <td className="p-3 border">{getTextValue(r.chalan_no, r.delivery_challan_no)}</td>
+                      <td className="p-3 border">{formatDate(r.chalan_date)}</td>
                       <td className="p-3 border">
-                        {r.machine_category || "-"}
+                        {getTextValue(r.machine_category, r.job?.machine_category)}
                       </td>
-                      <td className="p-3 border">{r.machine_size || "-"}</td>
-                      <td className="p-3 border">{r.machine_code || "-"}</td>
+                      <td className="p-3 border">{getTextValue(r.machine_size, r.job?.machine_size)}</td>
+                      <td className="p-3 border">{getTextValue(r.machine_code, r.job?.machine_code)}</td>
                       <td className="p-3 border">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(
                             r.status || r.process
                           )}`}
                         >
-                          {r.process || r.status || "-"}
+                          {getTextValue(r.status, r.process)}
                         </span>
                       </td>
                     </tr>

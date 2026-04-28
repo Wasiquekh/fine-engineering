@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
 import PageGuard from "../../../component/PageGuard";
 import Swal from "sweetalert2";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -245,6 +246,17 @@ export default function VendorIncomingPage() {
         return;
       }
 
+      await sendRoleNotificationByEvent({
+        eventKey: "assignment_created",
+        joNo: String(item.jo_no || item.job?.jo_number || ""),
+        joNumber: String(item.jo_no || item.job?.jo_number || ""),
+        jobNo: String(item.job?.job_no || item.tso_no || ""),
+        workerName: assignTo,
+        clientName: String(item.job?.client_name || client || ""),
+        jobType: String(item.job_type || item.job?.job_type || "JOB_SERVICE"),
+        sendAll: false,
+      });
+
       toast.success(responseData.message || "Vendor assignment reverted successfully");
       // Avoid full refetch here because backend in-review filter can hide sibling rows
       // for the same JO/job after one revert. Remove only the acted row from UI.
@@ -330,6 +342,15 @@ export default function VendorIncomingPage() {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/backToQc`, {
           updated_by,
         });
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_qc",
+          joNo: String(item.jo_no || item.job?.jo_number || ""),
+          joNumber: String(item.jo_no || item.job?.jo_number || ""),
+          jobNo: String(item.job?.job_no || item.tso_no || ""),
+          clientName: String(item.job?.client_name || client || ""),
+          jobType: String(item.job_type || item.job?.job_type || "JOB_SERVICE"),
+          sendAll: false,
+        });
         
         toast.success("Item marked as Ready for QC");
         fetchVendorIncoming();
@@ -361,6 +382,15 @@ export default function VendorIncomingPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/reject`, {});
+        await sendRoleNotificationByEvent({
+          eventKey: "job_rejected",
+          joNo: String(item.jo_no || item.job?.jo_number || ""),
+          joNumber: String(item.jo_no || item.job?.jo_number || ""),
+          jobNo: String(item.job?.job_no || item.tso_no || ""),
+          clientName: String(item.job?.client_name || client || ""),
+          jobType: String(item.job_type || item.job?.job_type || "JOB_SERVICE"),
+          sendAll: false,
+        });
         toast.success("Item rejected");
         fetchVendorIncoming();
       } catch (error: any) {
@@ -378,7 +408,7 @@ export default function VendorIncomingPage() {
   };
 
   const getIdentifiers = () => {
-    const ids = new Map<string, { type: string; category: string; vendorName: string; qcDate: string; gatepassNo: string }>();
+    const ids = new Map<string, { type: string; category: string; vendorName: string; gatepassNo: string }>();
     
     filteredData().forEach((item) => {
       const jobType = item.job_type || item.job?.job_type;
@@ -401,7 +431,6 @@ export default function VendorIncomingPage() {
           type: jobType || "JOB_SERVICE",
           category: item.job_category || item.job?.job_category || "N/A",
           vendorName: item.vendor_name || "N/A",
-          qcDate: item.qc_date || "N/A",
           gatepassNo: item.gatepass_no || "N/A",
         });
       }
@@ -412,7 +441,6 @@ export default function VendorIncomingPage() {
       type: info.type,
       category: info.category,
       vendorName: info.vendorName,
-      qcDate: info.qcDate,
       gatepassNo: info.gatepassNo,
     }));
   };
@@ -461,6 +489,11 @@ export default function VendorIncomingPage() {
     const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
     const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
     return { totalQty, uniqueJoCount };
+  };
+
+  const getJobNoForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    return items[0]?.job?.job_no || items[0]?.job_no || "-";
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {
@@ -551,9 +584,7 @@ export default function VendorIncomingPage() {
                           <th className="p-3 border">Item Description</th>
                           <th className="p-3 border">MOC</th>
                           <th className="p-3 border">Vendor Name</th>
-                          <th className="p-3 border">Machine</th>
                           <th className="p-3 border text-center">Quantity</th>
-                          <th className="p-3 border text-center">QC Date</th>
                           <th className="p-3 border text-center">Gatepass No</th>
                           <th className="p-3 border text-center">Current Assignee</th>
                           <th className="p-3 border text-center">Actions</th>
@@ -570,9 +601,7 @@ export default function VendorIncomingPage() {
                               <td className="p-3 border">{item.job?.item_description || "N/A"}</td>
                               <td className="p-3 border">{item.job?.moc || "N/A"}</td>
                               <td className="p-3 border">{item.vendor_name || "N/A"}</td>
-                              <td className="p-3 border">{item.machine_code} ({item.machine_category})</td>
                               <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
-                              <td className="p-3 border text-center">{item.qc_date ? new Date(item.qc_date).toLocaleDateString() : "N/A"}</td>
                               <td className="p-3 border text-center">{item.gatepass_no || "N/A"}</td>
                               <td className="p-3 border text-center">
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -638,7 +667,6 @@ export default function VendorIncomingPage() {
                           <th className="p-3 border">Item Nos</th>
                           <th className="p-3 border">Item Description</th>
                           <th className="p-3 border">MOC</th>
-                          <th className="p-3 border text-center">QC Date</th>
                           <th className="p-3 border text-center">Gatepass No</th>
                           <th className="p-3 border text-center">Action</th>
                         </tr>
@@ -650,7 +678,6 @@ export default function VendorIncomingPage() {
                           const descriptions = [...new Set(items.map(i => i.job?.item_description).filter(Boolean))];
                           const mocList = [...new Set(items.map(i => i.job?.moc).filter(Boolean))];
                           const vendorName = items[0]?.vendor_name || "N/A";
-                          const qcDate = items[0]?.qc_date ? new Date(items[0].qc_date).toLocaleDateString() : "N/A";
                           const gatepassNo = items[0]?.gatepass_no || "N/A";
                           
                           return (
@@ -662,7 +689,6 @@ export default function VendorIncomingPage() {
                               <td className="p-3 border"><div className="text-sm">{itemNos.slice(0, 3).join(", ")}{itemNos.length > 3 && ` +${itemNos.length - 3}`}</div></td>
                               <td className="p-3 border"><div className="text-sm max-w-[200px]">{descriptions.slice(0, 2).join(", ")}{descriptions.length > 2 && ` +${descriptions.length - 2}`}</div></td>
                               <td className="p-3 border"><div className="text-sm">{mocList.slice(0, 2).join(", ")}{mocList.length > 2 && ` +${mocList.length - 2}`}</div></td>
-                              <td className="p-3 border text-center">{qcDate}</td>
                               <td className="p-3 border text-center">{gatepassNo}</td>
                               <td className="p-3 border text-center"><button className="px-3 py-1 bg-primary-600 text-white rounded text-sm">View Items</button></td>
                             </tr>
@@ -681,34 +707,32 @@ export default function VendorIncomingPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border bg-gray-50">
-                      <th className="p-3 border">Identifier</th>
+                      <th className="p-3 border">Job No</th>
                       <th className="p-3 border">Type</th>
                       <th className="p-3 border">Category</th>
                       <th className="p-3 border">Vendor Name</th>
                       <th className="p-3 border text-center">Total JOs</th>
                       <th className="p-3 border text-center">Total Quantity</th>
-                      <th className="p-3 border text-center">QC Date</th>
                       <th className="p-3 border text-center">Gatepass No</th>
                       <th className="p-3 border text-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={9} className="text-center p-4">Loading...</td></tr>
+                      <tr><td colSpan={8} className="text-center p-4">Loading...</td></tr>
                     ) : getIdentifiers().length === 0 ? (
-                      <tr><td colSpan={9} className="text-center p-4">No vendor incoming assignments found</td></tr>
+                      <tr><td colSpan={8} className="text-center p-4">No vendor incoming assignments found</td></tr>
                     ) : (
-                      getIdentifiers().map(({ identifier, type, category, vendorName, qcDate, gatepassNo }) => {
+                      getIdentifiers().map(({ identifier, type, category, vendorName, gatepassNo }) => {
                         const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
                         return (
                           <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
-                            <td className="p-3 border text-blue-600 font-medium">{identifier}</td>
+                            <td className="p-3 border text-blue-600 font-medium">{getJobNoForIdentifier(identifier)}</td>
                             <td className="p-3 border">{getJobTypeBadge(type)}</td>
                             <td className="p-3 border">{category}</td>
                             <td className="p-3 border">{vendorName}</td>
                             <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{uniqueJoCount}</span></td>
                             <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
-                            <td className="p-3 border text-center">{qcDate !== "N/A" ? new Date(qcDate).toLocaleDateString() : "N/A"}</td>
                             <td className="p-3 border text-center">{gatepassNo}</td>
                             <td className="p-3 border text-center"><button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">View Details</button></td>
                           </tr>

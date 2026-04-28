@@ -10,6 +10,7 @@ import StorageManager from "../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
+import { sendRoleNotificationByEvent } from "../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -112,6 +113,7 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
+  job_type?: string | null;
   status?: string | null;
   job?: {
     id?: string | null;
@@ -120,6 +122,7 @@ type QcRow = {
     job_category?: string | null;
     client_name?: string | null;
     assign_to?: string | null;
+    job_type?: string | null;
     jo_number?: string | null;
     item_description?: string | null;
     item_no?: string | null;
@@ -141,6 +144,19 @@ export default function QcMainPage() {
   const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [jobServiceMetaByJobNo, setJobServiceMetaByJobNo] = useState<
+    Record<
+      string,
+      {
+        job_category?: string | null;
+        description?: string | null;
+        material_type?: string | null;
+        qty?: number | string | null;
+        bar?: string | null;
+        tempp?: string | null;
+      }
+    >
+  >({});
 
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
@@ -148,6 +164,7 @@ export default function QcMainPage() {
   const assignTo = searchParams.get("assign_to") || "";
 
   const permissions = storage.getUserPermissions();
+  const currentUserName = storage.getUserName() || storage.getUserEmail() || "";
   
   // Single permission check for all review actions (QC, Machine, Welding, Vendor)
   // All actions use the same permission - based on client + filter type
@@ -178,22 +195,49 @@ export default function QcMainPage() {
 
       if (filterParam === "JOB_SERVICE") {
         const uniqueMap = new Map<string, { value: string; label: string }>();
+        const metaMap: Record<
+          string,
+          {
+            job_category?: string | null;
+            description?: string | null;
+            material_type?: string | null;
+            qty?: number | string | null;
+            bar?: string | null;
+            tempp?: string | null;
+          }
+        > = {};
+
         cats.forEach((cat: any) => {
           const jobCategory = String(cat?.job_category || "").trim();
+          const jobNo = String(cat?.job_no || "").trim();
           if (jobCategory && !uniqueMap.has(jobCategory)) {
             uniqueMap.set(jobCategory, {
               value: jobCategory,
               label: jobCategory,
             });
           }
+          if (jobNo && !metaMap[jobNo]) {
+            metaMap[jobNo] = {
+              job_category: cat?.job_category ?? null,
+              description: cat?.description ?? null,
+              material_type: cat?.material_type ?? null,
+              qty: cat?.qty ?? null,
+              bar: cat?.bar ?? null,
+              tempp: cat?.tempp ?? null,
+            };
+          }
         });
         cats = Array.from(uniqueMap.values());
+        setJobServiceMetaByJobNo(metaMap);
+      } else {
+        setJobServiceMetaByJobNo({});
       }
       
       setCategories(cats);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
+      setJobServiceMetaByJobNo({});
     }
   };
 
@@ -389,6 +433,44 @@ export default function QcMainPage() {
     
     try {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${id}/${endpoint}`, null);
+
+      const selectedRow = data.find((x) => String(x.id) === String(id));
+      const notifyPayload = {
+        joNo: String(selectedRow?.jo_no || selectedRow?.job?.jo_number || selectedRow?.job_no || ""),
+        joNumber: String(selectedRow?.job?.jo_number || selectedRow?.jo_no || ""),
+        jobNo: String(selectedRow?.job_no || selectedRow?.job?.job_no || ""),
+        clientName: String(selectedRow?.job?.client_name || client || ""),
+        jobType: String(selectedRow?.job_type || selectedRow?.job?.job_type || filterParam || "JOB_SERVICE"),
+        assignedBy: currentUserName,
+        sendAll: false as const,
+      };
+
+      if (endpoint === "ready-for-qc") {
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_qc",
+          ...notifyPayload,
+          source: "review_ready_for_qc",
+        });
+      } else if (endpoint === "vendor") {
+        await sendRoleNotificationByEvent({
+          eventKey: "sent_to_vendor",
+          ...notifyPayload,
+          source: "review_sent_to_vendor",
+        });
+      } else if (endpoint === "welding") {
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_welding",
+          ...notifyPayload,
+          source: "review_sent_to_welding",
+        });
+      } else if (endpoint === "reject") {
+        await sendRoleNotificationByEvent({
+          eventKey: "returned_to_in_progress",
+          ...notifyPayload,
+          source: "review_returned_to_in_progress",
+        });
+      }
+
       const msg = serialNo ? `${successMsg} - Serial: ${serialNo}` : successMsg;
       toast.success(msg);
       fetchData();
@@ -550,6 +632,11 @@ export default function QcMainPage() {
                         </th>
                         <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                           <div className="flex items-center gap-2">
+                            <div className="font-semibold">Job Category</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
                             <div className="font-semibold">Product Desc</div>
                           </div>
                         </th>
@@ -601,7 +688,7 @@ export default function QcMainPage() {
                         if (items.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
+                              <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
                                 <p className="text-[#666666] text-base">No data found</p>
                               </td>
                             </tr>
@@ -614,6 +701,11 @@ export default function QcMainPage() {
                           >
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm leading-normal">{item.jo_no || "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">
+                                {item.job_category || item.job?.job_category || "-"}
+                              </p>
                             </td>
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm leading-normal">{item.job?.product_desc || "-"}</p>
@@ -725,16 +817,49 @@ export default function QcMainPage() {
                             <div className="font-semibold">Category</div>
                           </div>
                         </th>
-                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold">Total JO</div>
-                          </div>
-                        </th>
-                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold">Total Quantity</div>
-                          </div>
-                        </th>
+                        {filterParam === "JOB_SERVICE" && (
+                          <>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Description</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Material Type</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Quantity</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Bar</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Temperature</div>
+                              </div>
+                            </th>
+                          </>
+                        )}
+                        {filterParam !== "JOB_SERVICE" && (
+                          <>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Total JO</div>
+                              </div>
+                            </th>
+                            <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold">Total Quantity</div>
+                              </div>
+                            </th>
+                          </>
+                        )}
                         <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <div className="font-semibold">Assigning Date</div>
@@ -745,19 +870,20 @@ export default function QcMainPage() {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                          <td colSpan={filterParam === "JOB_SERVICE" ? 8 : 5} className="px-4 py-6 text-center border border-tableBorder">
                             <p className="text-[#666666] text-base">Loading...</p>
                           </td>
                         </tr>
                       ) : jobIdentifiers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
+                          <td colSpan={filterParam === "JOB_SERVICE" ? 8 : 5} className="px-4 py-6 text-center border border-tableBorder">
                             <p className="text-[#666666] text-base">No data found</p>
                           </td>
                         </tr>
                       ) : (
                         jobIdentifiers.map((identifier) => {
                           const summary = jobSummary[identifier];
+                          const meta = jobServiceMetaByJobNo[identifier];
                           return (
                             <tr
                               key={identifier}
@@ -770,14 +896,37 @@ export default function QcMainPage() {
                                 </p>
                               </td>
                               <td className="px-4 py-3 border border-tableBorder">
-                                <p className="text-[#232323] text-sm leading-normal">{summary.jobCategory}</p>
+                                <p className="text-[#232323] text-sm leading-normal">{summary.jobCategory !== "N/A" ? summary.jobCategory : meta?.job_category || "-"}</p>
                               </td>
-                              <td className="px-4 py-3 border border-tableBorder">
-                                <p className="text-[#232323] text-sm leading-normal">{summary.uniqueJoCount}</p>
-                              </td>
-                              <td className="px-4 py-3 border border-tableBorder">
-                                <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{summary.totalQty}</p>
-                              </td>
+                              {filterParam === "JOB_SERVICE" && (
+                                <>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.description || "-"}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.material_type || "-"}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{meta?.qty ?? summary.totalQty}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.bar || "-"}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{meta?.tempp || "-"}</p>
+                                  </td>
+                                </>
+                              )}
+                              {filterParam !== "JOB_SERVICE" && (
+                                <>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm leading-normal">{summary.uniqueJoCount}</p>
+                                  </td>
+                                  <td className="px-4 py-3 border border-tableBorder">
+                                    <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{summary.totalQty}</p>
+                                  </td>
+                                </>
+                              )}
                               <td className="px-4 py-3 border border-tableBorder">
                                 <p className="text-[#232323] text-sm leading-normal">{summary.assigningDate || "-"}</p>
                               </td>
