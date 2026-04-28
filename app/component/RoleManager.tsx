@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaUserShield } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaUserShield, FaBell } from "react-icons/fa";
 import { IoCloseOutline } from "react-icons/io5";
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 import AxiosProvider from "../../provider/AxiosProvider";
+import { sendRoleNotification } from "../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 
@@ -95,6 +96,61 @@ export default function RoleManager({ roles, onClose, onRoleUpdate, onPermission
       } catch (error: any) {
         toast.error(error.response?.data?.msg || "Failed to delete role");
       }
+    }
+  };
+
+  const handleSendPushToRole = async (role: Role) => {
+    const result = await Swal.fire({
+      title: `Send push notification`,
+      html: `
+        <div style="display:flex;flex-direction:column;gap:10px;text-align:left;">
+          <label style="font-weight:600;">Role</label>
+          <input id="push_role_name" class="swal2-input" value="${role.name}" readonly />
+          <label style="font-weight:600;">Title</label>
+          <input id="push_title" class="swal2-input" placeholder="Enter notification title" />
+          <label style="font-weight:600;">Message</label>
+          <textarea id="push_body" class="swal2-textarea" placeholder="Enter notification message"></textarea>
+          <label style="font-weight:600;">Route (optional)</label>
+          <input id="push_route" class="swal2-input" placeholder="/dashboard" />
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Send",
+      cancelButtonText: "Cancel",
+      preConfirm: () => {
+        const title = (document.getElementById("push_title") as HTMLInputElement)?.value?.trim();
+        const body = (document.getElementById("push_body") as HTMLTextAreaElement)?.value?.trim();
+        const route = (document.getElementById("push_route") as HTMLInputElement)?.value?.trim();
+
+        if (!title) {
+          Swal.showValidationMessage("Please enter notification title");
+          return;
+        }
+        if (!body) {
+          Swal.showValidationMessage("Please enter notification message");
+          return;
+        }
+
+        return { title, body, route };
+      },
+    });
+
+    if (!result.isConfirmed || !result.value) return;
+
+    try {
+      await sendRoleNotification({
+        roles: [role.name],
+        title: result.value.title,
+        body: result.value.body,
+        route: result.value.route || undefined,
+        source: "role_manager_manual_push",
+        type: "role_alert",
+        sendAll: false,
+        userTypes: ["system"],
+      });
+      toast.success(`Push notification sent to ${role.name}`);
+    } catch (error) {
+      toast.error("Failed to send push notification");
     }
   };
   return (
@@ -213,6 +269,13 @@ export default function RoleManager({ roles, onClose, onRoleUpdate, onPermission
                         <p className="text-sm text-gray-500">Level: {role.level}</p>
                       </div>
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSendPushToRole(role)}
+                          className="p-2 bg-violet-600 rounded hover:bg-violet-700 text-white transition"
+                          title="Send Push Notification"
+                        >
+                          <FaBell size={16} />
+                        </button>
                         <button
                           onClick={() => onPermissionClick(role)}
                           className="p-2 bg-purple-600 rounded hover:bg-purple-700 text-white transition"

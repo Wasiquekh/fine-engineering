@@ -11,6 +11,7 @@ import { FaChevronDown, FaBan } from "react-icons/fa";
 import { MdOutlineVerified } from "react-icons/md";
 import Swal from "sweetalert2";
 import StorageManager from "../../../../provider/StorageManager";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -24,6 +25,8 @@ interface JobDetail {
   id: string;
   tso_no: string;
   jo_number: string;
+  job_no?: string;
+  client_name?: string;
   job_type: string;
   job_category: string;
   item_description: string;
@@ -222,6 +225,22 @@ export default function JobDetailsPage() {
         toast.warn(`${notFoundIds.length} selected job(s) were not found`);
       }
 
+      const notifiedIds = updatedIds.length > 0 ? updatedIds : uniqueSelectedIds;
+      notifiedIds.forEach((jobId) => {
+        const assignedJob = jobDetails.find((job) => job.id === jobId);
+        if (!assignedJob) return;
+        sendRoleNotificationByEvent({
+          eventKey: "assignment_created",
+          joNo: String(assignedJob.jo_number || ""),
+          joNumber: String(assignedJob.jo_number || ""),
+          jobNo: String(assignedJob.job_no || ""),
+          workerName: assignToName,
+          clientName: String(assignedJob.client_name || ""),
+          jobType: "KANBAN",
+          sendAll: false,
+        });
+      });
+
       setJobDetails((prev) =>
         prev.map((job) =>
           (updatedIds.length > 0 ? updatedIds.includes(job.id) : uniqueSelectedIds.includes(job.id))
@@ -260,6 +279,15 @@ export default function JobDetailsPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/reject`, {});
+        await sendRoleNotificationByEvent({
+          eventKey: "job_rejected",
+          joNo: String(item.jo_number || ""),
+          joNumber: String(item.jo_number || ""),
+          jobNo: String(item.job_no || ""),
+          clientName: String(item.client_name || ""),
+          jobType: "KANBAN",
+          sendAll: false,
+        });
         toast.success("Job rejected successfully");
 
         setJobDetails((prev) =>
@@ -288,6 +316,15 @@ export default function JobDetailsPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/direct_qc`, {});
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_qc",
+          joNo: String(item.jo_number || ""),
+          joNumber: String(item.jo_number || ""),
+          jobNo: String(item.job_no || ""),
+          clientName: String(item.client_name || ""),
+          jobType: "KANBAN",
+          sendAll: false,
+        });
         toast.success("Job marked Ready-For-QC successfully");
         setJobDetails((prev) =>
           prev.map((job) => (job.id === item.id ? { ...job, status: "QC", qty: 0 } : job))

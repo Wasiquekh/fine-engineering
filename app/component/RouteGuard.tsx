@@ -89,7 +89,7 @@ const routePermissions: Record<string, string | string[]> = {
 };
 
 // Public routes
-const publicRoutes = ["/login", "/", "/unauthorized", "/qrcode", "/generateqrcode"];
+const publicRoutes = ["/", "/", "/unauthorized", "/qrcode", "/generateqrcode"];
 
 const isPublicRoute = (pathname: string): boolean => {
   return publicRoutes.some(route => pathname === route || pathname.startsWith(route + "/"));
@@ -120,8 +120,8 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
       return ["production2.eqp.job.view", "production2.bio.job.view", "production2.view"];
     }
     
-    // Production 3 (Ramzaan)
-    if (assignTo === "Ramzaan") {
+    // Production 3 (Ramzan)
+    if (assignTo === "Ramzan") {
       if (client === "Amar Equipment") return "production3.eqp.job.view";
       if (client === "Amar Biosystem") return "production3.bio.job.view";
       return ["production3.eqp.job.view", "production3.bio.job.view", "production3.view"];
@@ -145,7 +145,7 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
       if (client === "Amar Biosystem") return "production2.bio.tso.view";
       return ["production2.eqp.tso.view", "production2.bio.tso.view", "production2.view"];
     }
-    if (assignTo === "Ramzaan") {
+    if (assignTo === "Ramzan") {
       if (client === "Amar Equipment") return "production3.eqp.tso.view";
       if (client === "Amar Biosystem") return "production3.bio.tso.view";
       return ["production3.eqp.tso.view", "production3.bio.tso.view", "production3.view"];
@@ -163,7 +163,7 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
       if (client === "Amar Biosystem") return "production2.bio.kanban.view";
       return ["production2.eqp.kanban.view", "production2.bio.kanban.view", "production2.view"];
     }
-    if (assignTo === "Ramzaan") {
+    if (assignTo === "Ramzan") {
       if (client === "Amar Equipment") return "production3.eqp.kanban.view";
       if (client === "Amar Biosystem") return "production3.bio.kanban.view";
       return ["production3.eqp.kanban.view", "production3.bio.kanban.view", "production3.view"];
@@ -181,7 +181,7 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
     
     let prodNumber = "production1";
     if (assignTo === "Riyaaz") prodNumber = "production2";
-    if (assignTo === "Ramzaan") prodNumber = "production3";
+    if (assignTo === "Ramzan") prodNumber = "production3";
     
     // Agar client specified hai to specific permission
     if (client === "Amar Equipment") {
@@ -221,7 +221,7 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
     
     let prodNumber = "production1";
     if (assignTo === "Riyaaz") prodNumber = "production2";
-    if (assignTo === "Ramzaan") prodNumber = "production3";
+    if (assignTo === "Ramzan") prodNumber = "production3";
     
     if (client === "Amar Equipment") return `${prodNumber}.eqp.review.welding.view`;
     if (client === "Amar Biosystem") return `${prodNumber}.bio.review.welding.view`;
@@ -237,7 +237,7 @@ const getRequiredPermission = (pathname: string, searchParams: ReadonlyURLSearch
     
     let prodNumber = "production1";
     if (assignTo === "Riyaaz") prodNumber = "production2";
-    if (assignTo === "Ramzaan") prodNumber = "production3";
+    if (assignTo === "Ramzan") prodNumber = "production3";
     
     if (client === "Amar Equipment") return `${prodNumber}.eqp.review.vendor.view`;
     if (client === "Amar Biosystem") return `${prodNumber}.bio.review.vendor.view`;

@@ -488,20 +488,19 @@ export default function VendorOutsourcePage() {
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No vendor outsource data found</p>
                         </td>
                       </tr>
@@ -532,9 +531,6 @@ export default function VendorOutsourcePage() {
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-sm">{summary.totalQty}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
                             </td>
                           </tr>
                         );

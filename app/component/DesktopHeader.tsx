@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { CiSettings } from "react-icons/ci";
 import { IoIosNotificationsOutline } from "react-icons/io";
@@ -7,12 +7,58 @@ import { IoCloseOutline } from "react-icons/io5";
 import LeftSideBarMobile from "./LeftSideBarMobile";
 import DynamicBreadCrum from "./DynamicBreadCrum";
 
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import {
+  AppNotification,
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  notificationsEventName,
+} from "../services/notificationCenter";
 
 const DesktopHeader = () => {
   const [isFlyoutFilterOpen, setFlyoutFilterOpen] = useState<boolean>(false);
+  const [isNotificationsOpen, setNotificationsOpen] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const toggleFilterFlyout = () => setFlyoutFilterOpen(!isFlyoutFilterOpen);
-  const pathname = usePathname();
+  const router = useRouter();
+
+  const refreshNotifications = () => {
+    setNotifications(getNotifications());
+  };
+
+  useEffect(() => {
+    refreshNotifications();
+    const onCustom = () => refreshNotifications();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "app_notifications_v1") refreshNotifications();
+    };
+
+    window.addEventListener(notificationsEventName, onCustom);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(notificationsEventName, onCustom);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.read).length,
+    [notifications]
+  );
+
+  const handleNotificationClick = (item: AppNotification) => {
+    markNotificationRead(item.id);
+    refreshNotifications();
+    setNotificationsOpen(false);
+    if (item.route) router.push(item.route);
+  };
+
+  const markAllRead = () => {
+    markAllNotificationsRead();
+    refreshNotifications();
+  };
+
   return (
     <>
       <div className=" w-full flex justify-between  items-center gap-7 md:mb-14">
@@ -30,8 +76,57 @@ const DesktopHeader = () => {
           <div className=" w-[50px] h-[50px] bg-white rounded-full flex justify-center items-center">
             <CiSettings className=" text-[#718EBF] w-[25px] h-[25px]" />
           </div>
-          <div className=" w-[50px] h-[50px] bg-white rounded-full flex justify-center items-center">
-            <IoIosNotificationsOutline className=" text-[#FE5C73] w-[25px] h-[25px]" />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setNotificationsOpen((prev) => !prev)}
+              className="w-[50px] h-[50px] bg-white rounded-full flex justify-center items-center"
+            >
+              <IoIosNotificationsOutline className=" text-[#FE5C73] w-[25px] h-[25px]" />
+            </button>
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-3 w-3 rounded-full bg-red-500 border border-white" />
+            )}
+            {isNotificationsOpen && (
+              <div className="absolute right-0 mt-2 w-[24rem] max-h-[28rem] overflow-y-auto bg-white border border-[#E7E7E7] rounded-md shadow-lg z-[200]">
+                <div className="px-4 py-3 border-b flex justify-between items-center">
+                  <p className="font-semibold text-sm">Notifications</p>
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="text-xs text-primary-600 hover:underline"
+                  >
+                    Mark all read
+                  </button>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-gray-500">No notifications yet.</div>
+                ) : (
+                  notifications.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleNotificationClick(item)}
+                      className={`block w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-[#F8FAFF] ${
+                        item.read ? "bg-white" : "bg-[#F3F7FF]"
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium text-[#232323] leading-5 whitespace-normal break-words">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-[#718EBF] leading-5 whitespace-pre-wrap break-all">
+                          {item.body || "-"}
+                        </p>
+                        <p className="text-[11px] text-gray-400 leading-4 pt-1">
+                          {new Date(item.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
           <div className=" w-[50px] h-[50px]  rounded-full flex justify-center items-center z-10">
             <Image

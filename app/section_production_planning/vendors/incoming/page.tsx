@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
 import PageGuard from "../../../component/PageGuard";
 import Swal from "sweetalert2";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -245,6 +246,17 @@ export default function VendorIncomingPage() {
         return;
       }
 
+      await sendRoleNotificationByEvent({
+        eventKey: "assignment_created",
+        joNo: String(item.jo_no || item.job?.jo_number || ""),
+        joNumber: String(item.jo_no || item.job?.jo_number || ""),
+        jobNo: String(item.job?.job_no || item.tso_no || ""),
+        workerName: assignTo,
+        clientName: String(item.job?.client_name || client || ""),
+        jobType: String(item.job_type || item.job?.job_type || "JOB_SERVICE"),
+        sendAll: false,
+      });
+
       toast.success(responseData.message || "Vendor assignment reverted successfully");
       // Avoid full refetch here because backend in-review filter can hide sibling rows
       // for the same JO/job after one revert. Remove only the acted row from UI.
@@ -330,6 +342,15 @@ export default function VendorIncomingPage() {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/backToQc`, {
           updated_by,
         });
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_qc",
+          joNo: String(item.jo_no || item.job?.jo_number || ""),
+          joNumber: String(item.jo_no || item.job?.jo_number || ""),
+          jobNo: String(item.job?.job_no || item.tso_no || ""),
+          clientName: String(item.job?.client_name || client || ""),
+          jobType: String(item.job_type || item.job?.job_type || "JOB_SERVICE"),
+          sendAll: false,
+        });
         
         toast.success("Item marked as Ready for QC");
         fetchVendorIncoming();
@@ -361,6 +382,15 @@ export default function VendorIncomingPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.job_id}/reject`, {});
+        await sendRoleNotificationByEvent({
+          eventKey: "job_rejected",
+          joNo: String(item.jo_no || item.job?.jo_number || ""),
+          joNumber: String(item.jo_no || item.job?.jo_number || ""),
+          jobNo: String(item.job?.job_no || item.tso_no || ""),
+          clientName: String(item.job?.client_name || client || ""),
+          jobType: String(item.job_type || item.job?.job_type || "JOB_SERVICE"),
+          sendAll: false,
+        });
         toast.success("Item rejected");
         fetchVendorIncoming();
       } catch (error: any) {
@@ -461,6 +491,11 @@ export default function VendorIncomingPage() {
     const totalQty = items.reduce((sum, item) => sum + (Number(item.quantity_no) || 0), 0);
     const uniqueJoCount = new Set(items.map((x) => x.jo_no || "Unknown")).size;
     return { totalQty, uniqueJoCount };
+  };
+
+  const getJobNoForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    return items[0]?.job?.job_no || items[0]?.job_no || "-";
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {
@@ -681,7 +716,7 @@ export default function VendorIncomingPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border bg-gray-50">
-                      <th className="p-3 border">Identifier</th>
+                      <th className="p-3 border">Job No</th>
                       <th className="p-3 border">Type</th>
                       <th className="p-3 border">Category</th>
                       <th className="p-3 border">Vendor Name</th>
@@ -702,7 +737,7 @@ export default function VendorIncomingPage() {
                         const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
                         return (
                           <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
-                            <td className="p-3 border text-blue-600 font-medium">{identifier}</td>
+                            <td className="p-3 border text-blue-600 font-medium">{getJobNoForIdentifier(identifier)}</td>
                             <td className="p-3 border">{getJobTypeBadge(type)}</td>
                             <td className="p-3 border">{category}</td>
                             <td className="p-3 border">{vendorName}</td>

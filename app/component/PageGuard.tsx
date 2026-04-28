@@ -30,7 +30,7 @@ const PageGuard = ({
     const permissions = storage.getUserPermissions();
 
     if (!user || !user.id) {
-      router.push("/login");
+      router.push("/");
       return;
     }
 

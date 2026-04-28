@@ -8,6 +8,8 @@ import LeftSideBar from "../../../component/LeftSideBar";
 import DesktopHeader from "../../../component/DesktopHeader";
 import Link from "next/link";
 import Image from "next/image";
+import StorageManager from "../../../../provider/StorageManager";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 
@@ -87,6 +89,76 @@ export default function JobDetailsPage() {
       fetchData();
     }
   }, [job_no, client, filter, assign_to]);
+
+  const handleAssignmentChange = (id: string, field: string, value: string) => {
+    if (!canEdit) return;
+    setAssignments((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || { assignTo: "", otherName: "", assignDate: "" }),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleAssign = async (id: string) => {
+    if (!canEdit) {
+      toast.error("You don't have permission to assign");
+      return;
+    }
+    const assignment = assignments[id];
+
+    if (!assignment?.assignTo) {
+      toast.error("Please select who to assign to");
+      return;
+    }
+
+    if (assignment.assignTo === "Others" && !assignment.otherName) {
+      toast.error("Please enter the name");
+      return;
+    }
+
+    if (!assignment.assignDate) {
+      toast.error("Please select a date");
+      return;
+    }
+
+    const assignToName = assignment.assignTo === "Others" ? assignment.otherName : assignment.assignTo;
+    const formattedDate = assignment.assignDate.replace(/-/g, '/');
+
+    try {
+      const params = new URLSearchParams();
+      params.append('assign_to', assignToName);
+      params.append('assign_date', formattedDate);
+
+      await axiosProvider.post(`/fineengg_erp/system/jobs/${id}/assign`, params);
+
+      const assignedJob = jobDetails.find((job) => job.id === id);
+      await sendRoleNotificationByEvent({
+        eventKey: "assignment_created",
+        joNo: String(assignedJob?.jo_number || ""),
+        joNumber: String(assignedJob?.jo_number || ""),
+        jobNo: String(assignedJob?.job_no || ""),
+        workerName: assignToName,
+        clientName: String(client || ""),
+        jobType: "JOB_SERVICE",
+        sendAll: false,
+      });
+
+      toast.success("Job assigned successfully");
+
+      setJobDetails((prev) =>
+        prev.map((job) =>
+          job.id === id
+            ? { ...job, assign_to: assignToName, assign_date: formattedDate }
+            : job
+        )
+      );
+    } catch (error) {
+      console.error("Error assigning job:", error);
+      toast.error("Failed to assign job");
+    }
+  };
 
   return (
     <div className="flex justify-end min-h-screen">

@@ -10,6 +10,7 @@ import StorageManager from "../../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
+import { sendRoleNotificationByEvent } from "../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -85,10 +86,11 @@ export default function QcWeldingPage() {
     { value: string; label: string }[]
   >([]);
 
-  const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const filterParam = searchParams.get("filter") || "ALL";
   const client = searchParams.get("client") || "";
   const REVIEW_FOR = "welding";
   const permissions = storage.getUserPermissions();
+  const currentUserName = storage.getUserName() || storage.getUserEmail() || "";
   const canQcEdit = canPerformQcWeldingAction(permissions, client);
 
   const status = useMemo(() => {
@@ -96,6 +98,19 @@ export default function QcWeldingPage() {
   }, [tab]);
 
   const getJobId = (r: Row) => r.jobId || r.job_id || r.job?.id;
+  const notifyEvent = async (eventKey: string, item: Row, source: string) => {
+    await sendRoleNotificationByEvent({
+      eventKey,
+      joNo: String(item.jo_no || item.job?.jo_number || ""),
+      joNumber: String(item.job?.jo_number || item.jo_no || ""),
+      jobNo: String(item.job_no || item.job?.job_no || item.tso_no || item.job?.tso_no || ""),
+      clientName: String(item.job?.client_name || client || ""),
+      jobType: String(item.job_type || item.job?.job_type || filterParam || "JOB_SERVICE"),
+      assignedBy: currentUserName,
+      sendAll: false,
+      source,
+    });
+  };
 
   const fetchCategories = async () => {
     try {
@@ -342,7 +357,7 @@ export default function QcWeldingPage() {
           updated_by,
         }
       );
-
+      await notifyEvent("returned_to_in_progress", item, "qc_welding_rework");
       toast.success(`Item ${item.serial_no} sent for rework`);
       fetchData();
     } catch (error: any) {
@@ -447,6 +462,7 @@ export default function QcWeldingPage() {
       toast.dismiss(loadingToast);
 
       if (response?.data?.success) {
+        await notifyEvent("job_rejected", item, "qc_welding_not_ok");
         const remainingQty = maxQty - result.notOkQty;
         toast.warning(
           <div>
@@ -749,6 +765,7 @@ export default function QcWeldingPage() {
       toast.dismiss(loadingToast);
 
       if (response?.data?.success) {
+        await notifyEvent("job_rejected", firstItem, "qc_welding_not_ok_bulk");
         toast.warning(response.data.message);
         fetchData();
         setSelectedJobNo(null);

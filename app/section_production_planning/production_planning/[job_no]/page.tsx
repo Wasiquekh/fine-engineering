@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AxiosProvider from "../../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
@@ -12,6 +12,7 @@ import { MdOutlineVerified } from "react-icons/md";
 import { IoCloseOutline } from "react-icons/io5";
 import Swal from "sweetalert2";
 import StorageManager from "../../../../provider/StorageManager";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -106,11 +107,13 @@ export default function JobDetailsPage() {
   }>({});
   const [expandedJoNumbers, setExpandedJoNumbers] = useState<string[]>([]);
   const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const pendingNotificationSentRef = useRef<string>("");
   const params = useParams();
   const router = useRouter();
   const job_no = params.job_no ? decodeURIComponent(params.job_no as string) : "";
 
   const permissions = storage.getUserPermissions();
+  const currentUserName = storage.getUserName() || storage.getUserEmail() || "";
   
   // Edit permission for actions (assign, reject, qc) - Backend se aayega
   const canEdit = hasAnyPermission(permissions, [
@@ -268,6 +271,27 @@ export default function JobDetailsPage() {
     }
   }, [job_no]);
 
+  useEffect(() => {
+    if (!job_no) return;
+    const hasPending = pendingData.some((item) => !item.is_completed);
+    if (!hasPending) return;
+
+    // Avoid sending duplicate alerts for same job in same browser session.
+    if (pendingNotificationSentRef.current === String(job_no)) return;
+    pendingNotificationSentRef.current = String(job_no);
+
+    const clientNameFromData = categoryDetails[0]?.client_name || "";
+    sendRoleNotificationByEvent({
+      eventKey: "material_required",
+      joNo: String(job_no),
+      jobNo: String(job_no),
+      clientName: clientNameFromData,
+      assignedBy: currentUserName,
+      source: "production_planning_pending_material",
+      sendAll: false,
+    });
+  }, [pendingData, job_no, categoryDetails]);
+
   const handleAssignmentChange = (id: string, field: string, value: string) => {
     if (!canEdit) return;
     setAssignments((prev) => ({
@@ -333,6 +357,24 @@ export default function JobDetailsPage() {
         toast.warn(`${notFoundIds.length} selected job(s) were not found`);
       }
 
+      const notifiedIds = updatedIds.length > 0 ? updatedIds : uniqueSelectedIds;
+      notifiedIds.forEach((jobId) => {
+        const assignedJob = jobDetails.find((job) => job.id === jobId);
+        if (!assignedJob) return;
+        sendRoleNotificationByEvent({
+          eventKey: "assignment_created",
+          joNo: String(assignedJob.jo_number || ""),
+          joNumber: String(assignedJob.jo_number || ""),
+          jobNo: String(assignedJob.job_no || ""),
+          workerName: assignToName,
+          assignedBy: currentUserName,
+          clientName: categoryDetails[0]?.client_name || "",
+          notifyAssignee: true,
+          source: "production_planning_assign",
+          sendAll: false,
+        });
+      });
+
       setJobDetails((prev) =>
         prev.map((job) =>
           (updatedIds.length > 0 ? updatedIds.includes(job.id) : uniqueSelectedIds.includes(job.id))
@@ -371,6 +413,16 @@ export default function JobDetailsPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/reject`, {});
+        await sendRoleNotificationByEvent({
+          eventKey: "job_rejected",
+          joNo: String(item.jo_number || ""),
+          joNumber: String(item.jo_number || ""),
+          jobNo: String(item.job_no || ""),
+          assignedBy: currentUserName,
+          clientName: categoryDetails[0]?.client_name || "",
+          source: "production_planning_reject",
+          sendAll: false,
+        });
         toast.success("Job rejected successfully");
         setJobDetails((prev) =>
           prev.map((job) => (job.id === item.id ? { ...job, is_rejected: true } : job))
@@ -398,6 +450,16 @@ export default function JobDetailsPage() {
     if (result.isConfirmed) {
       try {
         await axiosProvider.post(`/fineengg_erp/system/jobs/${item.id}/direct_qc`, {});
+        await sendRoleNotificationByEvent({
+          eventKey: "moved_to_qc",
+          joNo: String(item.jo_number || ""),
+          joNumber: String(item.jo_number || ""),
+          jobNo: String(item.job_no || ""),
+          assignedBy: currentUserName,
+          clientName: categoryDetails[0]?.client_name || "",
+          source: "production_planning_direct_qc",
+          sendAll: false,
+        });
         toast.success("Job marked Ready-For-QC successfully");
         setJobDetails((prev) =>
           prev.map((job) => (job.id === item.id ? { ...job, status: "QC", qty: 0 } : job))

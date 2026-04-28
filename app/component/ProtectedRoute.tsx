@@ -28,7 +28,7 @@ const ProtectedRoute = ({
 
     // Check if user is logged in
     if (!user || !user.id) {
-      router.push("/login");
+      router.push("/");
       return;
     }
 

@@ -7,6 +7,13 @@ import AxiosProvider from "../../provider/AxiosProvider";
 import StorageManager from "../../provider/StorageManager";
 import OtpInput from "react-otp-input";
 import { getFirstAvailableModulePath } from "../component/utils/permissionUtils";
+import { getToken } from "firebase/messaging";
+import { getPushMessaging } from "../push/firebaseMessaging";
+import {
+  isLikelyValidVapidKey,
+  pushFirebaseVapidKey,
+  pushFirebaseWebConfig,
+} from "../firebase-config";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -65,7 +72,7 @@ export default function OtpHome() {
     if (!tempUserId && !storedUserId) {
       console.log("No user data found, redirecting to login");
       toast.error("Session expired. Please login again.");
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -74,7 +81,7 @@ export default function OtpHome() {
     if (!finalUserId) {
       console.log("No user ID available, redirecting to login");
       toast.error("Session expired. Please login again.");
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -132,7 +139,7 @@ export default function OtpHome() {
       
       if (error.response?.status === 401) {
         toast.error("Session expired. Please login again.");
-        router.push("/login");
+        router.push("/");
       }
     } finally {
       setLoading(false);
@@ -141,6 +148,79 @@ export default function OtpHome() {
 
   const handleChange = (value: string) => {
     setOtp(value);
+  };
+
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const getAuthFcmToken = async (): Promise<string | null> => {
+    try {
+      if (typeof window === "undefined") return null;
+      if (!("serviceWorker" in navigator)) {
+        console.warn("FCM skip: serviceWorker unsupported");
+        return null;
+      }
+      if (!("Notification" in window)) {
+        console.warn("FCM skip: Notification API unsupported");
+        return null;
+      }
+
+      const swQuery = new URLSearchParams({
+        apiKey: pushFirebaseWebConfig.apiKey || "",
+        authDomain: pushFirebaseWebConfig.authDomain || "",
+        projectId: pushFirebaseWebConfig.projectId || "",
+        messagingSenderId: pushFirebaseWebConfig.messagingSenderId || "",
+        appId: pushFirebaseWebConfig.appId || "",
+      });
+      const serviceWorkerRegistration = await navigator.serviceWorker.register(
+        `/firebase-messaging-sw.js?${swQuery.toString()}`
+      );
+      const readyRegistration = await navigator.serviceWorker.ready;
+
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+      if (permission !== "granted") {
+        console.warn("FCM skip: notification permission not granted", { permission });
+        return null;
+      }
+
+      const vapidKey = pushFirebaseVapidKey;
+      if (!vapidKey) {
+        console.warn(
+          "FCM skip: VAPID key missing. Set NEXT_PUBLIC_PUSH_FIREBASE_VAPID_KEY (or NEXT_PUBLIC_FIREBASE_VAPID_KEY)"
+        );
+        return null;
+      }
+      if (!isLikelyValidVapidKey(vapidKey)) {
+        console.warn(
+          "FCM skip: VAPID key format invalid. Copy exact PUBLIC key from Firebase > Project settings > Cloud Messaging > Web Push certificates."
+        );
+        return null;
+      }
+
+      const messaging = await getPushMessaging();
+      if (!messaging) {
+        console.warn("FCM skip: messaging not supported/initialized");
+        return null;
+      }
+
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const fcmToken = await getToken(messaging, {
+          vapidKey,
+          serviceWorkerRegistration: readyRegistration || serviceWorkerRegistration,
+        });
+        if (fcmToken) return fcmToken;
+        if (attempt < 3) {
+          await sleep(500 * attempt);
+        }
+      }
+      console.warn("FCM skip: token generation returned empty after retries");
+      return null;
+    } catch (error) {
+      console.warn("Unable to get auth-time FCM token:", error);
+      return null;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -153,7 +233,7 @@ export default function OtpHome() {
 
     if (!userId) {
       toast.error("User ID not found. Please login again.");
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -169,6 +249,12 @@ export default function OtpHome() {
         userId: userId,
         isSetup: isSetup
       };
+
+      const authTimeFcmToken = await getAuthFcmToken();
+      if (authTimeFcmToken) {
+        payload.fcm_token = authTimeFcmToken;
+        payload.device_type = "web";
+      }
       
       if (isSetup) {
         if (!secretKey) {
@@ -190,7 +276,22 @@ export default function OtpHome() {
         };
       }
       
-      const res = await axiosProvider.post("/fineengg_erp/system/verifytotp", payload, config);
+      const verifyHeaders: Record<string, string> = {
+        ...(config?.headers || {}),
+      };
+      if (authTimeFcmToken) {
+        verifyHeaders["x-fcm-token"] = authTimeFcmToken;
+        verifyHeaders["x-device-type"] = "web";
+      }
+
+      const res = await axiosProvider.post(
+        "/fineengg_erp/system/verifytotp",
+        payload,
+        {
+          ...(config || {}),
+          headers: verifyHeaders,
+        }
+      );
 
       console.log("Verify TOTP response:", res.data);
 
@@ -198,6 +299,46 @@ export default function OtpHome() {
         // Save the access token
         console.log("Saving access token...");
         await storage.saveAccessToken(res.data.data.token);
+
+        // Fallback token registration:
+        // retry in background because token generation can be delayed
+        // right after auth + service worker registration.
+        const registerPushTokenWithRetry = async () => {
+          const authHeaderToken = res.data?.data?.token || "";
+          const userName = res.data?.data?.user?.name || undefined;
+          for (let attempt = 1; attempt <= 5; attempt += 1) {
+            try {
+              const tokenFromAuth = attempt === 1 ? authTimeFcmToken : null;
+              const fcmToken = tokenFromAuth || (await getAuthFcmToken());
+              if (!fcmToken) {
+                console.warn(`Fallback register-token skipped (no token), attempt ${attempt}/5`);
+                await sleep(1200 * attempt);
+                continue;
+              }
+
+              await axiosProvider.post(
+                "/fineengg_erp/system/push/register-token",
+                {
+                  fcm_token: fcmToken,
+                  device_type: "web",
+                  user_name: userName,
+                },
+                {
+                  headers: {
+                    Authorization: `Bearer ${authHeaderToken}`,
+                  },
+                }
+              );
+              console.log(`Push token registered successfully on attempt ${attempt}/5`);
+              return;
+            } catch (registerError) {
+              console.warn(`Fallback register-token failed on attempt ${attempt}/5`, registerError);
+              await sleep(1200 * attempt);
+            }
+          }
+          console.warn("Fallback register-token exhausted retries");
+        };
+        void registerPushTokenWithRetry();
         
         if (isSetup && secretKey) {
           await storage.saveUserSecretKey(secretKey);
@@ -390,7 +531,7 @@ export default function OtpHome() {
               
               <button
                 type="button"
-                onClick={() => router.push("/login")}
+                onClick={() => router.push("/")}
                 className="text-primary-600 text-sm hover:underline text-center w-full mt-2"
               >
                 Back to Login
