@@ -225,6 +225,11 @@ export default function VendorOutgoingPage() {
     return { totalQty, uniqueJoCount };
   };
 
+  const getJobNoForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    return items[0]?.job?.job_no || items[0]?.job_no || "-";
+  };
+
   const getJobTypeBadge = (jobType: string | null | undefined) => {
     switch(jobType) {
       case "TSO_SERVICE":
@@ -291,7 +296,7 @@ export default function VendorOutgoingPage() {
                           <th className="p-3 border">Serial No</th><th className="p-3 border">Item No</th>
                           <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th>
                           <th className="p-3 border">Vendor Name</th><th className="p-3 border">Machine</th>
-                          <th className="p-3 border text-center">Quantity</th><th className="p-3 border text-center">Assigning Date</th>
+                          <th className="p-3 border text-center">Quantity</th>
                          </tr>
                       </thead>
                       <tbody>
@@ -304,7 +309,6 @@ export default function VendorOutgoingPage() {
                             <td className="p-3 border">{item.vendor_name || "N/A"}</td>
                             <td className="p-3 border">{item.machine_code} ({item.machine_category})</td>
                             <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
-                            <td className="p-3 border text-center">{item.assigning_date ? new Date(item.assigning_date).toLocaleDateString() : "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -371,7 +375,7 @@ export default function VendorOutgoingPage() {
                         const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
                         return (
                           <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
-                            <td className="p-3 border text-blue-600 font-medium">{identifier}</td>
+                            <td className="p-3 border text-blue-600 font-medium">{getJobNoForIdentifier(identifier)}</td>
                             <td className="p-3 border">{getJobTypeBadge(type)}</td>
                             <td className="p-3 border">{category}</td>
                             <td className="p-3 border">{vendorName}</td>

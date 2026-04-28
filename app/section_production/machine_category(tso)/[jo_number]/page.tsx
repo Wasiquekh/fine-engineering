@@ -7,6 +7,7 @@ import Image from "next/image";
 import AxiosProvider from "../../../../provider/AxiosProvider";
 import { toast } from "react-toastify";
 import StorageManager from "../../../../provider/StorageManager";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -70,7 +71,7 @@ export default function TsoMachineCategoryPage() {
   const getProductionPrefix = () => {
     if (assignTo === "Usmaan") return "production1";
     if (assignTo === "Riyaaz") return "production2";
-    if (assignTo === "Ramzaan") return "production3";
+    if (assignTo === "Ramzan") return "production3";
     return null;
   };
 
@@ -255,6 +256,18 @@ export default function TsoMachineCategoryPage() {
 
     try {
       await axiosProvider.post("/fineengg_erp/system/assign-to-worker", payload);
+      await sendRoleNotificationByEvent({
+        eventKey: "assignment_created",
+        joNo: String(jo_number || ""),
+        joNumber: String(jo_number || ""),
+        jobNo: String(selectedJob.job_no || ""),
+        workerName: worker,
+        assignedBy: String(assignTo || storage.getUserName() || ""),
+        clientName: String(clientName || ""),
+        jobType: "TSO_SERVICE",
+        notifyAssignee: true,
+        sendAll: false,
+      });
       toast.success("Job assigned successfully");
       setSelectedSerialNo("");
       setSelectedOption("");

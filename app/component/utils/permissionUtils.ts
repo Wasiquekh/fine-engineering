@@ -62,10 +62,10 @@ export const getFirstAvailableModulePath = (permissions: Permission[] | null): s
     { permission: "production2.eqp.job.view", path: "/section_production/production_module?assign_to=Riyaaz&client=Amar%20Equipment" },
     { permission: "production2.bio.job.view", path: "/section_production/production_module?assign_to=Riyaaz&client=Amar%20Biosystem" },
     
-    // Production 3 (Ramzaan) - With Kanban & PO
-    { permission: "production3.view", path: "/section_production/production_module?assign_to=Ramzaan" },
-    { permission: "production3.eqp.job.view", path: "/section_production/production_module?assign_to=Ramzaan&client=Amar%20Equipment" },
-    { permission: "production3.bio.job.view", path: "/section_production/production_module?assign_to=Ramzaan&client=Amar%20Biosystem" },
+    // Production 3 (Ramzan) - With Kanban & PO
+    { permission: "production3.view", path: "/section_production/production_module?assign_to=Ramzan" },
+    { permission: "production3.eqp.job.view", path: "/section_production/production_module?assign_to=Ramzan&client=Amar%20Equipment" },
+    { permission: "production3.bio.job.view", path: "/section_production/production_module?assign_to=Ramzan&client=Amar%20Biosystem" },
     
     // QC
     { permission: "qc.view", path: "/qc" },
@@ -83,7 +83,7 @@ export const getFirstAvailableModulePath = (permissions: Permission[] | null): s
     { permission: "review.view", path: "/review" },
     { permission: "production1.eqp.review.view", path: "/review?assign_to=Usmaan" },
     { permission: "production2.eqp.review.view", path: "/review?assign_to=Riyaaz" },
-    { permission: "production3.eqp.review.view", path: "/review?assign_to=Ramzaan" },
+    { permission: "production3.eqp.review.view", path: "/review?assign_to=Ramzan" },
     
     // PP Vendor
     { permission: "pp.vendor.outgoing.view", path: "/section_production_planning/vendors/outgoing" },
@@ -184,7 +184,7 @@ export const getDefaultAssignee = (permissions: Permission[] | null): string | n
   if (hasPermission(permissions, "production3.view") || 
       hasPermission(permissions, "production3.eqp.job.view") ||
       hasPermission(permissions, "production3.bio.job.view")) {
-    return "Ramzaan";
+    return "Ramzan";
   }
   
   return null;

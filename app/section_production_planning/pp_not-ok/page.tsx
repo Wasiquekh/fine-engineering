@@ -10,6 +10,7 @@ import StorageManager from "../../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
+import { sendRoleNotificationByEvent } from "../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -83,6 +84,13 @@ type QcRow = {
     job_category?: string | null;
     client_name?: string | null;
     reason?: string | null;
+    product_desc?: string | null;
+    product_item_no?: string | null;
+    product_qty?: number | string | null;
+    item_description?: string | null;
+    item_no?: string | null;
+    qty?: number | string | null;
+    moc?: string | null;
   } | null;
 };
 
@@ -95,6 +103,19 @@ export default function NotokMainPage() {
   const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [jobServiceMetaByJobNo, setJobServiceMetaByJobNo] = useState<
+    Record<
+      string,
+      {
+        job_category?: string | null;
+        description?: string | null;
+        material_type?: string | null;
+        qty?: number | string | null;
+        bar?: string | null;
+        tempp?: string | null;
+      }
+    >
+  >({});
 
   const searchParams = useSearchParams();
   const filterParam = searchParams.get("filter") || "JOB_SERVICE";
@@ -106,28 +127,67 @@ export default function NotokMainPage() {
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories");
-      const cats = Array.isArray(response?.data?.data)
+      let url = "/fineengg_erp/system/categories";
+      if (filterParam === "TSO_SERVICE") {
+        url = "/fineengg_erp/system/tso-service-categories";
+      } else if (filterParam === "KANBAN") {
+        url = "/fineengg_erp/system/kanban-categories";
+      }
+
+      const response = await axiosProvider.get(url, {
+        params: {
+          ...(client ? { client_name: client } : {}),
+        },
+      } as any);
+      let cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
 
-      const uniqueMap = new Map<string, { value: string; label: string }>();
+      if (filterParam === "JOB_SERVICE") {
+        const uniqueMap = new Map<string, { value: string; label: string }>();
+        const metaMap: Record<
+          string,
+          {
+            job_category?: string | null;
+            description?: string | null;
+            material_type?: string | null;
+            qty?: number | string | null;
+            bar?: string | null;
+            tempp?: string | null;
+          }
+        > = {};
 
-      cats.forEach((cat: any) => {
-        const jobCategory = String(cat?.job_category || "").trim();
-        if (jobCategory && !uniqueMap.has(jobCategory)) {
-          uniqueMap.set(jobCategory, {
-            value: jobCategory,
-            label: jobCategory,
-          });
-        }
-      });
+        cats.forEach((cat: any) => {
+          const jobCategory = String(cat?.job_category || "").trim();
+          const jobNo = String(cat?.job_no || "").trim();
+          if (jobCategory && !uniqueMap.has(jobCategory)) {
+            uniqueMap.set(jobCategory, {
+              value: jobCategory,
+              label: jobCategory,
+            });
+          }
+          if (jobNo && !metaMap[jobNo]) {
+            metaMap[jobNo] = {
+              job_category: cat?.job_category ?? null,
+              description: cat?.description ?? null,
+              material_type: cat?.material_type ?? null,
+              qty: cat?.qty ?? null,
+              bar: cat?.bar ?? null,
+              tempp: cat?.tempp ?? null,
+            };
+          }
+        });
+        cats = Array.from(uniqueMap.values());
+        setJobServiceMetaByJobNo(metaMap);
+      } else {
+        setJobServiceMetaByJobNo({});
+      }
 
-      const formattedCats = Array.from(uniqueMap.values());
-      setCategories(formattedCats);
+      setCategories(cats);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
+      setJobServiceMetaByJobNo({});
     }
   };
 
@@ -162,7 +222,7 @@ export default function NotokMainPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [filterParam, client]);
 
   useEffect(() => {
     setSelectedJobNo(null);
@@ -196,6 +256,15 @@ export default function NotokMainPage() {
       await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/backToQc`, {
         updated_by,
       });
+      await sendRoleNotificationByEvent({
+        eventKey: "moved_to_qc",
+        joNo: String(item.jo_no || ""),
+        joNumber: String(item.jo_no || ""),
+        jobNo: String(item.job_no || item.tso_no || ""),
+        clientName: String(item.job?.client_name || client || ""),
+        jobType: String(filterParam || "JOB_SERVICE"),
+        sendAll: false,
+      });
 
       toast.success("Serial sent back to QC successfully");
       fetchData();
@@ -225,6 +294,15 @@ export default function NotokMainPage() {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
         updated_by,
       });
+      await sendRoleNotificationByEvent({
+        eventKey: "job_rejected",
+        joNo: String(item.jo_no || ""),
+        joNumber: String(item.jo_no || ""),
+        jobNo: String(item.job_no || item.tso_no || ""),
+        clientName: String(item.job?.client_name || client || ""),
+        jobType: String(filterParam || "JOB_SERVICE"),
+        sendAll: false,
+      });
 
       toast.success(`Item ${item.serial_no} sent for rework`);
       fetchData();
@@ -246,6 +324,15 @@ export default function NotokMainPage() {
     try {
       await axiosProvider.post(`/fineengg_erp/system/jobs/${job_id}/reject-not-ok`, {
         updated_by,
+      });
+      await sendRoleNotificationByEvent({
+        eventKey: "job_rejected",
+        joNo: String(item.jo_no || ""),
+        joNumber: String(item.jo_no || ""),
+        jobNo: String(item.job_no || item.tso_no || ""),
+        clientName: String(item.job?.client_name || client || ""),
+        jobType: String(filterParam || "JOB_SERVICE"),
+        sendAll: false,
       });
 
       toast.success("Serial rejected successfully");
@@ -489,15 +576,16 @@ export default function NotokMainPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999] uppercase font-semibold">
                     <tr className="border border-tableBorder">
-                      <th className="p-3 border border-tableBorder">JO No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
+                      <th className="p-3 border border-tableBorder">J/O No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Job Category</th>
+                      <th className="px-2 py-0 border border-tableBorder">Product Desc</th>
+                      <th className="px-2 py-0 border border-tableBorder">Product Item No</th>
+                      <th className="px-2 py-0 border border-tableBorder">Product Qty</th>
+                      <th className="px-2 py-0 border border-tableBorder">Item Description</th>
                       <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                      <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                      <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
-                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
+                      <th className="px-2 py-0 border border-tableBorder">MOC</th>
+                      <th className="px-2 py-0 border border-tableBorder">Qty</th>
+                      <th className="px-2 py-0 border border-tableBorder">Serial No</th>
                       <th className="px-2 py-0 border border-tableBorder">Reason</th>
                       {canEditNotOk && (
                         <th className="px-2 py-0 border border-tableBorder">Actions</th>
@@ -508,7 +596,7 @@ export default function NotokMainPage() {
                   <tbody>
                     {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                       <tr>
-                        <td colSpan={canEditNotOk ? 11 : 10} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={canEditNotOk ? 12 : 11} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No JO data found</p>
                         </td>
                       </tr>
@@ -523,20 +611,17 @@ export default function NotokMainPage() {
 
                           {items.map((item) => (
                             <tr key={item.id} className="border border-tableBorder bg-white hover:bg-gray-50">
-                              <td className="px-2 py-2 border border-tableBorder">—</td>
-                              <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <span className="text-red-600 text-xs font-medium">
-                                  {item.job?.reason || "-"}
-                                </span>
-                              </td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.jo_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job_category || item.job?.job_category || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.product_desc || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.product_item_no || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.product_qty || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.item_description || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? item.job?.item_no ?? "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder">{item.job?.moc || "-"}</td>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? item.job?.qty ?? "-"}</td>
+                            <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
+                            <td className="px-2 py-2 border border-tableBorder">{item.job?.reason || "-"}</td>
                               {canEditNotOk && (
                                 <td className="px-2 py-2 border border-tableBorder">
                                   <div className="flex items-center gap-1 flex-wrap">
@@ -599,29 +684,31 @@ export default function NotokMainPage() {
                           : "Job No"}
                       </th>
                       <th className="px-2 py-0 border border-tableBorder">Job Category</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total JO</th>
-                      <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
-                      <th className="px-2 py-0 border border-tableBorder">Reason</th>
+                      <th className="px-2 py-0 border border-tableBorder">Description</th>
+                      <th className="px-2 py-0 border border-tableBorder">Material Type</th>
+                      <th className="px-2 py-0 border border-tableBorder">Quantity</th>
+                      <th className="px-2 py-0 border border-tableBorder">Bar</th>
+                      <th className="px-2 py-0 border border-tableBorder">Temperature</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No data found</p>
                         </td>
                       </tr>
                     ) : (
                       jobIdentifiers.map((identifier) => {
                         const summary = jobSummary[identifier];
+                        const meta = jobServiceMetaByJobNo[identifier];
 
                         return (
                           <tr
@@ -636,16 +723,19 @@ export default function NotokMainPage() {
                               <p className="text-[#232323] text-sm">{summary.jobCategory}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.uniqueJoCount}</p>
+                              <p className="text-[#232323] text-sm">{meta?.description || "-"}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.totalQty}</p>
+                              <p className="text-[#232323] text-sm">{meta?.material_type || "-"}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
+                              <p className="text-[#232323] text-sm">{meta?.qty ?? summary.totalQty}</p>
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-red-600 text-xs font-medium">{summary.reason}</p>
+                              <p className="text-[#232323] text-sm">{meta?.bar || "-"}</p>
+                            </td>
+                            <td className="px-2 py-2 border border-tableBorder">
+                              <p className="text-[#232323] text-sm">{meta?.tempp || "-"}</p>
                             </td>
                           </tr>
                         );

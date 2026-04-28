@@ -9,6 +9,7 @@ import DesktopHeader from "../../../component/DesktopHeader";
 import Link from "next/link";
 import Image from "next/image";
 import StorageManager from "../../../../provider/StorageManager";
+import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -156,10 +157,21 @@ export default function TsoDetailsPage() {
         assign_date: formattedDate,
       };
       if (updatedBy) payload.updated_by = updatedBy;
-
       const response = await axiosProvider.post(`/fineengg_erp/system/jobs/assign`, payload);
       const updatedIds: string[] = response?.data?.updated_ids || [];
       const notFoundIds: string[] = response?.data?.not_found_ids || [];
+      const assignedJob = jobDetails.find((job) => job.id === id);
+
+      await sendRoleNotificationByEvent({
+        eventKey: "assignment_created",
+        joNo: String(assignedJob?.jo_number || ""),
+        joNumber: String(assignedJob?.jo_number || ""),
+        jobNo: String(assignedJob?.tso_no || ""),
+        workerName: assignToName,
+        clientName: String(clientParam || ""),
+        jobType: "TSO_SERVICE",
+        sendAll: false,
+      });
 
       if (updatedIds.length > 0) {
         toast.success(`Job assigned successfully (${updatedIds.length})`);

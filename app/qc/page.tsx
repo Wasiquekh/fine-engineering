@@ -10,6 +10,7 @@ import StorageManager from "../../provider/StorageManager";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 import { FaArrowLeft } from "react-icons/fa";
+import { sendRoleNotificationByEvent } from "../services/pushNotificationApi";
 import PageGuard from "../component/PageGuard";
 
 const axiosProvider = new AxiosProvider();
@@ -39,6 +40,13 @@ const canPerformQcAction = (
     TSO_SERVICE: "tso",
     KANBAN: "kanban",
   };
+  if (filterType === "ALL") {
+    return (
+      canPerformQcAction(permissions, clientName, "JOB_SERVICE") ||
+      canPerformQcAction(permissions, clientName, "TSO_SERVICE") ||
+      canPerformQcAction(permissions, clientName, "KANBAN")
+    );
+  }
   const filterKey = filterKeyMap[filterType];
 
   if (!filterKey) return false;
@@ -91,6 +99,7 @@ type QcRow = {
   assigning_date?: string | null;
   review_for?: "vendor" | "welding" | null;
   job_category?: string | null;
+  job_type?: string | null;
   status?: string | null;
   job?: {
     id?: string | null;
@@ -98,6 +107,7 @@ type QcRow = {
     tso_no?: string | null;
     jo_number?: string | null;
     job_category?: string | null;
+    job_type?: string | null;
     client_name?: string | null;
     item_description?: string | null;
     product_desc?: string | null;
@@ -120,60 +130,142 @@ export default function QcMainPage() {
   const [tsoSubFilter, setTsoSubFilter] = useState("ALL");
   const [kanbanSubFilter, setKanbanSubFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [jobServiceMetaByJobNo, setJobServiceMetaByJobNo] = useState<
+    Record<
+      string,
+      {
+        job_category?: string | null;
+        description?: string | null;
+        material_type?: string | null;
+        qty?: number | string | null;
+        bar?: string | null;
+        tempp?: string | null;
+      }
+    >
+  >({});
 
   const searchParams = useSearchParams();
-  const filterParam = searchParams.get("filter") || "JOB_SERVICE";
+  const filterParam = searchParams.get("filter") || "ALL";
   const client = searchParams.get("client") || "";
   const permissions = storage.getUserPermissions();
+  const currentUserName = storage.getUserName() || storage.getUserEmail() || "";
   const canQcEdit = canPerformQcAction(permissions, client, filterParam);
+  const notifyEvent = async (eventKey: string, item: QcRow, source: string) => {
+    await sendRoleNotificationByEvent({
+      eventKey,
+      joNo: String(item.jo_no || item.job?.jo_number || ""),
+      joNumber: String(item.job?.jo_number || item.jo_no || ""),
+      jobNo: String(item.job_no || item.job?.job_no || item.tso_no || item.job?.tso_no || ""),
+      clientName: String(item.job?.client_name || client || ""),
+      jobType: String(item.job_type || item.job?.job_type || filterParam || "JOB_SERVICE"),
+      assignedBy: currentUserName,
+      sendAll: false,
+      source,
+    });
+  };
+
 
   const fetchCategories = async () => {
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/categories", {
+      let url = "/fineengg_erp/system/categories";
+      if (filterParam === "TSO_SERVICE") {
+        url = "/fineengg_erp/system/tso-service-categories";
+      } else if (filterParam === "KANBAN") {
+        url = "/fineengg_erp/system/kanban-categories";
+      }
+
+      const response = await axiosProvider.get(url, {
         params: {
-          ...(client ? { "job.client_name": client } : {}),
+          ...(client ? { client_name: client } : {}),
         },
       } as any);
-      const cats = Array.isArray(response?.data?.data)
+      let cats = Array.isArray(response?.data?.data)
         ? response.data.data
         : response?.data?.data?.categories || [];
 
-      const uniqueMap = new Map<string, { value: string; label: string }>();
+      if (filterParam === "JOB_SERVICE") {
+        const uniqueMap = new Map<string, { value: string; label: string }>();
+        const metaMap: Record<
+          string,
+          {
+            job_category?: string | null;
+            description?: string | null;
+            material_type?: string | null;
+            qty?: number | string | null;
+            bar?: string | null;
+            tempp?: string | null;
+          }
+        > = {};
 
-      cats.forEach((cat: any) => {
-        const jobCategory = String(cat?.job_category || "").trim();
-        if (jobCategory && !uniqueMap.has(jobCategory)) {
-          uniqueMap.set(jobCategory, {
-            value: jobCategory,
-            label: jobCategory,
-          });
-        }
-      });
+        cats.forEach((cat: any) => {
+          const jobCategory = String(cat?.job_category || "").trim();
+          const jobNo = String(cat?.job_no || "").trim();
+          if (jobCategory && !uniqueMap.has(jobCategory)) {
+            uniqueMap.set(jobCategory, {
+              value: jobCategory,
+              label: jobCategory,
+            });
+          }
+          if (jobNo && !metaMap[jobNo]) {
+            metaMap[jobNo] = {
+              job_category: cat?.job_category ?? null,
+              description: cat?.description ?? null,
+              material_type: cat?.material_type ?? null,
+              qty: cat?.qty ?? null,
+              bar: cat?.bar ?? null,
+              tempp: cat?.tempp ?? null,
+            };
+          }
+        });
+        cats = Array.from(uniqueMap.values());
+        setJobServiceMetaByJobNo(metaMap);
+      } else {
+        setJobServiceMetaByJobNo({});
+        cats = (cats || [])
+          .map((cat: any) => ({
+            value: String(cat?.value || cat?.job_category || "").trim(),
+            label: String(cat?.label || cat?.job_category || cat?.value || "").trim(),
+          }))
+          .filter((cat: any) => cat.value && cat.label);
+      }
 
-      const formattedCats = Array.from(uniqueMap.values());
-      setCategories(formattedCats);
+      setCategories(cats);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
+      setJobServiceMetaByJobNo({});
     }
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
-        params: {
-          job_type: filterParam,
-          status: "ready-for-qc",
-          ...(client ? { "job.client_name": client } : {}),
-        },
-      } as any);
+      const jobTypes =
+        filterParam === "ALL"
+          ? ["JOB_SERVICE", "TSO_SERVICE", "KANBAN"]
+          : [filterParam];
 
-      let fetchedData = Array.isArray(response?.data?.data)
-        ? response.data.data
-        : [];
+      let allData: QcRow[] = [];
+      for (const jobType of jobTypes) {
+        const response = await axiosProvider.get("/fineengg_erp/system/assign-to-worker", {
+          params: {
+            job_type: jobType,
+            status: "ready-for-qc",
+            ...(client ? { "job.client_name": client } : {}),
+          },
+        } as any);
 
-      setData(fetchedData);
+        const fetchedData = Array.isArray(response?.data?.data)
+          ? response.data.data
+          : [];
+        const typedData = fetchedData.map((item: any) => ({
+          ...item,
+          job_type: item?.job_type || item?.job?.job_type || jobType,
+        }));
+        allData = [...allData, ...typedData];
+      }
+
+      setData(allData);
     } catch (error) {
       console.error("Error fetching QC data:", error);
       toast.error("Failed to load QC data");
@@ -185,7 +277,7 @@ export default function QcMainPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, [client]);
+  }, [client, filterParam]);
 
   useEffect(() => {
     setSelectedJobNo(null);
@@ -256,7 +348,7 @@ export default function QcMainPage() {
       const identifier = getCurrentIdentifier(item);
       if (identifier) {
         if (!jobMap.has(identifier)) {
-          jobMap.set(identifier, {
+      jobMap.set(identifier, {
             jobNo: identifier,
             jobCategory: item.job_category || item.job?.job_category || "N/A",
             clientName: item.job?.client_name || "N/A",
@@ -397,36 +489,41 @@ export default function QcMainPage() {
       title: `Bulk Dispatch - ${selectedJOList.length} JO${selectedJOList.length > 1 ? 's' : ''}`,
       html: `
         <div class="text-left">
-          <div class="bg-blue-50 p-4 rounded-lg mb-4">
-            <p class="font-semibold text-blue-800 mb-2">📦 Dispatch Summary</p>
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div class="text-gray-600">Total JOs:</div>
-              <div class="font-bold text-blue-600">${selectedJOList.length}</div>
-              <div class="text-gray-600">Total Items:</div>
-              <div class="font-bold">${totalItems}</div>
-              <div class="text-gray-600">Total Quantity:</div>
-              <div class="font-bold text-green-600">${totalQuantity}</div>
+          <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-4">
+            <p class="font-semibold text-blue-800 mb-3">Dispatch Summary</p>
+            <div class="grid grid-cols-2 gap-y-2 gap-x-3 text-sm">
+              <div class="text-gray-600">Total JOs</div>
+              <div class="font-bold text-blue-600 text-right">${selectedJOList.length}</div>
+              <div class="text-gray-600">Total Items</div>
+              <div class="font-bold text-right">${totalItems}</div>
+              <div class="text-gray-600">Total Quantity</div>
+              <div class="font-bold text-green-600 text-right">${totalQuantity}</div>
             </div>
           </div>
           
           <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Selected JOs:</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Selected JOs</label>
             ${joSummaryHtml}
           </div>
           
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
-              <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
+              <input id="chalan_no" class="swal2-input !m-0 !w-full !h-10 !text-sm" placeholder="Enter chalan number" required>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
-              <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
+              <input id="dispatch_date" class="swal2-input !m-0 !w-full !h-10 !text-sm" type="date" value="${new Date().toISOString().split('T')[0]}" required>
             </div>
           </div>
+          <div class="mb-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Attach File (optional)</label>
+            <input id="dispatch_attachment" class="swal2-file !m-0 !w-full !text-sm" type="file" accept="image/*,.pdf" />
+            <p class="text-xs text-gray-500 mt-1">Allowed: Images/PDF, max 10MB</p>
+          </div>
           
-          <div class="bg-yellow-50 p-3 rounded text-sm">
-            <p class="font-semibold text-yellow-800">⚠️ Note:</p>
+          <div class="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm">
+            <p class="font-semibold text-yellow-800">Note</p>
             <p class="text-yellow-700 text-xs mt-1">All selected JOs will be dispatched with FULL quantities.</p>
           </div>
         </div>
@@ -439,6 +536,8 @@ export default function QcMainPage() {
       preConfirm: () => {
         const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
         const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+        const attachmentInput = document.getElementById("dispatch_attachment") as HTMLInputElement;
+        const dispatch_attachment = attachmentInput?.files?.[0] || null;
 
         if (!chalan_no || !chalan_no.trim()) {
           Swal.showValidationMessage("Chalan number is required");
@@ -450,7 +549,7 @@ export default function QcMainPage() {
           return false;
         }
         
-        return { chalan_no: chalan_no.trim(), dispatch_date };
+        return { chalan_no: chalan_no.trim(), dispatch_date, dispatch_attachment };
       }
     });
 
@@ -487,12 +586,26 @@ export default function QcMainPage() {
     const loadingToast = toast.loading(`Dispatching ${selectedJOList.length} JO(s)...`);
 
     try {
-      const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
-        items: itemsToDispatch,
-        chalan_no: dispatchData.chalan_no,
-        dispatch_date: dispatchData.dispatch_date,
-        multi_jo_dispatch: true,
-      });
+      const hasAttachment = !!dispatchData.dispatch_attachment;
+      const response = hasAttachment
+        ? await axiosProvider.post(
+            "/fineengg_erp/system/jobs/dispatch",
+            (() => {
+              const formData = new FormData();
+              formData.append("items", JSON.stringify(itemsToDispatch));
+              formData.append("chalan_no", dispatchData.chalan_no);
+              formData.append("dispatch_date", dispatchData.dispatch_date);
+              formData.append("multi_jo_dispatch", "true");
+              formData.append("dispatch_attachment", dispatchData.dispatch_attachment as File);
+              return formData;
+            })()
+          )
+        : await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+            items: itemsToDispatch,
+            chalan_no: dispatchData.chalan_no,
+            dispatch_date: dispatchData.dispatch_date,
+            multi_jo_dispatch: true,
+          });
 
       toast.dismiss(loadingToast);
 
@@ -559,10 +672,10 @@ export default function QcMainPage() {
       title: `Dispatch Items - JO: ${displayIdentifier}`,
       html: `
         <div class="text-left">
-          <div class="bg-blue-50 p-3 rounded-lg mb-4">
-            <p class="font-semibold">Job: ${jobNo}</p>
-            <p class="text-sm text-gray-600">Total Available Quantity: <span class="font-bold text-green-600">${totalQuantity}</span></p>
-            <p class="text-xs text-gray-500 mt-1">Select items and enter quantity to dispatch</p>
+          <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-4">
+            <p class="font-semibold text-blue-800">Job: ${jobNo}</p>
+            <p class="text-sm text-gray-700 mt-1">Total Available Quantity: <span class="font-bold text-green-600">${totalQuantity}</span></p>
+            <p class="text-xs text-gray-500 mt-1">Select items and enter quantity to dispatch.</p>
           </div>
           
           <div class="mb-4">
@@ -609,16 +722,21 @@ export default function QcMainPage() {
           
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
-              <input id="chalan_no" class="swal2-input w-full" placeholder="Enter Chalan Number" required>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Chalan No <span class="text-red-500">*</span></label>
+              <input id="chalan_no" class="swal2-input !m-0 !w-full !h-10 !text-sm" placeholder="Enter chalan number" required>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
-              <input id="dispatch_date" class="swal2-input w-full" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Dispatch Date <span class="text-red-500">*</span></label>
+              <input id="dispatch_date" class="swal2-input !m-0 !w-full !h-10 !text-sm" type="date" value="${new Date().toISOString().split('T')[0]}" required>
             </div>
           </div>
+          <div class="mb-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Attach File (optional)</label>
+            <input id="dispatch_attachment" class="swal2-file !m-0 !w-full !text-sm" type="file" accept="image/*,.pdf" />
+            <p class="text-xs text-gray-500 mt-1">Allowed: Images/PDF, max 10MB</p>
+          </div>
           
-          <div class="bg-yellow-50 p-2 rounded text-xs text-yellow-700">
+          <div class="bg-yellow-50 border border-yellow-200 p-2.5 rounded-lg text-xs text-yellow-700">
             💡 Tip: You can partially dispatch items by entering quantity less than available
           </div>
         </div>
@@ -711,6 +829,8 @@ export default function QcMainPage() {
         
         const chalan_no = (document.getElementById("chalan_no") as HTMLInputElement)?.value;
         const dispatch_date = (document.getElementById("dispatch_date") as HTMLInputElement)?.value;
+        const attachmentInput = document.getElementById("dispatch_attachment") as HTMLInputElement;
+        const dispatch_attachment = attachmentInput?.files?.[0] || null;
 
         if (!chalan_no || !chalan_no.trim()) {
           Swal.showValidationMessage("Chalan number is required");
@@ -779,7 +899,8 @@ export default function QcMainPage() {
             return { 
               items: selectedItemsData,
               chalan_no: chalan_no.trim(), 
-              dispatch_date 
+              dispatch_date,
+              dispatch_attachment
             };
           }
           return false;
@@ -792,11 +913,24 @@ export default function QcMainPage() {
     const loadingToast = toast.loading(`Dispatching ${selectedItems.items.length} item(s)...`);
 
     try {
-      const response = await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
-        items: selectedItems.items,
-        chalan_no: selectedItems.chalan_no,
-        dispatch_date: selectedItems.dispatch_date,
-      });
+      const hasAttachment = !!selectedItems.dispatch_attachment;
+      const response = hasAttachment
+        ? await axiosProvider.post(
+            "/fineengg_erp/system/jobs/dispatch",
+            (() => {
+              const formData = new FormData();
+              formData.append("items", JSON.stringify(selectedItems.items));
+              formData.append("chalan_no", selectedItems.chalan_no);
+              formData.append("dispatch_date", selectedItems.dispatch_date);
+              formData.append("dispatch_attachment", selectedItems.dispatch_attachment as File);
+              return formData;
+            })()
+          )
+        : await axiosProvider.post("/fineengg_erp/system/jobs/dispatch", {
+            items: selectedItems.items,
+            chalan_no: selectedItems.chalan_no,
+            dispatch_date: selectedItems.dispatch_date,
+          });
 
       toast.dismiss(loadingToast);
 
@@ -947,6 +1081,7 @@ export default function QcMainPage() {
       toast.dismiss(loadingToast);
       
       if (response?.data?.success) {
+        await notifyEvent("job_rejected", firstItem, "qc_not_ok_bulk");
         toast.warning(response.data.message);
         fetchData();
         setSelectedJO(null);
@@ -1005,6 +1140,7 @@ export default function QcMainPage() {
         await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
           updated_by,
         });
+        await notifyEvent("returned_to_in_progress", item, "qc_rework_bulk");
         successCount++;
       } catch (error: any) {
         console.error(`Failed to reject item ${item.serial_no}:`, error);
@@ -1061,7 +1197,7 @@ export default function QcMainPage() {
       await axiosProvider.post(`/fineengg_erp/system/assign-to-worker/${item.id}/reject`, {
         updated_by,
       });
-
+      await notifyEvent("returned_to_in_progress", item, "qc_rework_single");
       toast.success(`Item ${item.serial_no} sent for rework`);
       fetchData();
     } catch (error: any) {
@@ -1408,9 +1544,11 @@ export default function QcMainPage() {
                       </th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Job Category</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold">Client Name</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold">Product Description</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total JOs</th>
-                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Total Quantity</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Description</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Material Type</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Quantity</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Bar</th>
+                      <th className="px-3 py-2 border border-tableBorder font-semibold">Temperature</th>
                       <th className="px-3 py-2 border border-tableBorder font-semibold text-center">Actions</th>
                     </tr>
                   </thead>
@@ -1418,7 +1556,7 @@ export default function QcMainPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                           <div className="flex justify-center items-center gap-2">
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>
                             <p className="text-[#666666] text-base">Loading...</p>
@@ -1427,12 +1565,14 @@ export default function QcMainPage() {
                       </tr>
                     ) : jobsGrouped.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={10} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-base">No data found</p>
                         </td>
                       </tr>
                     ) : (
-                      jobsGrouped.map((job) => (
+                      jobsGrouped.map((job) => {
+                        const meta = jobServiceMetaByJobNo[job.jobNo];
+                        return (
                         <tr
                           key={job.jobNo}
                           className="border border-tableBorder cursor-pointer bg-white hover:bg-primary-50 transition-colors"
@@ -1450,15 +1590,31 @@ export default function QcMainPage() {
                             <p className="text-[#232323] text-sm">{job.clientName}</p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder">
-                            <p className="text-[#232323] text-sm">{job.productDesc}</p>
+                            <p className="text-[#232323] text-sm">
+                              {filterParam === "JOB_SERVICE"
+                                ? meta?.description || "-"
+                                : "-"}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-sm">
+                              {filterParam === "JOB_SERVICE" ? meta?.material_type || "-" : "-"}
+                            </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                              {job.uniqueJOs.size}
+                            <span className="font-semibold text-green-600">
+                              {filterParam === "JOB_SERVICE" ? (meta?.qty ?? job.totalQty) : job.totalQty}
                             </span>
                           </td>
-                          <td className="px-3 py-2 border border-tableBorder text-center">
-                            <span className="font-semibold text-green-600">{job.totalQty}</span>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-sm">
+                              {filterParam === "JOB_SERVICE" ? meta?.bar || "-" : "-"}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2 border border-tableBorder">
+                            <p className="text-[#232323] text-sm">
+                              {filterParam === "JOB_SERVICE" ? meta?.tempp || "-" : "-"}
+                            </p>
                           </td>
                           <td className="px-3 py-2 border border-tableBorder text-center">
                             <button
@@ -1472,7 +1628,7 @@ export default function QcMainPage() {
                             </button>
                           </td>
                         </tr>
-                      ))
+                      )})
                     )}
                   </tbody>
                 </table>
