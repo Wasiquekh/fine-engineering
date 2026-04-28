@@ -64,11 +64,13 @@ type Row = {
   job?: { 
     id?: string | null;
     job_no?: string | null;
+    jo_number?: string | null;
     tso_no?: string | null;
     job_category?: string | null;
     job_type?: string | null;
     item_description?: string | null;
     moc?: string | null;
+    client_name?: string | null;
   } | null;
 };
 

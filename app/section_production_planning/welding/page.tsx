@@ -185,7 +185,7 @@ export default function WeldingPage() {
 
   const getJobNoForIdentifier = (identifier: string) => {
     const items = getItemsForIdentifier(identifier);
-    return items[0]?.job?.job_no || items[0]?.job_no || "-";
+    return items[0]?.job?.job_no || items[0]?.jo_no || "-";
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {

@@ -58,6 +58,23 @@ export default function VendorOutgoingPage() {
   const [selectedJO, setSelectedJO] = useState<string | null>(null);
   const [jobServiceCategoryFilter, setJobServiceCategoryFilter] = useState("ALL");
   const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+  const [categoryByJobNo, setCategoryByJobNo] = useState<Record<string, string>>({});
+  const [categoryMetaByJobNo, setCategoryMetaByJobNo] = useState<
+    Record<
+      string,
+      {
+        job_category?: string | null;
+        client_name?: string | null;
+        drawing_recieved_date?: string | null;
+        drawing_received_date?: string | null;
+        description?: string | null;
+        material_type?: string | null;
+        qty?: number | string | null;
+        bar?: string | null;
+        tempp?: string | null;
+      }
+    >
+  >({});
 
   const client = searchParams.get("client") || "";
 
@@ -71,16 +88,52 @@ export default function VendorOutgoingPage() {
         : response?.data?.data?.categories || [];
 
       const uniqueMap = new Map<string, { value: string; label: string }>();
+      const jobNoCategoryMap: Record<string, string> = {};
+      const metaMap: Record<
+        string,
+        {
+          job_category?: string | null;
+          client_name?: string | null;
+          drawing_recieved_date?: string | null;
+          drawing_received_date?: string | null;
+          description?: string | null;
+          material_type?: string | null;
+          qty?: number | string | null;
+          bar?: string | null;
+          tempp?: string | null;
+        }
+      > = {};
       cats.forEach((cat: any) => {
         const jobCategory = String(cat?.job_category || "").trim();
+        const jobNo = String(cat?.job_no || "").trim();
         if (jobCategory && !uniqueMap.has(jobCategory)) {
           uniqueMap.set(jobCategory, { value: jobCategory, label: jobCategory });
         }
+        if (jobNo && jobCategory && !jobNoCategoryMap[jobNo]) {
+          jobNoCategoryMap[jobNo] = jobCategory;
+        }
+        if (jobNo && !metaMap[jobNo]) {
+          metaMap[jobNo] = {
+            job_category: cat?.job_category ?? null,
+            client_name: cat?.client_name ?? null,
+            drawing_recieved_date: cat?.drawing_recieved_date ?? null,
+            drawing_received_date: cat?.drawing_received_date ?? null,
+            description: cat?.description ?? null,
+            material_type: cat?.material_type ?? null,
+            qty: cat?.qty ?? null,
+            bar: cat?.bar ?? null,
+            tempp: cat?.tempp ?? null,
+          };
+        }
       });
       setCategories(Array.from(uniqueMap.values()));
+      setCategoryByJobNo(jobNoCategoryMap);
+      setCategoryMetaByJobNo(metaMap);
     } catch (error) {
       console.error("Error fetching categories:", error);
       setCategories([]);
+      setCategoryByJobNo({});
+      setCategoryMetaByJobNo({});
     }
   };
 
@@ -227,7 +280,23 @@ export default function VendorOutgoingPage() {
 
   const getJobNoForIdentifier = (identifier: string) => {
     const items = getItemsForIdentifier(identifier);
-    return items[0]?.job?.job_no || items[0]?.job_no || "-";
+    const firstItem = items[0];
+    const jobType = firstItem?.job_type;
+
+    if (jobType === "TSO_SERVICE") {
+      return firstItem?.tso_no || firstItem?.job?.tso_no || "-";
+    }
+
+    if (jobType === "KANBAN") {
+      return firstItem?.job?.jo_number || firstItem?.jo_no || "-";
+    }
+
+    return firstItem?.job?.job_no || firstItem?.jo_no || "-";
+  };
+
+  const getClientNameForIdentifier = (identifier: string) => {
+    const items = getItemsForIdentifier(identifier);
+    return items[0]?.job?.client_name || "-";
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {
@@ -293,22 +362,23 @@ export default function VendorOutgoingPage() {
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">Serial No</th><th className="p-3 border">Item No</th>
+                          <th className="p-3 border">JO Number</th><th className="p-3 border">Item No</th>
                           <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th>
-                          <th className="p-3 border">Vendor Name</th><th className="p-3 border">Machine</th>
-                          <th className="p-3 border text-center">Quantity</th>
+                          <th className="p-3 border text-center">Quantity</th><th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">Outgoing Date</th><th className="p-3 border text-center">Gatepass No</th>
                          </tr>
                       </thead>
                       <tbody>
                         {getJoGroupsForIdentifier(selectedIdentifier)[selectedJO]?.map((item) => (
                           <tr key={item.id} className="border hover:bg-primary-50">
-                            <td className="p-3 border font-mono text-blue-600">{item.serial_no || "N/A"}</td>
+                            <td className="p-3 border text-blue-600 font-medium">{selectedJO}</td>
                             <td className="p-3 border">{item.item_no || "N/A"}</td>
                             <td className="p-3 border">{item.job?.item_description || "N/A"}</td>
                             <td className="p-3 border">{item.job?.moc || "N/A"}</td>
-                            <td className="p-3 border">{item.vendor_name || "N/A"}</td>
-                            <td className="p-3 border">{item.machine_code} ({item.machine_category})</td>
                             <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
+                            <td className="p-3 border">{item.vendor_name || "N/A"}</td>
+                            <td className="p-3 border text-center">{item.assigning_date ? new Date(item.assigning_date).toLocaleDateString() : "N/A"}</td>
+                            <td className="p-3 border text-center">{item.gatepass_no || "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -322,10 +392,11 @@ export default function VendorOutgoingPage() {
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">JO Number</th><th className="p-3 border">Vendor Name</th>
-                          <th className="p-3 border text-center">Items</th><th className="p-3 border text-center">Total Quantity</th>
-                          <th className="p-3 border">Item Nos</th><th className="p-3 border">Item Description</th>
-                          <th className="p-3 border">MOC</th><th className="p-3 border text-center">Action</th>
+                          <th className="p-3 border">JO Number</th><th className="p-3 border">Item No</th>
+                          <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th>
+                          <th className="p-3 border text-center">Total Quantity</th><th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">No of Items</th>
+                          <th className="p-3 border text-center">Action</th>
                          </tr>
                       </thead>
                       <tbody>
@@ -337,12 +408,12 @@ export default function VendorOutgoingPage() {
                           return (
                             <tr key={jo} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedJO(jo)}>
                               <td className="p-3 border text-blue-600 font-medium">{jo}</td>
-                              <td className="p-3 border">{items[0]?.vendor_name || "N/A"}</td>
-                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
-                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
                               <td className="p-3 border"><div className="text-sm">{itemNos.slice(0, 3).join(", ")}{itemNos.length > 3 && ` +${itemNos.length - 3}`}</div></td>
                               <td className="p-3 border"><div className="text-sm max-w-[200px]">{descriptions.slice(0, 2).join(", ")}{descriptions.length > 2 && ` +${descriptions.length - 2}`}</div></td>
                               <td className="p-3 border"><div className="text-sm">{mocList.slice(0, 2).join(", ")}{mocList.length > 2 && ` +${mocList.length - 2}`}</div></td>
+                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
+                              <td className="p-3 border">{items[0]?.vendor_name || "N/A"}</td>
+                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
                               <td className="p-3 border text-center"><button className="px-3 py-1 bg-primary-600 text-white rounded text-sm">View Items</button></td>
                             </tr>
                           );
@@ -359,29 +430,44 @@ export default function VendorOutgoingPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border bg-gray-50">
-                      <th className="p-3 border">Job No</th><th className="p-3 border">Type</th>
-                      <th className="p-3 border">Category</th><th className="p-3 border">Vendor Name</th>
-                      <th className="p-3 border text-center">Total JOs</th><th className="p-3 border text-center">Total Quantity</th>
-                      <th className="p-3 border text-center">Action</th>
+                      <th className="p-3 border">Type</th><th className="p-3 border">Job No</th><th className="p-3 border">Job Category</th>
+                      <th className="p-3 border">Client Name</th><th className="p-3 border">Drawing Rec. Date</th>
+                      <th className="p-3 border">Description</th><th className="p-3 border">Material Type</th>
+                      <th className="p-3 border text-center">Quantity</th><th className="p-3 border">Bar</th>
+                      <th className="p-3 border">Temperature</th>
                      </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={7} className="text-center p-4">Loading...</td></tr>
+                      <tr><td colSpan={10} className="text-center p-4">Loading...</td></tr>
                     ) : getIdentifiers().length === 0 ? (
-                      <tr><td colSpan={7} className="text-center p-4">No vendor outgoing assignments found</td></tr>
+                      <tr><td colSpan={10} className="text-center p-4">No vendor outgoing assignments found</td></tr>
                     ) : (
-                      getIdentifiers().map(({ identifier, type, category, vendorName }) => {
+                      getIdentifiers().map(({ identifier, type, category }) => {
                         const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
+                        const jobNo = getJobNoForIdentifier(identifier);
+                        const meta = categoryMetaByJobNo[jobNo];
+                        const resolvedCategory =
+                          category && category !== "N/A"
+                            ? category
+                            : categoryByJobNo[jobNo] || "N/A";
+                        const drawingDate =
+                          meta?.drawing_recieved_date ||
+                          meta?.drawing_received_date ||
+                          "-";
+                        const resolvedQty = meta?.qty ?? totalQty ?? uniqueJoCount ?? "-";
                         return (
                           <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
-                            <td className="p-3 border text-blue-600 font-medium">{getJobNoForIdentifier(identifier)}</td>
                             <td className="p-3 border">{getJobTypeBadge(type)}</td>
-                            <td className="p-3 border">{category}</td>
-                            <td className="p-3 border">{vendorName}</td>
-                            <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{uniqueJoCount}</span></td>
-                            <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
-                            <td className="p-3 border text-center"><button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">View Details</button></td>
+                            <td className="p-3 border text-blue-600 font-medium">{jobNo}</td>
+                            <td className="p-3 border">{resolvedCategory}</td>
+                            <td className="p-3 border">{meta?.client_name || getClientNameForIdentifier(identifier)}</td>
+                            <td className="p-3 border">{drawingDate}</td>
+                            <td className="p-3 border">{meta?.description || "-"}</td>
+                            <td className="p-3 border">{meta?.material_type || "-"}</td>
+                            <td className="p-3 border text-center font-semibold text-green-600">{resolvedQty}</td>
+                            <td className="p-3 border">{meta?.bar || "-"}</td>
+                            <td className="p-3 border">{meta?.tempp || "-"}</td>
                           </tr>
                         );
                       })

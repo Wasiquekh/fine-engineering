@@ -326,7 +326,7 @@ export default function OtpHome() {
                 {
                   headers: {
                     Authorization: `Bearer ${authHeaderToken}`,
-                  },
+                  } as any,
                 }
               );
               console.log(`Push token registered successfully on attempt ${attempt}/5`);
