@@ -21,6 +21,55 @@ const firebaseConfig = {
   appId: q.get("appId") || defaultFirebaseConfig.appId,
 };
 
+const DB_NAME = "fine_notifications_db";
+const STORE_NAME = "queued_notifications";
+
+const openNotificationsDb = () =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+const queueNotificationForApp = async (payload) => {
+  try {
+    const db = await openNotificationsDb();
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const rawData = payload?.data || {};
+    const route =
+      rawData?.route ||
+      (rawData?.source === "production_planning_job_assign"
+        ? "/section_production_planning/production_planning"
+        : "/material-movement");
+    const title = payload?.notification?.title || "New Assignment";
+    const body = payload?.notification?.body || "";
+    store.put({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      title,
+      body,
+      route,
+      rawData,
+      receivedAt: new Date().toISOString(),
+    });
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    db.close();
+  } catch (err) {
+    // Keep push flow resilient even if IndexedDB is unavailable.
+    console.error("Failed to queue notification in service worker:", err);
+  }
+};
+
 if (
   firebaseConfig.apiKey &&
   firebaseConfig.authDomain &&
@@ -47,6 +96,7 @@ if (
       data: { ...data, route },
       icon: "/images/fine-engineering-icon.png",
     });
+    queueNotificationForApp(payload);
 
     // Broadcast to open tabs so in-app notification center can store it.
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
