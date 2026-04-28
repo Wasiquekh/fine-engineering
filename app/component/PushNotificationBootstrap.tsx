@@ -11,7 +11,7 @@ import {
   pushFirebaseVapidKey,
   pushFirebaseWebConfig,
 } from "../firebase-config";
-import { addNotification } from "../services/notificationCenter";
+import { addNotification, hydrateNotificationsFromQueue } from "../services/notificationCenter";
 
 const storage = new StorageManager();
 const api = new AxiosProvider();
@@ -27,6 +27,8 @@ export default function PushNotificationBootstrap() {
 
     const init = async () => {
       try {
+        await hydrateNotificationsFromQueue();
+
         if ("serviceWorker" in navigator) {
           const swQuery = new URLSearchParams({
             apiKey: pushFirebaseWebConfig.apiKey || "",
