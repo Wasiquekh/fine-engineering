@@ -286,7 +286,7 @@ export default function WeldingPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]"><tr className="border bg-gray-50">
-                    <th className="p-3 border">Identifier</th><th className="p-3 border">Type</th><th className="p-3 border">Client Name</th>
+                    <th className="p-3 border">Job No</th><th className="p-3 border">Type</th><th className="p-3 border">Client Name</th>
                     <th className="p-3 border text-center">Total JOs</th><th className="p-3 border text-center">Total Quantity</th><th className="p-3 border text-center">Action</th>
                   </tr></thead>
                   <tbody>
