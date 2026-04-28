@@ -37,6 +37,7 @@ interface JobDetail {
   item_no: number;
   serial_no: string;
   qty: number;
+  qty_history?: number | string;
   moc: string;
   bin_location: string;
   urgent: boolean;
@@ -150,6 +151,44 @@ export default function JobDetailsPage() {
     [pendingData, editingPendingId]
   );
 
+  const orderedPendingData = useMemo(() => {
+    const normalize = (value: unknown) => String(value ?? "").trim().toLowerCase();
+    const isMissingJoNumber = (item: PendingMaterial) => !normalize(item.jo_number);
+    const makeGroupKey = (item: PendingMaterial) => normalize(item.item_no);
+
+    const highlightedRows = pendingData.filter(isMissingJoNumber);
+    const nonHighlightedRows = pendingData.filter((item) => !isMissingJoNumber(item));
+    const nonHighlightedByKey = new Map<string, PendingMaterial[]>();
+
+    nonHighlightedRows.forEach((item) => {
+      const key = makeGroupKey(item);
+      const bucket = nonHighlightedByKey.get(key) || [];
+      bucket.push(item);
+      nonHighlightedByKey.set(key, bucket);
+    });
+
+    const usedNonHighlightedIds = new Set<string>();
+    const orderedRows: PendingMaterial[] = [];
+
+    highlightedRows.forEach((baseRow) => {
+      orderedRows.push(baseRow);
+      const relatedRows = nonHighlightedByKey.get(makeGroupKey(baseRow)) || [];
+      relatedRows.forEach((relatedRow) => {
+        if (usedNonHighlightedIds.has(relatedRow.id)) return;
+        orderedRows.push(relatedRow);
+        usedNonHighlightedIds.add(relatedRow.id);
+      });
+    });
+
+    nonHighlightedRows.forEach((row) => {
+      if (!usedNonHighlightedIds.has(row.id)) {
+        orderedRows.push(row);
+      }
+    });
+
+    return orderedRows;
+  }, [pendingData]);
+
   const toggleJoNumberExpansion = (joNumber: string) => {
     setExpandedJoNumbers((prev) =>
       prev.includes(joNumber)
@@ -209,9 +248,9 @@ export default function JobDetailsPage() {
         try {
           const normalizedJobNo = decodeURIComponent(String(job_no || "")).trim().toLowerCase();
           const [jobsResponse, pendingResponse, categoriesResponse] = await Promise.all([
-            axiosProvider.get(`/fineengg_erp/system/jobs?job_no=${encodeURIComponent(job_no)}`),
-            axiosProvider.get(`/fineengg_erp/system/pending-materials?job_no=${encodeURIComponent(job_no)}`),
-            axiosProvider.get(`/fineengg_erp/system/categories?job_no=${encodeURIComponent(job_no)}`),
+            axiosProvider.get(`/fineengg_erp/system/jobs?job_no=${encodeURIComponent(job_no)}&limit=1000`),
+            axiosProvider.get(`/fineengg_erp/system/pending-materials?job_no=${encodeURIComponent(job_no)}&limit=1000`),
+            axiosProvider.get(`/fineengg_erp/system/categories?job_no=${encodeURIComponent(job_no)}&limit=1000`),
           ]);
 
           if (jobsResponse.data && Array.isArray(jobsResponse.data.data)) {
@@ -245,7 +284,12 @@ export default function JobDetailsPage() {
           }
 
           if (pendingResponse.data && Array.isArray(pendingResponse.data.data)) {
-            setPendingData(pendingResponse.data.data);
+            const fetchedPendingData = pendingResponse.data.data;
+            const filteredPendingData = fetchedPendingData.filter((item: PendingMaterial) => {
+              const pendingJobNo = decodeURIComponent(String(item.job_no || "")).trim().toLowerCase();
+              return pendingJobNo === normalizedJobNo;
+            });
+            setPendingData(filteredPendingData);
           } else {
             setPendingData([]);
           }
@@ -708,7 +752,7 @@ export default function JobDetailsPage() {
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (isRejected ? "true" : item.qty) : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.qty_history ?? item.qty ?? "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.bin_location : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">
                                 {isRejected ? (
@@ -800,7 +844,7 @@ export default function JobDetailsPage() {
                   <tbody>
                     {loading ? <tr><td colSpan={9} className="text-center py-4">Loading...</td></tr>
                     : pendingData.length === 0 ? <tr><td colSpan={9} className="text-center py-4">No pending materials found.</td></tr>
-                    : pendingData.map((item) => {
+                    : orderedPendingData.map((item) => {
                       const isMissingJoNumber = !String(item.jo_number || "").trim();
                       return (
                       <tr

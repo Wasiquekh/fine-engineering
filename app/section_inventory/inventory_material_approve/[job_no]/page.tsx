@@ -155,9 +155,10 @@ export default function JobDetailsPage() {
     if (!searchTerm) return items;
 
     return items.filter((item: any) => {
-      return String(item.jo_number ?? "")
-        .toLowerCase()
-        .includes(searchTerm);
+      const joNumber = String(item.jo_number ?? "").toLowerCase();
+      const itemNo = String(item.item_no ?? "").toLowerCase();
+
+      return joNumber.includes(searchTerm) || itemNo.includes(searchTerm);
     });
   }, [items, searchTerm]);
 
@@ -235,7 +236,7 @@ export default function JobDetailsPage() {
                         <td className="px-2 py-2 border border-tableBorder">{item.jo_number || "N/A"}</td>
                         <td className="px-2 py-2 border border-tableBorder">{item.item_description}</td>
                         <td className="px-2 py-2 border border-tableBorder">{item.item_no}</td>
-                        <td className="px-2 py-2 border border-tableBorder">{item.qty}</td>
+                        <td className="px-2 py-2 border border-tableBorder">{item.qty_history ?? item.qty ?? "-"}</td>
                         <td className="px-2 py-2 border border-tableBorder">{item.moc}</td>
                         <td className="px-2 py-2 border border-tableBorder">{item.bin_location}</td>
                         <td className="px-2 py-2 border border-tableBorder">
