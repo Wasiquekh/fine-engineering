@@ -179,7 +179,6 @@ export default function VendorOutsourcePage() {
         totalQty: number;
         uniqueJoCount: number;
         jobCategory: string;
-        assigningDate: string;
         jobType: string;
       }
     > = {};
@@ -199,8 +198,6 @@ export default function VendorOutsourcePage() {
           ? items[0].job_category || items[0].job?.job_category || "N/A"
           : "N/A";
 
-      const assigningDate = items.length > 0 ? items[0].assigning_date || "N/A" : "N/A";
-      
       const jobType = items.length > 0 
         ? (items[0].job_type || items[0].job?.job_type || "JOB_SERVICE")
         : "JOB_SERVICE";
@@ -209,7 +206,6 @@ export default function VendorOutsourcePage() {
         totalQty,
         uniqueJoCount,
         jobCategory,
-        assigningDate,
         jobType,
       };
     });
@@ -383,13 +379,9 @@ export default function VendorOutsourcePage() {
                         <th className="p-3 border border-tableBorder">JO No</th>
                         <th className="px-2 py-0 border border-tableBorder">Type</th>
                         <th className="px-2 py-0 border border-tableBorder">Serial No</th>
+                        <th className="px-2 py-0 border border-tableBorder">Item Description</th>
                         <th className="px-2 py-0 border border-tableBorder">Item No</th>
-                        <th className="px-2 py-0 border border-tableBorder">Machine Category</th>
-                        <th className="px-2 py-0 border border-tableBorder">Machine Size</th>
-                        <th className="px-2 py-0 border border-tableBorder">Machine Code</th>
-                        <th className="px-2 py-0 border border-tableBorder">Worker Name</th>
                         <th className="px-2 py-0 border border-tableBorder">Quantity</th>
-                        <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
                         {canEditOutsource && (
                           <th className="px-2 py-0 border border-tableBorder">Assign Vendor</th>
                         )}
@@ -398,7 +390,7 @@ export default function VendorOutsourcePage() {
                     <tbody>
                       {Object.entries(getJoGroupsForIdentifier(selectedJobNo)).length === 0 ? (
                         <tr>
-                          <td colSpan={canEditOutsource ? 11 : 10} className="px-4 py-6 text-center border border-tableBorder">
+                          <td colSpan={canEditOutsource ? 7 : 6} className="px-4 py-6 text-center border border-tableBorder">
                             <p className="text-[#666666] text-sm">No JO data found</p>
                           </td>
                         </tr>
@@ -407,7 +399,7 @@ export default function VendorOutsourcePage() {
                           <Fragment key={jo}>
                             {/* JO Group Header */}
                             <tr className="border border-tableBorder bg-gray-100">
-                              <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={canEditOutsource ? 11 : 10}>
+                              <td className="px-2 py-2 border border-tableBorder font-semibold" colSpan={canEditOutsource ? 7 : 6}>
                                 JO: {jo} ({items.length} item(s))
                               </td>
                             </tr>
@@ -422,17 +414,14 @@ export default function VendorOutsourcePage() {
                                     {getJobTypeBadge(item.job_type || item.job?.job_type || "JOB_SERVICE")}
                                   </td>
                                   <td className="px-2 py-2 border border-tableBorder font-mono">{item.serial_no || "-"}</td>
+                                  <td className="px-2 py-2 border border-tableBorder">{item.job?.item_description || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder">{item.item_no ?? "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_category || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_size || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.machine_code || "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.worker_name || "-"}</td>
                                   <td className="px-2 py-2 border border-tableBorder font-semibold">{item.quantity_no ?? "-"}</td>
-                                  <td className="px-2 py-2 border border-tableBorder">{item.assigning_date || "-"}</td>
                                   {canEditOutsource && (
                                     <td className="px-2 py-2 border border-tableBorder">
                                       <div className="flex flex-col gap-2 min-w-[200px]">
                                         <select
+                                          aria-label="Select vendor"
                                           className="border border-customBorder bg-white rounded-lg px-3 py-1 text-xs outline-none focus:ring-2 focus:ring-primary-200"
                                           value={picked}
                                           onChange={(e) =>
@@ -488,20 +477,19 @@ export default function VendorOutsourcePage() {
                       <th className="px-2 py-0 border border-tableBorder">Category</th>
                       <th className="px-2 py-0 border border-tableBorder">Total JO</th>
                       <th className="px-2 py-0 border border-tableBorder">Total Quantity</th>
-                      <th className="px-2 py-0 border border-tableBorder">Assigning Date</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">Loading...</p>
                         </td>
                       </tr>
                     ) : jobIdentifiers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center border border-tableBorder">
+                        <td colSpan={5} className="px-4 py-6 text-center border border-tableBorder">
                           <p className="text-[#666666] text-sm">No vendor outsource data found</p>
                         </td>
                       </tr>
@@ -532,9 +520,6 @@ export default function VendorOutsourcePage() {
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
                               <p className="text-[#232323] text-sm">{summary.totalQty}</p>
-                            </td>
-                            <td className="px-2 py-2 border border-tableBorder">
-                              <p className="text-[#232323] text-sm">{summary.assigningDate || "-"}</p>
                             </td>
                           </tr>
                         );

@@ -355,19 +355,19 @@ export default function VendorOutgoingPage() {
                 <table className="w-full text-sm text-left text-gray-500">
                   <thead className="text-xs text-[#999999]">
                     <tr className="border bg-gray-50">
-                      <th className="p-3 border">Identifier</th><th className="p-3 border">Type</th>
+                      <th className="p-3 border">Job No</th><th className="p-3 border">Type</th>
                       <th className="p-3 border">Category</th><th className="p-3 border">Vendor Name</th>
                       <th className="p-3 border text-center">Total JOs</th><th className="p-3 border text-center">Total Quantity</th>
-                      <th className="p-3 border text-center">Assigning Date</th><th className="p-3 border text-center">Action</th>
+                      <th className="p-3 border text-center">Action</th>
                      </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={8} className="text-center p-4">Loading...</td></tr>
+                      <tr><td colSpan={7} className="text-center p-4">Loading...</td></tr>
                     ) : getIdentifiers().length === 0 ? (
-                      <tr><td colSpan={8} className="text-center p-4">No vendor outgoing assignments found</td></tr>
+                      <tr><td colSpan={7} className="text-center p-4">No vendor outgoing assignments found</td></tr>
                     ) : (
-                      getIdentifiers().map(({ identifier, type, category, vendorName, assigningDate }) => {
+                      getIdentifiers().map(({ identifier, type, category, vendorName }) => {
                         const { totalQty, uniqueJoCount } = getIdentifierSummary(identifier);
                         return (
                           <tr key={identifier} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedIdentifier(identifier)}>
@@ -377,7 +377,6 @@ export default function VendorOutgoingPage() {
                             <td className="p-3 border">{vendorName}</td>
                             <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{uniqueJoCount}</span></td>
                             <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
-                            <td className="p-3 border text-center">{assigningDate}</td>
                             <td className="p-3 border text-center"><button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">View Details</button></td>
                           </tr>
                         );
