@@ -35,9 +35,14 @@ interface JobDetail {
 export default function JobDetailsPage() {
   const [jobDetails, setJobDetails] = useState<JobDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignments, setAssignments] = useState<
+    Record<string, { assignTo: string; otherName: string; assignDate: string }>
+  >({});
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const permissions = new StorageManager().getUserPermissions();
+  const canEdit = (permissions || []).some((p: any) => p.name === "production.planning.edit");
   const job_no = decodeURIComponent(params.job_no as string);
   const client = searchParams.get("client");
   const filter = searchParams.get("filter");
