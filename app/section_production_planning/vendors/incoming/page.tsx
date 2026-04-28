@@ -493,7 +493,7 @@ export default function VendorIncomingPage() {
 
   const getJobNoForIdentifier = (identifier: string) => {
     const items = getItemsForIdentifier(identifier);
-    return items[0]?.job?.job_no || items[0]?.job_no || "-";
+    return items[0]?.job?.job_no || items[0]?.jo_no || "-";
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {
@@ -579,75 +579,27 @@ export default function VendorIncomingPage() {
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">Serial No</th>
+                          <th className="p-3 border">JO Number</th>
                           <th className="p-3 border">Item No</th>
                           <th className="p-3 border">Item Description</th>
                           <th className="p-3 border">MOC</th>
-                          <th className="p-3 border">Vendor Name</th>
                           <th className="p-3 border text-center">Quantity</th>
-                          <th className="p-3 border text-center">Gatepass No</th>
-                          <th className="p-3 border text-center">Current Assignee</th>
-                          <th className="p-3 border text-center">Actions</th>
+                          <th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">Incoming Date</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {getJoGroupsForIdentifier(selectedIdentifier)[selectedJO]?.map((item) => {
-                          const currentAssignee = item.assign_to || item.job?.assign_to || "Unassigned";
-                          
-                          return (
-                            <tr key={item.id} className="border hover:bg-primary-50">
-                              <td className="p-3 border font-mono text-blue-600">{item.serial_no || "N/A"}</td>
-                              <td className="p-3 border">{item.item_no || "N/A"}</td>
-                              <td className="p-3 border">{item.job?.item_description || "N/A"}</td>
-                              <td className="p-3 border">{item.job?.moc || "N/A"}</td>
-                              <td className="p-3 border">{item.vendor_name || "N/A"}</td>
-                              <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
-                              <td className="p-3 border text-center">{item.gatepass_no || "N/A"}</td>
-                              <td className="p-3 border text-center">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  currentAssignee !== "Unassigned" ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {currentAssignee}
-                                </span>
-                              </td>
-                              <td className="p-3 border text-center">
-                                <div className="flex flex-col gap-2 items-center">
-                                  {String(item.status || "").toLowerCase() === "in-review" && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMoveToQc(item)}
-                                      disabled={processingQcAssignmentId === item.id}
-                                      className="px-3 py-1 rounded text-xs transition-colors bg-green-100 text-green-700 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
-                                    >
-                                      {processingQcAssignmentId === item.id ? "Processing..." : "QC"}
-                                    </button>
-                                  )}
-                                  <div className="relative">
-                                    <details>
-                                      <summary
-                                        className="list-none px-3 py-1 rounded text-xs transition-colors cursor-pointer bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                      >
-                                        Assign
-                                      </summary>
-                                      <div className="absolute z-10 mt-1 w-28 bg-white border rounded-md shadow-md">
-                                        {ASSIGN_OPTIONS.map((assignee) => (
-                                          <button
-                                            key={assignee}
-                                            type="button"
-                                            onClick={() => handleRevertVendorAssign(item, assignee)}
-                                            className="block w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-100"
-                                          >
-                                            {assignee}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </details>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {getJoGroupsForIdentifier(selectedIdentifier)[selectedJO]?.map((item) => (
+                          <tr key={item.id} className="border hover:bg-primary-50">
+                            <td className="p-3 border text-blue-600 font-medium">{selectedJO}</td>
+                            <td className="p-3 border">{item.item_no || "N/A"}</td>
+                            <td className="p-3 border">{item.job?.item_description || "N/A"}</td>
+                            <td className="p-3 border">{item.job?.moc || "N/A"}</td>
+                            <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
+                            <td className="p-3 border">{item.vendor_name || "N/A"}</td>
+                            <td className="p-3 border text-center">{item.qc_date ? new Date(item.qc_date).toLocaleDateString() : "N/A"}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -661,13 +613,12 @@ export default function VendorIncomingPage() {
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
                           <th className="p-3 border">JO Number</th>
-                          <th className="p-3 border">Vendor Name</th>
-                          <th className="p-3 border text-center">Items</th>
-                          <th className="p-3 border text-center">Total Quantity</th>
                           <th className="p-3 border">Item Nos</th>
                           <th className="p-3 border">Item Description</th>
                           <th className="p-3 border">MOC</th>
-                          <th className="p-3 border text-center">Gatepass No</th>
+                          <th className="p-3 border text-center">Total Quantity</th>
+                          <th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">No of Items</th>
                           <th className="p-3 border text-center">Action</th>
                         </tr>
                       </thead>
@@ -678,18 +629,16 @@ export default function VendorIncomingPage() {
                           const descriptions = [...new Set(items.map(i => i.job?.item_description).filter(Boolean))];
                           const mocList = [...new Set(items.map(i => i.job?.moc).filter(Boolean))];
                           const vendorName = items[0]?.vendor_name || "N/A";
-                          const gatepassNo = items[0]?.gatepass_no || "N/A";
                           
                           return (
                             <tr key={jo} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedJO(jo)}>
                               <td className="p-3 border text-blue-600 font-medium">{jo}</td>
-                              <td className="p-3 border">{vendorName}</td>
-                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
-                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
                               <td className="p-3 border"><div className="text-sm">{itemNos.slice(0, 3).join(", ")}{itemNos.length > 3 && ` +${itemNos.length - 3}`}</div></td>
                               <td className="p-3 border"><div className="text-sm max-w-[200px]">{descriptions.slice(0, 2).join(", ")}{descriptions.length > 2 && ` +${descriptions.length - 2}`}</div></td>
                               <td className="p-3 border"><div className="text-sm">{mocList.slice(0, 2).join(", ")}{mocList.length > 2 && ` +${mocList.length - 2}`}</div></td>
-                              <td className="p-3 border text-center">{gatepassNo}</td>
+                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
+                              <td className="p-3 border">{vendorName}</td>
+                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
                               <td className="p-3 border text-center"><button className="px-3 py-1 bg-primary-600 text-white rounded text-sm">View Items</button></td>
                             </tr>
                           );

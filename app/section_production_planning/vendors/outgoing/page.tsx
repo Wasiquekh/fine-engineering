@@ -227,7 +227,7 @@ export default function VendorOutgoingPage() {
 
   const getJobNoForIdentifier = (identifier: string) => {
     const items = getItemsForIdentifier(identifier);
-    return items[0]?.job?.job_no || items[0]?.job_no || "-";
+    return items[0]?.job?.job_no || items[0]?.jo_no || "-";
   };
 
   const getJobTypeBadge = (jobType: string | null | undefined) => {
@@ -293,22 +293,23 @@ export default function VendorOutgoingPage() {
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">Serial No</th><th className="p-3 border">Item No</th>
+                          <th className="p-3 border">JO Number</th><th className="p-3 border">Item No</th>
                           <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th>
-                          <th className="p-3 border">Vendor Name</th><th className="p-3 border">Machine</th>
-                          <th className="p-3 border text-center">Quantity</th>
+                          <th className="p-3 border text-center">Quantity</th><th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">Outgoing Date</th><th className="p-3 border text-center">Gatepass No</th>
                          </tr>
                       </thead>
                       <tbody>
                         {getJoGroupsForIdentifier(selectedIdentifier)[selectedJO]?.map((item) => (
                           <tr key={item.id} className="border hover:bg-primary-50">
-                            <td className="p-3 border font-mono text-blue-600">{item.serial_no || "N/A"}</td>
+                            <td className="p-3 border text-blue-600 font-medium">{selectedJO}</td>
                             <td className="p-3 border">{item.item_no || "N/A"}</td>
                             <td className="p-3 border">{item.job?.item_description || "N/A"}</td>
                             <td className="p-3 border">{item.job?.moc || "N/A"}</td>
-                            <td className="p-3 border">{item.vendor_name || "N/A"}</td>
-                            <td className="p-3 border">{item.machine_code} ({item.machine_category})</td>
                             <td className="p-3 border text-center font-semibold text-green-600">{item.quantity_no || 0}</td>
+                            <td className="p-3 border">{item.vendor_name || "N/A"}</td>
+                            <td className="p-3 border text-center">{item.assigning_date ? new Date(item.assigning_date).toLocaleDateString() : "N/A"}</td>
+                            <td className="p-3 border text-center">{item.gatepass_no || "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -322,10 +323,11 @@ export default function VendorOutgoingPage() {
                     <table className="w-full text-sm text-left text-gray-500">
                       <thead className="text-xs text-[#999999]">
                         <tr className="border bg-gray-50">
-                          <th className="p-3 border">JO Number</th><th className="p-3 border">Vendor Name</th>
-                          <th className="p-3 border text-center">Items</th><th className="p-3 border text-center">Total Quantity</th>
-                          <th className="p-3 border">Item Nos</th><th className="p-3 border">Item Description</th>
-                          <th className="p-3 border">MOC</th><th className="p-3 border text-center">Action</th>
+                          <th className="p-3 border">JO Number</th><th className="p-3 border">Item No</th>
+                          <th className="p-3 border">Item Description</th><th className="p-3 border">MOC</th>
+                          <th className="p-3 border text-center">Total Quantity</th><th className="p-3 border">Vendor Name</th>
+                          <th className="p-3 border text-center">No of Items</th>
+                          <th className="p-3 border text-center">Action</th>
                          </tr>
                       </thead>
                       <tbody>
@@ -337,12 +339,12 @@ export default function VendorOutgoingPage() {
                           return (
                             <tr key={jo} className="border cursor-pointer hover:bg-primary-50" onClick={() => setSelectedJO(jo)}>
                               <td className="p-3 border text-blue-600 font-medium">{jo}</td>
-                              <td className="p-3 border">{items[0]?.vendor_name || "N/A"}</td>
-                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
-                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
                               <td className="p-3 border"><div className="text-sm">{itemNos.slice(0, 3).join(", ")}{itemNos.length > 3 && ` +${itemNos.length - 3}`}</div></td>
                               <td className="p-3 border"><div className="text-sm max-w-[200px]">{descriptions.slice(0, 2).join(", ")}{descriptions.length > 2 && ` +${descriptions.length - 2}`}</div></td>
                               <td className="p-3 border"><div className="text-sm">{mocList.slice(0, 2).join(", ")}{mocList.length > 2 && ` +${mocList.length - 2}`}</div></td>
+                              <td className="p-3 border text-center font-semibold text-green-600">{totalQty}</td>
+                              <td className="p-3 border">{items[0]?.vendor_name || "N/A"}</td>
+                              <td className="p-3 border text-center"><span className="px-2 py-1 bg-blue-100 rounded-full text-xs">{items.length}</span></td>
                               <td className="p-3 border text-center"><button className="px-3 py-1 bg-primary-600 text-white rounded text-sm">View Items</button></td>
                             </tr>
                           );
