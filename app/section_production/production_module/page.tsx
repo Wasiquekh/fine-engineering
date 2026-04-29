@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DesktopHeader from "../../component/DesktopHeader";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import { FiSearch } from "react-icons/fi";
+import { normalizeUrgent, urgentBadgeClass } from "../../component/utils/permissionUtils";
 
 const axiosProvider = new AxiosProvider();
 
@@ -377,7 +378,11 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    filteredData.map((item: any) => (
+                    filteredData.map((item: any) => {
+                      const urgentStatus = normalizeUrgent(item.is_urgent ?? item.urgent);
+                      const isUrgent = urgentStatus === "Urgent";
+                      const isHold = urgentStatus === "Hold";
+                      return (
                       <tr
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
@@ -391,8 +396,10 @@ export default function Home() {
                                 )
                               }
                               className={`text-sm font-medium leading-normal cursor-pointer underline ${
-                                item.is_urgent
+                                isUrgent
                                   ? "text-red-600 hover:text-red-800"
+                                  : isHold
+                                  ? "text-amber-700 hover:text-amber-800"
                                   : "text-blue-600 hover:text-blue-800"
                               }`}
                             >
@@ -425,17 +432,13 @@ export default function Home() {
                         </td>
                         <td className="px-4 py-3 border border-tableBorder">
                           <span
-                            className={`px-2 py-1 rounded text-sm ${
-                              item.is_urgent
-                                ? "bg-red-100 text-red-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
+                            className={`px-2 py-1 rounded text-sm ${urgentBadgeClass(urgentStatus)}`}
                           >
-                            {item.is_urgent ? "Urgent" : "Normal"}
+                            {urgentStatus}
                           </span>
                         </td>
                       </tr>
-                    ))
+                    )})
                   )}
                 </tbody>
               </table>

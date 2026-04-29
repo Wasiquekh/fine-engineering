@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import StorageManager from "../../../../provider/StorageManager";
 import { sendRoleNotificationByEvent } from "../../../services/pushNotificationApi";
+import type { UrgentStatus } from "../../../component/utils/permissionUtils";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -35,7 +36,7 @@ interface JobDetail {
   qty: number;
   moc: string;
   bin_location: string;
-  urgent: boolean;
+  urgent: UrgentStatus;
   assign_to?: string;
   assign_date?: string;
 }

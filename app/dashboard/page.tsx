@@ -28,6 +28,7 @@ import LeftSideBar from "../component/LeftSideBar";
 import DesktopHeader from "../component/DesktopHeader";
 import StorageManager from "../../provider/StorageManager";
 import AxiosProvider from "../../provider/AxiosProvider";
+import { normalizeUrgent } from "../component/utils/permissionUtils";
 
 ChartJS.register(
   CategoryScale,
@@ -173,7 +174,7 @@ export default function MainDashboardPage() {
     kanban: kanbanJobs.length,
     tso: tsoJobs.length,
     jobService: jobServiceJobs.length,
-    urgent: jobs.filter((j: any) => j.urgent === true && j.status !== "completed").length,
+    urgent: jobs.filter((j: any) => normalizeUrgent(j.urgent) === "Urgent" && j.status !== "completed").length,
     approved: jobs.filter((j: any) => j.is_approved === true).length,
     tsoInProcess: tsoJobs.filter((j: any) => j.status === "in-process").length,
     tsoCompleted: tsoJobs.filter((j: any) => j.status === "completed").length,
@@ -295,7 +296,7 @@ export default function MainDashboardPage() {
   };
   
   // ============ URGENT ITEMS ============
-  const urgentJobs = jobs.filter((j: any) => j.urgent === true && j.status !== "completed");
+  const urgentJobs = jobs.filter((j: any) => normalizeUrgent(j.urgent) === "Urgent" && j.status !== "completed");
   
   // ============ CATEGORIES SUMMARY ============
   const categoryStats = {

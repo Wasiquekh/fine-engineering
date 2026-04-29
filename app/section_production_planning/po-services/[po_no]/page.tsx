@@ -9,6 +9,7 @@ import DesktopHeader from "../../../component/DesktopHeader";
 import Image from "next/image";
 import { FaChevronDown } from "react-icons/fa";
 import Swal from "sweetalert2";
+import type { UrgentStatus } from "../../../component/utils/permissionUtils";
 
 const axiosProvider = new AxiosProvider();
 
@@ -24,7 +25,7 @@ interface POServiceDetail {
   description: string;
   po_qnty: number;
   category: string;
-  urgent: boolean;
+  urgent: UrgentStatus;
   assign_to?: string;
   is_rejected?: boolean | number;
   rejected?: boolean | number;
@@ -148,7 +149,11 @@ export default function JobDetailsPage() {
                                 <div className="flex items-center gap-2">
                                   {item.pn_no || "N/A"}
                                   {hasMultiple && (
-                                    <button onClick={() => toggleJoNumberExpansion(joNumber)}>
+                                    <button
+                                      onClick={() => toggleJoNumberExpansion(joNumber)}
+                                      title={`Toggle rows for PN ${joNumber}`}
+                                      aria-label={`Toggle rows for PN ${joNumber}`}
+                                    >
                                       <FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                                     </button>
                                   )}
