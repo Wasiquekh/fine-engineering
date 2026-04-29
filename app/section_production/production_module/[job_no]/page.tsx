@@ -58,6 +58,20 @@ export default function JobDetailsPage() {
     });
   }, [jobDetails]);
 
+  const allQtyZeroByJoNumber = useMemo(() => {
+    return jobDetails.reduce<Record<string, boolean>>((acc, job) => {
+      if (!job.jo_number) return acc;
+      const joKey = String(job.jo_number);
+      if (!(joKey in acc)) {
+        acc[joKey] = true;
+      }
+      if (job.qty !== 0) {
+        acc[joKey] = false;
+      }
+      return acc;
+    }, {});
+  }, [jobDetails]);
+
   useEffect(() => {
     if (job_no) {
       const fetchData = async () => {
@@ -260,8 +274,16 @@ export default function JobDetailsPage() {
                         </td>
                       </tr>
                     ) : (
-                      uniqueJobDetails.map((item) => (
-                        <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                      uniqueJobDetails.map((item) => {
+                        const isFullyAssigned =
+                          !!item.jo_number && allQtyZeroByJoNumber[String(item.jo_number)];
+                        return (
+                        <tr
+                          key={item.id}
+                          className={`border border-tableBorder ${
+                            isFullyAssigned ? "bg-green-100" : "bg-white"
+                          } hover:bg-primary-100`}
+                        >
                           <td className="px-4 py-3 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
@@ -300,7 +322,8 @@ export default function JobDetailsPage() {
                             <p className="text-[#232323] text-sm leading-normal">{item.assign_date || "-"}</p>
                           </td>
                         </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
