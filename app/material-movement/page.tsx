@@ -486,21 +486,21 @@ export default function MaterialMovementPage() {
                     <th className="p-3 text-left border">Item No</th>
                     <th className="p-3 text-left border">Qty</th>
                     <th className="p-3 text-left border">MOC</th>
+                    <th className="p-3 text-left border">Machine Category</th>
+                    <th className="p-3 text-left border">Machine Size</th>
+                    <th className="p-3 text-left border">Machine Code</th>
+                    <th className="p-3 text-left border">Status</th>
                     <th className="p-3 text-left border">Job Order Date</th>
                     <th className="p-3 text-left border">Mtl Rcd Date</th>
                     <th className="p-3 text-left border">Mtl Challan No</th>
                     <th className="p-3 text-left border">Delivery Challan No</th>
                     <th className="p-3 text-left border">Challan Date</th>
-                    <th className="p-3 text-left border">Machine Category</th>
-                    <th className="p-3 text-left border">Machine Size</th>
-                    <th className="p-3 text-left border">Machine Code</th>
-                    <th className="p-3 text-left border">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={22} className="text-center p-6 border">
+                      <td colSpan={21} className="text-center p-6 border">
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
                           Loading...
@@ -512,7 +512,7 @@ export default function MaterialMovementPage() {
                   {!loading && rows.length === 0 && (
                     <tr>
                       <td
-                        colSpan={22}
+                        colSpan={21}
                         className="text-center p-6 text-gray-500 border"
                       >
                         No Data Found
@@ -522,7 +522,7 @@ export default function MaterialMovementPage() {
 
                   {rows.map((r, idx) => (
                     <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border">{getTextValue(r.sr_no, idx + 1)}</td>
+                      <td className="p-3 border">{getTextValue(r.sequence_no, r.sr_no, idx + 1)}</td>
                       <td className="p-3 border">{getTextValue(r.serial_no, r.job?.serial_no)}</td>
                       <td className="p-3 border font-semibold">
                         <div
@@ -551,31 +551,20 @@ export default function MaterialMovementPage() {
                         {getTextValue(r.jo_number, r.jo_no, r.job?.jo_number)}
                       </td>
                       <td className="p-3 border">
-                        {getTextValue(r.product_desc, r.job?.product_desc)}
+                        {getTextValue(r.product_description, r.product_desc, r.job?.product_desc)}
                       </td>
                       <td className="p-3 border">{getTextValue(r.product_item_no, r.job?.product_item_no)}</td>
                       <td className="p-3 border font-semibold">
-                        {getTextValue(r.product_qty, r.job?.product_qty)}
+                        {getTextValue(r.product_qty, r.prod_qty, r.job?.product_qty)}
                       </td>
                       <td className="p-3 border">
-                        {getTextValue(r.item_description, r.job?.item_description)}
+                        {getTextValue(r.item_description, r.item_desc, r.job?.item_description)}
                       </td>
                       <td className="p-3 border">{getTextValue(r.item_no, r.job?.item_no)}</td>
                       <td className="p-3 border font-semibold">
                         {getTextValue(r.quantity_no, r.qty, r.job?.qty)}
                       </td>
                       <td className="p-3 border">{getTextValue(r.moc, r.job?.moc)}</td>
-                      <td className="p-3 border">{formatDate(r.job_order_date)}</td>
-                      <td className="p-3 border">
-                        {formatDate(getTextValue(r.mtl_receive_date, r.mtl_rcd_date))}
-                      </td>
-                      <td className="p-3 border">
-                        <span className="font-bold text-blue-600">
-                          {getTextValue(r.material_challan_no, r.mtl_challan_no)}
-                        </span>
-                      </td>
-                      <td className="p-3 border">{getTextValue(r.chalan_no, r.delivery_challan_no)}</td>
-                      <td className="p-3 border">{formatDate(r.chalan_date)}</td>
                       <td className="p-3 border">
                         {getTextValue(r.machine_category, r.job?.machine_category)}
                       </td>
@@ -590,6 +579,17 @@ export default function MaterialMovementPage() {
                           {getDisplayStatus(r)}
                         </span>
                       </td>
+                      <td className="p-3 border">{formatDate(r.job_order_date)}</td>
+                      <td className="p-3 border">
+                        {formatDate(getTextValue(r.mtl_rcd_date, r.mtl_receive_date))}
+                      </td>
+                      <td className="p-3 border">
+                        <span className="font-bold text-blue-600">
+                          {getTextValue(r.mtl_challan_no, r.material_challan_no)}
+                        </span>
+                      </td>
+                      <td className="p-3 border">{getTextValue(r.delivery_challan_no, r.chalan_no)}</td>
+                      <td className="p-3 border">{formatDate(r.challan_date)}</td>
                     </tr>
                   ))}
                 </tbody>
