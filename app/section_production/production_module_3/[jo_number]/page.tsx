@@ -62,6 +62,20 @@ export default function KanbanDetailsPage() {
                   hasPermission(permissions, "production2.bio.kanban.edit") ||
                   hasPermission(permissions, "production3.bio.kanban.edit");
 
+  const allQtyZeroByJoNumber = useMemo(() => {
+    return jobDetails.reduce<Record<string, boolean>>((acc, job) => {
+      if (!job.jo_number) return acc;
+      const joKey = String(job.jo_number);
+      if (!(joKey in acc)) {
+        acc[joKey] = true;
+      }
+      if (job.qty !== 0) {
+        acc[joKey] = false;
+      }
+      return acc;
+    }, {});
+  }, [jobDetails]);
+
   useEffect(() => {
     if (jo_number) {
       const fetchData = async () => {
@@ -221,8 +235,16 @@ export default function KanbanDetailsPage() {
                     ) : jobDetails.length === 0 ? (
                       <tr><td colSpan={canEdit ? 9 : 8} className="text-center py-4 border border-tableBorder">No items to assign for this job.</td></tr>
                     ) : (
-                      jobDetails.map((item) => (
-                        <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
+                      jobDetails.map((item) => {
+                        const isFullyAssigned =
+                          !!item.jo_number && allQtyZeroByJoNumber[String(item.jo_number)];
+                        return (
+                        <tr
+                          key={item.id}
+                          className={`border border-tableBorder ${
+                            isFullyAssigned ? "bg-green-100" : "bg-white"
+                          } hover:bg-primary-100`}
+                        >
                           <td className="px-4 py-3 border border-tableBorder">
                             {item.jo_number ? (
                               <Link
@@ -258,6 +280,7 @@ export default function KanbanDetailsPage() {
                                 value={assignments[item.id]?.assignTo || ""}
                                 onChange={(e) => handleAssignmentChange(item.id, "assignTo", e.target.value)}
                                 disabled={!!item.assign_to}
+                                title="Assign to"
                               >
                                 <option value="">Select</option>
                                 <option value="Usmaan">Usmaan</option>
@@ -276,6 +299,7 @@ export default function KanbanDetailsPage() {
                                 value={assignments[item.id]?.assignDate || ""}
                                 onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)}
                                 disabled={!!item.assign_to}
+                                title="Assign date"
                               />
                             ) : (
                               <p className="text-[#232323]">{item.assign_date || "-"}</p>
@@ -295,7 +319,8 @@ export default function KanbanDetailsPage() {
                             </td>
                           )}
                         </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
