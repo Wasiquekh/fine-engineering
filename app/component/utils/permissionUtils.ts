@@ -6,6 +6,23 @@ export interface Permission {
   description: string;
 }
 
+export type UrgentStatus = "Urgent" | "Normal" | "Hold";
+
+export const normalizeUrgent = (v: unknown): UrgentStatus => {
+  if (v === true) return "Urgent";
+  if (v === false || v == null) return "Normal";
+  const s = String(v).trim().toLowerCase();
+  if (s === "urgent") return "Urgent";
+  if (s === "hold" || s === "on hold" || s === "paused") return "Hold";
+  return "Normal";
+};
+
+export const urgentBadgeClass = (status: UrgentStatus): string => {
+  if (status === "Urgent") return "bg-red-100 text-red-600";
+  if (status === "Hold") return "bg-amber-100 text-amber-700";
+  return "bg-green-100 text-green-600";
+};
+
 export const hasPermission = (permissions: Permission[] | null, permissionName: string): boolean => {
   if (!permissions || !Array.isArray(permissions)) return false;
   return permissions.some(p => p.name === permissionName);

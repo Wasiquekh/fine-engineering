@@ -14,6 +14,7 @@ import * as Yup from "yup";
 import AxiosProvider from "../../../provider/AxiosProvider";
 import Swal from "sweetalert2";
 import StorageManager from "../../../provider/StorageManager";
+import { normalizeUrgent, urgentBadgeClass, type UrgentStatus } from "../../component/utils/permissionUtils";
 
 const axiosProvider = new AxiosProvider();
 const storage = new StorageManager();
@@ -78,7 +79,7 @@ const initialValues = {
 
 // Helper function to check if item is urgent
 const isItemUrgent = (item: any): boolean => {
-  return !!(item.urgent || item.is_urgent || item.urgent === true || item.is_urgent === true || item.urgent === 1 || item.is_urgent === 1);
+  return normalizeUrgent(item.urgent ?? item.is_urgent) === "Urgent";
 };
 
 export default function Home() {
@@ -362,13 +363,20 @@ export default function Home() {
     }
     
     const result = await Swal.fire({
-      title: "Mark as Urgent?",
-      text: "Are you sure you want to mark this job as urgent?",
+      title: "Update Urgent Status",
+      text: "Select status for this item",
       icon: "question",
+      input: "select",
+      inputOptions: {
+        Urgent: "Urgent",
+        Normal: "Normal",
+        Hold: "Hold",
+      },
+      inputValue: "Urgent",
       showCancelButton: true,
       confirmButtonColor: "#facc15",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, mark urgent!",
+      confirmButtonText: "Update Status",
       cancelButtonText: "Cancel",
     });
 
@@ -377,34 +385,24 @@ export default function Home() {
         let response;
         const id = String(job_no);
 
+        const urgentStatus = (result.value || "Urgent") as UrgentStatus;
+        const updatedBy = storage.getUserId();
         if (activeFilter === "TSO_SERVICE") {
-          const params = new URLSearchParams();
-          params.append("tso_no", id);
-          response = await axiosProvider.post(
-            `/fineengg_erp/system/jobs/mark-urgent-by-tso`,
-            params,
-            {
-              headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-            }
-          );
+          const payload: Record<string, any> = { tso_no: id, urgent: urgentStatus };
+          if (updatedBy) payload.updated_by = updatedBy;
+          response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent-by-tso`, payload);
         } else if (activeFilter === "KANBAN") {
-          const params = new URLSearchParams();
-          params.append("jo_number", id);
-          response = await axiosProvider.post(
-            `/fineengg_erp/system/jobs/mark-urgent-by-jo-number`,
-            params,
-            {
-              headers: { "Content-Type": "application/x-www-form-urlencoded" } as any,
-            }
-          );
+          const payload: Record<string, any> = { jo_number: id, urgent: urgentStatus };
+          if (updatedBy) payload.updated_by = updatedBy;
+          response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent-by-jo-number`, payload);
         } else {
-          response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent`, {
-            job_no: id,
-          });
+          const payload: Record<string, any> = { job_no: id, urgent: urgentStatus };
+          if (updatedBy) payload.updated_by = updatedBy;
+          response = await axiosProvider.post(`/fineengg_erp/system/jobs/mark-urgent`, payload);
         }
 
         if (response.status === 200) {
-          toast.success("Job marked as urgent");
+          toast.success(`Job status updated to ${result.value || "Urgent"}`);
           
           // Store current filter values before refetching
           const currentTsoFilter = tsoSubFilter;
@@ -783,12 +781,14 @@ export default function Home() {
                     <tr><td colSpan={100} className="px-4 py-6 text-center">No data found</td></tr>
                   ) : (
                     searchedData.map((item: any) => {
-                      const isUrgent = isItemUrgent(item);
+                      const urgentStatus = normalizeUrgent(item.is_urgent ?? item.urgent);
+                      const isUrgent = urgentStatus === "Urgent";
+                      const isHold = urgentStatus === "Hold";
                       return (
                         currentDataset === "CATEGORIES" ? (
                           <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                             <td className="px-2 py-2 border border-tableBorder">
-                              <p onClick={() => router.push(`/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
+                              <p onClick={() => router.push(`/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-800 font-semibold" : isHold ? "text-amber-700 hover:text-amber-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
                                 {item.job_no}
                               </p>
                             </td>
@@ -802,8 +802,8 @@ export default function Home() {
                               <input type="date" className="border border-gray-300 rounded px-1 disabled:bg-gray-100" value={item.urgent_due_date ? item.urgent_due_date.replace(/\//g, "-") : ""} onChange={(e) => updateDueDate(item.job_no, e.target.value)} disabled={!canEdit} title="Urgent due date" aria-label="Urgent due date" />
                             </td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <span className={`px-2 py-1 rounded text-sm ${isUrgent ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
-                                {isUrgent ? "Urgent" : "Normal"}
+                              <span className={`px-2 py-1 rounded text-sm ${urgentBadgeClass(urgentStatus)}`}>
+                                {urgentStatus}
                               </span>
                             </td>
                             {canEdit && (
@@ -819,15 +819,15 @@ export default function Home() {
                           <tr key={item.id} className="border border-tableBorder bg-white hover:bg-primary-100">
                             <td className="px-2 py-2 border border-tableBorder">
                               {activeFilter === "KANBAN" ? (
-                                <p onClick={() => router.push(`/section_production_planning/kanban_details/${item.jo_number}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
+                                <p onClick={() => router.push(`/section_production_planning/kanban_details/${item.jo_number}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : isHold ? "text-amber-700 hover:text-amber-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
                                   {item.jo_number}
                                 </p>
                               ) : activeFilter === "TSO_SERVICE" ? (
-                                <p onClick={() => router.push(`/section_production_planning/tso_details/${item.tso_no}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
+                                <p onClick={() => router.push(`/section_production_planning/tso_details/${item.tso_no}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : isHold ? "text-amber-700 hover:text-amber-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
                                   {item.tso_no || "N/A"}
                                 </p>
                               ) : (
-                                <p onClick={() => router.push(`/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
+                                <p onClick={() => router.push(`/section_production_planning/production_planning/${encodeURIComponent(item.job_no)}?filter=${activeFilter}&client=${encodeURIComponent(clientParam || "")}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : isHold ? "text-amber-700 hover:text-amber-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
                                   {item.job_no}
                                 </p>
                               )}
@@ -841,8 +841,8 @@ export default function Home() {
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.moc}</td>
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.bin_location}</td>
                             <td className="px-2 py-2 border border-tableBorder">
-                              <span className={`px-2 py-1 rounded text-sm ${isUrgent ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
-                                {isUrgent ? "Urgent" : "Normal"}
+                              <span className={`px-2 py-1 rounded text-sm ${urgentBadgeClass(urgentStatus)}`}>
+                                {urgentStatus}
                               </span>
                             </td>
                             {canEdit && (

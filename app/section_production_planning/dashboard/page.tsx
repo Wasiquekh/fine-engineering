@@ -41,7 +41,7 @@ import LeftSideBar from "../../component/LeftSideBar";
 import DesktopHeader from "../../component/DesktopHeader";
 import StorageManager from "../../../provider/StorageManager";
 import AxiosProvider from "../../../provider/AxiosProvider";
-import { hasPermission } from "../../component/utils/permissionUtils";
+import { hasPermission, normalizeUrgent, urgentBadgeClass, type UrgentStatus } from "../../component/utils/permissionUtils";
 
 ChartJS.register(
   CategoryScale,
@@ -109,7 +109,7 @@ interface ProductionStats {
       qty: number;
       client_name: string;
       material_type: string;
-      is_urgent: boolean;
+      is_urgent: UrgentStatus;
       created_at: string;
     }>;
   };
@@ -259,7 +259,7 @@ export default function ProductionPlanningDashboard() {
         completed: jobServiceData.filter((j: any) => j.status === "completed").length,
         notOk: jobServiceData.filter((j: any) => j.status === "not-ok").length,
         rejected: jobServiceData.filter((j: any) => j.rejected === true).length,
-        urgent: jobServiceData.filter((j: any) => j.urgent === true).length,
+        urgent: jobServiceData.filter((j: any) => normalizeUrgent(j.urgent) === "Urgent").length,
         completedQty: jobServiceData.filter((j: any) => j.status === "completed").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
         pendingQty: jobServiceData.filter((j: any) => j.job_status === "pending_approval").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
       };
@@ -275,7 +275,7 @@ export default function ProductionPlanningDashboard() {
         completed: tsoServiceData.filter((j: any) => j.status === "completed").length,
         notOk: tsoServiceData.filter((j: any) => j.status === "not-ok").length,
         rejected: tsoServiceData.filter((j: any) => j.rejected === true).length,
-        urgent: tsoServiceData.filter((j: any) => j.urgent === true).length,
+        urgent: tsoServiceData.filter((j: any) => normalizeUrgent(j.urgent) === "Urgent").length,
         completedQty: tsoServiceData.filter((j: any) => j.status === "completed").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
         pendingQty: tsoServiceData.filter((j: any) => j.job_status === "pending_approval").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
       };
@@ -291,7 +291,7 @@ export default function ProductionPlanningDashboard() {
         completed: kanbanData.filter((j: any) => j.status === "completed").length,
         notOk: kanbanData.filter((j: any) => j.status === "not-ok").length,
         rejected: kanbanData.filter((j: any) => j.rejected === true).length,
-        urgent: kanbanData.filter((j: any) => j.urgent === true).length,
+        urgent: kanbanData.filter((j: any) => normalizeUrgent(j.urgent) === "Urgent").length,
         completedQty: kanbanData.filter((j: any) => j.status === "completed").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
         pendingQty: kanbanData.filter((j: any) => j.job_status === "pending_approval").reduce((sum: number, j: any) => sum + (Number(j.qty) || 0), 0),
       };
@@ -306,7 +306,7 @@ export default function ProductionPlanningDashboard() {
         qty: c.qty,
         client_name: c.client_name,
         material_type: c.material_type,
-        is_urgent: c.is_urgent || false,
+        is_urgent: normalizeUrgent(c.is_urgent),
         created_at: c.created_at,
       }));
       
@@ -616,6 +616,7 @@ export default function ProductionPlanningDashboard() {
                 <select
                   value={selectedClient}
                   onChange={(e) => setSelectedClient(e.target.value as any)}
+                  title="Client filter"
                   className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
                 >
                   <option value="all">All Clients</option>
@@ -628,6 +629,7 @@ export default function ProductionPlanningDashboard() {
                 <select
                   value={selectedAssignee}
                   onChange={(e) => setSelectedAssignee(e.target.value as any)}
+                  title="Assignee filter"
                   className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
                 >
                   <option value="all">All Assignees</option>
@@ -835,7 +837,7 @@ export default function ProductionPlanningDashboard() {
                   <p className="text-sm text-gray-600">Total Categories</p>
                 </div>
                 <div className="bg-red-50 rounded-lg p-4 text-center">
-                  <p className="text-2xl font-bold text-red-600">{stats.categories?.list?.filter(c => c.is_urgent).length || 0}</p>
+                  <p className="text-2xl font-bold text-red-600">{stats.categories?.list?.filter(c => c.is_urgent === "Urgent").length || 0}</p>
                   <p className="text-sm text-gray-600">Urgent Categories</p>
                 </div>
               </div>
@@ -866,11 +868,9 @@ export default function ProductionPlanningDashboard() {
                           <td className="px-4 py-3 text-sm font-semibold text-yellow-600">{category.qty}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{category.client_name || '-'}</td>
                           <td className="px-4 py-3 text-sm">
-                            {category.is_urgent ? (
-                              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">Urgent</span>
-                            ) : (
-                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Normal</span>
-                            )}
+                            <span className={`px-2 py-1 rounded-full text-xs ${urgentBadgeClass(normalizeUrgent(category.is_urgent))}`}>
+                              {normalizeUrgent(category.is_urgent)}
+                            </span>
                           </td>
                         </tr>
                       ))}
