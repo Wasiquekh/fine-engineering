@@ -321,10 +321,9 @@ export default function MaterialMovementPage() {
   const getDisplayStatus = (row: any) => {
     const ownerStatusRaw = getTextValue(row.owner_status_display);
     if (ownerStatusRaw !== "-") {
-      const ownerStatus = getStatusLabel(ownerStatusRaw);
       return row.completion_indicator
-        ? `${ownerStatus} (${row.completion_indicator})`
-        : ownerStatus;
+        ? `${ownerStatusRaw} (${row.completion_indicator})`
+        : ownerStatusRaw;
     }
 
     const baseStatus = getStatusLabel(getTextValue(row.status, row.process));
