@@ -319,8 +319,9 @@ export default function MaterialMovementPage() {
   };
 
   const getDisplayStatus = (row: any) => {
-    const ownerStatus = getTextValue(row.owner_status_display);
-    if (ownerStatus !== "-") {
+    const ownerStatusRaw = getTextValue(row.owner_status_display);
+    if (ownerStatusRaw !== "-") {
+      const ownerStatus = getStatusLabel(ownerStatusRaw);
       return row.completion_indicator
         ? `${ownerStatus} (${row.completion_indicator})`
         : ownerStatus;
@@ -331,6 +332,13 @@ export default function MaterialMovementPage() {
       return `${baseStatus} (${row.completion_indicator})`;
     }
     return baseStatus;
+  };
+
+  const isJobCompleted = (row: any) => {
+    return Boolean(
+      row?.job_completed ||
+        String(row?.completion_indicator || "").toLowerCase() === "job completed"
+    );
   };
 
   const getTextValue = (...values: any[]) => {
@@ -517,8 +525,25 @@ export default function MaterialMovementPage() {
                     <tr key={r.id} className="border-t hover:bg-gray-50">
                       <td className="p-3 border">{getTextValue(r.sr_no, idx + 1)}</td>
                       <td className="p-3 border">{getTextValue(r.serial_no, r.job?.serial_no)}</td>
-                      <td className="p-3 border font-semibold text-blue-600">
-                        {getTextValue(r.document_no, r.job_no, r.tso_no, r.job?.job_no, r.job?.tso_no)}
+                      <td className="p-3 border font-semibold">
+                        <div
+                          className={
+                            isJobCompleted(r) ? "text-green-600" : "text-blue-600"
+                          }
+                        >
+                          {getTextValue(
+                            r.document_no,
+                            r.job_no,
+                            r.tso_no,
+                            r.job?.job_no,
+                            r.job?.tso_no
+                          )}
+                        </div>
+                        {isJobCompleted(r) && (
+                          <div className="text-xs text-green-700 mt-1 font-medium">
+                            Completed
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 border">
                         {getDocumentTypeBadge(getTextValue(r.job_type, r.job?.job_type))}
