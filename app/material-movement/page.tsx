@@ -307,6 +307,32 @@ export default function MaterialMovementPage() {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    const value = String(status || "").trim();
+    if (!value) return "-";
+    return value
+      .split("-")
+      .map((part) =>
+        part.length ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part
+      )
+      .join(" ");
+  };
+
+  const getDisplayStatus = (row: any) => {
+    const ownerStatus = getTextValue(row.owner_status_display);
+    if (ownerStatus !== "-") {
+      return row.completion_indicator
+        ? `${ownerStatus} (${row.completion_indicator})`
+        : ownerStatus;
+    }
+
+    const baseStatus = getStatusLabel(getTextValue(row.status, row.process));
+    if (row.completion_indicator) {
+      return `${baseStatus} (${row.completion_indicator})`;
+    }
+    return baseStatus;
+  };
+
   const getTextValue = (...values: any[]) => {
     for (const value of values) {
       if (value === 0) return "0";
@@ -537,7 +563,7 @@ export default function MaterialMovementPage() {
                             r.status || r.process
                           )}`}
                         >
-                          {getTextValue(r.status, r.process)}
+                          {getDisplayStatus(r)}
                         </span>
                       </td>
                     </tr>
