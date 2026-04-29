@@ -78,7 +78,10 @@ export default function QcVendorPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [tab, setTab] = useState<"outgoing" | "incoming">("outgoing");
+  const tabParam = String(searchParams.get("tab") || "").toLowerCase();
+  const [tab, setTab] = useState<"outgoing" | "incoming">(
+    tabParam === "incoming" ? "incoming" : "outgoing"
+  );
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [selectedJobNo, setSelectedJobNo] = useState<string | null>(null);
