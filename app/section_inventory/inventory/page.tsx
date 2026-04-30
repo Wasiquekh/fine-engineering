@@ -466,7 +466,6 @@ export default function Home() {
       payload.job_category = values.job_category;
     } else if (values.job_type === "KANBAN") {
       payload.job_category = values.job_category;
-      payload.item_no = null;
       payload.kanban_job_cat = values.kanban_job_cat;
     }
 
