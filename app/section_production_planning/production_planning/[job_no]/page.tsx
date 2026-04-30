@@ -352,8 +352,17 @@ export default function JobDetailsPage() {
     if (!canEdit) return;
     const assignment = assignments[sourceId];
     const uniqueSelectedIds = Array.from(new Set(selectedJobIds));
+    const sourceJob = jobDetails.find((job) => job.id === sourceId);
+    const sourceJoNumber = sourceJob?.jo_number || "N/A";
+    const isSingleEntryJo =
+      !!sourceJob &&
+      jobDetails.filter((job) => (job.jo_number || "N/A") === sourceJoNumber).length === 1;
+    const effectiveSelectedIds =
+      uniqueSelectedIds.length === 0 && sourceJob && isSingleEntryJo && isJobSelectable(sourceJob)
+        ? [sourceId]
+        : uniqueSelectedIds;
 
-    if (uniqueSelectedIds.length === 0) {
+    if (effectiveSelectedIds.length === 0) {
       toast.error("Please select at least one checkbox");
       return;
     }
@@ -382,10 +391,10 @@ export default function JobDetailsPage() {
         assign_to: assignToName,
         assign_date: formattedDate,
       };
-      if (uniqueSelectedIds.length === 1) {
-        payload.id = uniqueSelectedIds[0];
+      if (effectiveSelectedIds.length === 1) {
+        payload.id = effectiveSelectedIds[0];
       } else {
-        payload.ids = uniqueSelectedIds;
+        payload.ids = effectiveSelectedIds;
       }
       if (updatedBy) payload.updated_by = updatedBy;
 
@@ -402,7 +411,7 @@ export default function JobDetailsPage() {
         toast.warn(`${notFoundIds.length} selected job(s) were not found`);
       }
 
-      const notifiedIds = updatedIds.length > 0 ? updatedIds : uniqueSelectedIds;
+      const notifiedIds = updatedIds.length > 0 ? updatedIds : effectiveSelectedIds;
       notifiedIds.forEach((jobId) => {
         const assignedJob = jobDetails.find((job) => job.id === jobId);
         if (!assignedJob) return;
@@ -422,7 +431,7 @@ export default function JobDetailsPage() {
 
       setJobDetails((prev) =>
         prev.map((job) =>
-          (updatedIds.length > 0 ? updatedIds.includes(job.id) : uniqueSelectedIds.includes(job.id))
+          (updatedIds.length > 0 ? updatedIds.includes(job.id) : effectiveSelectedIds.includes(job.id))
             ? { ...job, assign_to: assignToName, assign_date: formattedDate }
             : job
         )
@@ -430,7 +439,7 @@ export default function JobDetailsPage() {
       if (updatedIds.length > 0) {
         setSelectedJobIds((prev) => prev.filter((jobId) => !updatedIds.includes(jobId)));
       } else {
-        setSelectedJobIds([]);
+        setSelectedJobIds((prev) => prev.filter((jobId) => !effectiveSelectedIds.includes(jobId)));
       }
       setAssignments((prev) => ({
         ...prev,
@@ -712,6 +721,7 @@ export default function JobDetailsPage() {
                         const groupSelectableIds = jobs.filter(isJobSelectable).map((job) => job.id);
                         const allGroupSelected = groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedJobIds.includes(id));
                         const isGroupSelectionDisabled = groupSelectableIds.length === 0;
+                        const areAllChildrenAssigned = hasMultiple && jobs.every((job) => !!job.assign_to);
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
                           const isProcessed = item.status === 'completed' || item.status === 'QC' || item.qty === 0;
@@ -731,7 +741,7 @@ export default function JobDetailsPage() {
                                     type="checkbox"
                                     title={`Select JO group ${joNumber}`}
                                     aria-label={`Select JO group ${joNumber}`}
-                                    checked={allGroupSelected}
+                                    checked={allGroupSelected || areAllChildrenAssigned}
                                     disabled={isGroupSelectionDisabled}
                                     onChange={() => toggleJoGroupSelection(joNumber, jobs)}
                                   />
@@ -746,11 +756,20 @@ export default function JobDetailsPage() {
                                   />
                                 )}
                               </td>
-                              <td className="px-4 py-3 border border-tableBorder">{isFirst && <div className="flex items-center gap-2">{joNumber}{hasMultiple && <button title={`Toggle rows for ${joNumber}`} aria-label={`Toggle rows for ${joNumber}`} onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}</div>}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {isFirst && (
+                                  <div className="flex items-center gap-2">
+                                    {joNumber}
+                                    {hasMultiple && <button title={`Toggle rows for ${joNumber}`} aria-label={`Toggle rows for ${joNumber}`} onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {!isChild ? <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.product_desc || "-"}</span> : ""}
+                              </td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.item_description || "-"}</span> : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.qty_history ?? item.qty ?? "-") : ""}</td>
@@ -774,15 +793,15 @@ export default function JobDetailsPage() {
                               </td>
                               <td className="px-4 py-3 border border-tableBorder">
                                 {showAssignedTextOnly ? (
-                                  item.assign_date || "-"
+                                  <span className="whitespace-nowrap">{item.assign_date || "-"}</span>
                                 ) : showParentAssignControls ? (
                                   <input type="date" title="Assign date" aria-label="Assign date" className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm disabled:bg-gray-100" value={assignments[item.id]?.assignDate || ""} onChange={(e) => handleAssignmentChange(item.id, "assignDate", e.target.value)} disabled={isParentSelectionLocked || !canEdit} />
                                 ) : (
-                                  item.assign_date || "-"
+                                  <span className="whitespace-nowrap">{item.assign_date || "-"}</span>
                                 )}
                               </td>
                               {canEdit && (
-                                <td className="px-4 py-3 border border-tableBorder">
+                                <td className="px-4 py-3 border border-tableBorder whitespace-nowrap min-w-[180px]">
                                   <div className="flex items-center gap-2">
                                     {showParentAssignControls && !isRejected && !isProcessed && (
                                       <button onClick={() => handleAssign(item.id)} disabled={isParentSelectionLocked} className={`px-3 py-1 rounded text-sm text-white ${isParentSelectionLocked ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
