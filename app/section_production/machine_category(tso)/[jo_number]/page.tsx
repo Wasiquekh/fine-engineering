@@ -71,7 +71,7 @@ export default function TsoMachineCategoryPage() {
   const getProductionPrefix = () => {
     if (assignTo === "Usmaan") return "production1";
     if (assignTo === "Riyaaz") return "production2";
-    if (assignTo === "Ramzan") return "production3";
+    if (assignTo === "Ramzaan" || assignTo === "Ramzan") return "production3";
     return null;
   };
 
