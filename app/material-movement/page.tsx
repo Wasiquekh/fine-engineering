@@ -1,5 +1,3 @@
-// app/section_material_movement/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -140,7 +138,6 @@ export default function MaterialMovementPage() {
     }
   };
 
-  // Get document type badge
   const getDocumentTypeBadge = (jobType: string) => {
     switch (jobType) {
       case "JOB_SERVICE":
@@ -224,7 +221,6 @@ export default function MaterialMovementPage() {
     if (jobCategory) params.job_category = jobCategory;
     if (stageLower === "all status") delete params.status;
 
-    console.log("🚀 Final API Params:", params);
     return params;
   };
 
@@ -239,20 +235,6 @@ export default function MaterialMovementPage() {
         setPage(resp.pagination?.page || 1);
         setTotal(resp.pagination?.total || 0);
         setTotalPages(resp.pagination?.totalPages || 1);
-
-        // Debug log
-        const jobRecords = resp.data.filter(
-          (r: any) => r.job_type === "JOB_SERVICE"
-        );
-        const tsoRecords = resp.data.filter(
-          (r: any) => r.job_type === "TSO_SERVICE"
-        );
-        const kanbanRecords = resp.data.filter(
-          (r: any) => r.job_type === "KANBAN"
-        );
-        console.log(
-          `📊 Records - Job: ${jobRecords.length}, TSO: ${tsoRecords.length}, Kanban: ${kanbanRecords.length}`
-        );
       } else {
         setRows([]);
       }
@@ -307,37 +289,18 @@ export default function MaterialMovementPage() {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    const value = String(status || "").trim();
-    if (!value) return "-";
-    return value
+  const getDisplayStatus = (row: any) => {
+    const status = row.status || "-";
+    return status
       .split("-")
-      .map((part) =>
+      .map((part: string) =>
         part.length ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part
       )
       .join(" ");
   };
 
-  const getDisplayStatus = (row: any) => {
-    const ownerStatusRaw = getTextValue(row.owner_status_display);
-    if (ownerStatusRaw !== "-") {
-      return row.completion_indicator
-        ? `${ownerStatusRaw} (${row.completion_indicator})`
-        : ownerStatusRaw;
-    }
-
-    const baseStatus = getStatusLabel(getTextValue(row.status, row.process));
-    if (row.completion_indicator) {
-      return `${baseStatus} (${row.completion_indicator})`;
-    }
-    return baseStatus;
-  };
-
   const isJobCompleted = (row: any) => {
-    return Boolean(
-      row?.job_completed ||
-        String(row?.completion_indicator || "").toLowerCase() === "job completed"
-    );
+    return row.job_completed === true;
   };
 
   const getTextValue = (...values: any[]) => {
@@ -366,7 +329,7 @@ export default function MaterialMovementPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="border pl-10 h-10 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search JO / Serial / Machine / Worker / Vendor / Job No / TSO No / Chalan No"
+                placeholder="Search JO / Serial / Machine / Worker / Vendor / Job No / TSO No / Chalan No / Assign To"
               />
             </div>
 
@@ -470,12 +433,11 @@ export default function MaterialMovementPage() {
             </div>
 
             {/* Results Table */}
-            <div className="overflow-auto">
+            <div className="overflow-auto max-h-[70vh]">
               <table className="w-full text-sm border-collapse">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                    <th className="p-3 text-left border">Sequence No</th>
-                    <th className="p-3 text-left border">Serial No</th>
+                    <th className="p-3 text-left border w-24">Seq No</th>
                     <th className="p-3 text-left border">Job No</th>
                     <th className="p-3 text-left border">Job Type</th>
                     <th className="p-3 text-left border">JO No</th>
@@ -489,18 +451,20 @@ export default function MaterialMovementPage() {
                     <th className="p-3 text-left border">Machine Category</th>
                     <th className="p-3 text-left border">Machine Size</th>
                     <th className="p-3 text-left border">Machine Code</th>
+                    <th className="p-3 text-left border">Assign To</th>
                     <th className="p-3 text-left border">Status</th>
                     <th className="p-3 text-left border">Job Order Date</th>
                     <th className="p-3 text-left border">Mtl Rcd Date</th>
                     <th className="p-3 text-left border">Mtl Challan No</th>
                     <th className="p-3 text-left border">Delivery Challan No</th>
                     <th className="p-3 text-left border">Challan Date</th>
+                    <th className="p-3 text-left border">Serial No</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={21} className="text-center p-6 border">
+                      <td colSpan={22} className="text-center p-6 border">
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-2"></div>
                           Loading...
@@ -511,85 +475,77 @@ export default function MaterialMovementPage() {
 
                   {!loading && rows.length === 0 && (
                     <tr>
-                      <td
-                        colSpan={21}
-                        className="text-center p-6 text-gray-500 border"
-                      >
+                      <td colSpan={22} className="text-center p-6 text-gray-500 border">
                         No Data Found
                       </td>
                     </tr>
                   )}
 
                   {rows.map((r, idx) => (
-                    <tr key={r.id} className="border-t hover:bg-gray-50">
-                      <td className="p-3 border">{getTextValue(r.sequence_no, r.sr_no, idx + 1)}</td>
-                      <td className="p-3 border">{getTextValue(r.serial_no, r.job?.serial_no)}</td>
+                    <tr key={idx} className="border-t hover:bg-gray-50">
+                      <td className="p-3 border text-center w-24">{getTextValue(r.sequence_no, idx + 1)}</td>
                       <td className="p-3 border font-semibold">
-                        <div
-                          className={
-                            isJobCompleted(r) ? "text-green-600" : "text-blue-600"
-                          }
-                        >
-                          {getTextValue(
-                            r.document_no,
-                            r.job_no,
-                            r.tso_no,
-                            r.job?.job_no,
-                            r.job?.tso_no
+                        <div className={isJobCompleted(r) ? "text-green-600" : "text-blue-600"}>
+                          {getTextValue(r.job_no)}
+                          {isJobCompleted(r) && (
+                            <span className="ml-2 text-xs font-normal text-green-600">
+                              (Completed)
+                            </span>
                           )}
                         </div>
-                        {isJobCompleted(r) && (
-                          <div className="text-xs text-green-700 mt-1 font-medium">
-                            Completed
-                          </div>
+                      </td>
+                      <td className="p-3 border">
+                        {getDocumentTypeBadge(getTextValue(r.job_type))}
+                      </td>
+                      <td className="p-3 border font-medium">
+                        {getTextValue(r.jo_no)}
+                      </td>
+                      <td className="p-3 border">
+                        {getTextValue(r.product_description)}
+                      </td>
+                      <td className="p-3 border">{getTextValue(r.product_item_no)}</td>
+                      <td className="p-3 border font-semibold">
+                        {getTextValue(r.product_qty)}
+                      </td>
+                      <td className="p-3 border">
+                        {getTextValue(r.item_description)}
+                      </td>
+                      <td className="p-3 border">{getTextValue(r.item_no)}</td>
+                      <td className="p-3 border font-semibold">
+                        {getTextValue(r.qty)}
+                      </td>
+                      <td className="p-3 border">{getTextValue(r.moc)}</td>
+                      <td className="p-3 border">
+                        {getTextValue(r.machine_category)}
+                      </td>
+                      <td className="p-3 border">{getTextValue(r.machine_size)}</td>
+                      <td className="p-3 border">{getTextValue(r.machine_code)}</td>
+                      <td className="p-3 border">
+                        {getTextValue(r.assign_to) && (
+                          <span className="px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800 font-medium">
+                            {getTextValue(r.assign_to)}
+                          </span>
                         )}
                       </td>
                       <td className="p-3 border">
-                        {getDocumentTypeBadge(getTextValue(r.job_type, r.job?.job_type))}
-                      </td>
-                      <td className="p-3 border font-medium">
-                        {getTextValue(r.jo_number, r.jo_no, r.job?.jo_number)}
-                      </td>
-                      <td className="p-3 border">
-                        {getTextValue(r.product_description, r.product_desc, r.job?.product_desc)}
-                      </td>
-                      <td className="p-3 border">{getTextValue(r.product_item_no, r.job?.product_item_no)}</td>
-                      <td className="p-3 border font-semibold">
-                        {getTextValue(r.product_qty, r.prod_qty, r.job?.product_qty)}
-                      </td>
-                      <td className="p-3 border">
-                        {getTextValue(r.item_description, r.item_desc, r.job?.item_description)}
-                      </td>
-                      <td className="p-3 border">{getTextValue(r.item_no, r.job?.item_no)}</td>
-                      <td className="p-3 border font-semibold">
-                        {getTextValue(r.quantity_no, r.qty, r.job?.qty)}
-                      </td>
-                      <td className="p-3 border">{getTextValue(r.moc, r.job?.moc)}</td>
-                      <td className="p-3 border">
-                        {getTextValue(r.machine_category, r.job?.machine_category)}
-                      </td>
-                      <td className="p-3 border">{getTextValue(r.machine_size, r.job?.machine_size)}</td>
-                      <td className="p-3 border">{getTextValue(r.machine_code, r.job?.machine_code)}</td>
-                      <td className="p-3 border">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(
-                            r.status || r.process
-                          )}`}
+                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(r.status)}`}
                         >
                           {getDisplayStatus(r)}
                         </span>
                       </td>
                       <td className="p-3 border">{formatDate(r.job_order_date)}</td>
                       <td className="p-3 border">
-                        {formatDate(getTextValue(r.mtl_rcd_date, r.mtl_receive_date))}
+                        {formatDate(r.mtl_rcd_date)}
                       </td>
                       <td className="p-3 border">
                         <span className="font-bold text-blue-600">
-                          {getTextValue(r.mtl_challan_no, r.material_challan_no)}
+                          {getTextValue(r.mtl_challan_no)}
                         </span>
                       </td>
-                      <td className="p-3 border">{getTextValue(r.delivery_challan_no, r.chalan_no)}</td>
+                      <td className="p-3 border">{getTextValue(r.delivery_challan_no)}</td>
                       <td className="p-3 border">{formatDate(r.challan_date)}</td>
+                      <td className="p-3 border">{getTextValue(r.serial_no)}</td>
                     </tr>
                   ))}
                 </tbody>
