@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { ReactNode } from "react";
 import "react-toastify/dist/ReactToastify.css";
 import RouteGuard from "./component/RouteGuard";
+import GlobalTypographyLayout from "./textAlignment";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -43,9 +44,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <ErrorBoundary>
           <AppProvider>
             <PushNotificationBootstrap />
-            <RouteGuard>
-              {children}
-            </RouteGuard>
+            <GlobalTypographyLayout>
+              <RouteGuard>
+                {children}
+              </RouteGuard>
+            </GlobalTypographyLayout>
             <ToastContainer
               position="top-right"
               autoClose={3000}

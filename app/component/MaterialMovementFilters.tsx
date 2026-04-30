@@ -200,30 +200,30 @@ const MaterialMovementFilters: React.FC = () => {
   };
   
   return (
-    <div className="filters-container" style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+    <div className="filters-container p-5">
       <h3>Material Movement Filters</h3>
       
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "15px", marginBottom: "20px" }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-[15px] mb-5">
         {/* Search */}
         <div className="filter-group">
-          <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Search:</label>
+          <label className="block mb-[5px] font-semibold">Search:</label>
           <input
             type="text"
             placeholder="Search by JO No, Serial No, Worker, Vendor, Chalan No..."
             value={filters.q}
             onChange={(e) => handleFilterChange("q", e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleApplyFilters()}
-            style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+            className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
           />
         </div>
         
         {/* Machine Category */}
         <div className="filter-group">
-          <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Stage / Machine Category:</label>
+          <label className="block mb-[5px] font-semibold">Stage / Machine Category:</label>
           <select
             value={filters.machine_category}
             onChange={(e) => handleFilterChange("machine_category", e.target.value)}
-            style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+            className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
           >
             <option value="">All Status</option>
             {STAGE_OPTIONS.map(option => (
@@ -237,11 +237,11 @@ const MaterialMovementFilters: React.FC = () => {
         {/* Machine Size - Show only for Lathe and cnc */}
         {(filters.machine_category === "Lathe" || filters.machine_category === "cnc") && (
           <div className="filter-group">
-            <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Machine Size:</label>
+            <label className="block mb-[5px] font-semibold">Machine Size:</label>
             <select
               value={filters.machine_size}
               onChange={(e) => handleFilterChange("machine_size", e.target.value)}
-              style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+              className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
             >
               <option value="">All Sizes</option>
               {SIZE_OPTIONS.map(option => (
@@ -256,11 +256,11 @@ const MaterialMovementFilters: React.FC = () => {
         {/* Machine Code */}
         {machineCodeOptions.length > 0 && (
           <div className="filter-group">
-            <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Machine Code:</label>
+            <label className="block mb-[5px] font-semibold">Machine Code:</label>
             <select
               value={filters.machine_code}
               onChange={(e) => handleFilterChange("machine_code", e.target.value)}
-              style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+              className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
             >
               <option value="">All Codes</option>
               {machineCodeOptions.map(option => (
@@ -274,11 +274,11 @@ const MaterialMovementFilters: React.FC = () => {
         
         {/* Status */}
         <div className="filter-group">
-          <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Status:</label>
+          <label className="block mb-[5px] font-semibold">Status:</label>
           <select
             value={filters.status}
             onChange={(e) => handleFilterChange("status", e.target.value)}
-            style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+            className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
           >
             <option value="">All Status</option>
             <option value="machine">Machine</option>
@@ -293,11 +293,11 @@ const MaterialMovementFilters: React.FC = () => {
         
         {/* Job Type */}
         <div className="filter-group">
-          <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Document Type:</label>
+          <label className="block mb-[5px] font-semibold">Document Type:</label>
           <select
             value={filters.job_type}
             onChange={(e) => handleFilterChange("job_type", e.target.value)}
-            style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+            className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
           >
             <option value="">All Types</option>
             {DOC_OPTIONS.map(option => (
@@ -311,11 +311,11 @@ const MaterialMovementFilters: React.FC = () => {
         {/* Job Category */}
         {getJobCategoryOptions().length > 0 && (
           <div className="filter-group">
-            <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Category:</label>
+            <label className="block mb-[5px] font-semibold">Category:</label>
             <select
               value={filters.job_category}
               onChange={(e) => handleFilterChange("job_category", e.target.value)}
-              style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+              className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
             >
               <option value="">All Categories</option>
               {getJobCategoryOptions().map(option => (
@@ -329,11 +329,11 @@ const MaterialMovementFilters: React.FC = () => {
         
         {/* Review For */}
         <div className="filter-group">
-          <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Review For:</label>
+          <label className="block mb-[5px] font-semibold">Review For:</label>
           <select
             value={filters.review_for}
             onChange={(e) => handleFilterChange("review_for", e.target.value)}
-            style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "4px" }}
+            className="w-full p-2 border border-[#ddd] rounded-[4px] focus:outline-none"
           >
             <option value="">All</option>
             {REVIEW_FOR_OPTIONS.map(option => (
@@ -346,100 +346,79 @@ const MaterialMovementFilters: React.FC = () => {
       </div>
       
       {/* Action Buttons */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div className="flex gap-[10px] mb-5">
         <button 
           onClick={handleApplyFilters} 
           disabled={loading}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: loading ? "not-allowed" : "pointer"
-          }}
+          className={`px-5 py-2.5 bg-[#007bff] text-white border-none rounded-[4px] ${loading ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#0069d9]"}`}
         >
           {loading ? "Loading..." : "Apply Filters"}
         </button>
         <button 
           onClick={handleResetFilters} 
           disabled={loading}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#6c757d",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: loading ? "not-allowed" : "pointer"
-          }}
+          className={`px-5 py-2.5 bg-[#6c757d] text-white border-none rounded-[4px] ${loading ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:bg-[#5a6268]"}`}
         >
           Reset
         </button>
       </div>
       
       {/* Results Count */}
-      <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
+      <div className="mb-[10px] font-bold">
         Total Records: {data.length}
       </div>
       
       {/* Data Table */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: "50px" }}>Loading...</div>
+        <div className="text-center p-[50px]">Loading...</div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
-              <tr style={{ backgroundColor: "#f2f2f2" }}>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>JO No</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Job No</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Chalan No</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Mtl Challan No</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Chalan Date</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Machine Category</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Machine Size</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Machine Code</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Status</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Worker Name</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Item Description</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Quantity</th>
-                <th style={{ border: "1px solid #ddd", padding: "8px", textAlign: "left" }}>Client Name</th>
+              <tr className="bg-[#f2f2f2]">
+                <th className="border border-[#ddd] p-2 text-left">JO No</th>
+                <th className="border border-[#ddd] p-2 text-left">Job No</th>
+                <th className="border border-[#ddd] p-2 text-left">Chalan No</th>
+                <th className="border border-[#ddd] p-2 text-left">Mtl Challan No</th>
+                <th className="border border-[#ddd] p-2 text-left">Chalan Date</th>
+                <th className="border border-[#ddd] p-2 text-left">Machine Category</th>
+                <th className="border border-[#ddd] p-2 text-left">Machine Size</th>
+                <th className="border border-[#ddd] p-2 text-left">Machine Code</th>
+                <th className="border border-[#ddd] p-2 text-left">Status</th>
+                <th className="border border-[#ddd] p-2 text-left">Worker Name</th>
+                <th className="border border-[#ddd] p-2 text-left">Item Description</th>
+                <th className="border border-[#ddd] p-2 text-left">Quantity</th>
+                <th className="border border-[#ddd] p-2 text-left">Client Name</th>
               </tr>
             </thead>
             <tbody>
               {data.map((record) => (
                 <tr key={record.id}>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.jo_no}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.job_no}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px", fontWeight: "bold", color: "#0066cc" }}>
+                  <td className="border border-[#ddd] p-2">{record.jo_no}</td>
+                  <td className="border border-[#ddd] p-2">{record.job_no}</td>
+                  <td className="border border-[#ddd] p-2 font-bold text-[#0066cc]">
                     {record.chalan_no !== "-" ? record.chalan_no : record.mtl_challan_no !== "-" ? record.mtl_challan_no : "-"}
                   </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.mtl_challan_no}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{formatDate(record.chalan_date)}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.machine_category}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.machine_size}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.machine_code}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    <span style={{
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      backgroundColor: 
-                        record.status === "completed" ? "#d4edda" :
-                        record.status === "rejected" ? "#f8d7da" :
-                        record.status === "in-progress" ? "#fff3cd" :
-                        "#e2e3e5",
-                      color:
-                        record.status === "completed" ? "#155724" :
-                        record.status === "rejected" ? "#721c24" :
-                        record.status === "in-progress" ? "#856404" :
-                        "#383d41"
-                    }}>
+                  <td className="border border-[#ddd] p-2">{record.mtl_challan_no}</td>
+                  <td className="border border-[#ddd] p-2">{formatDate(record.chalan_date)}</td>
+                  <td className="border border-[#ddd] p-2">{record.machine_category}</td>
+                  <td className="border border-[#ddd] p-2">{record.machine_size}</td>
+                  <td className="border border-[#ddd] p-2">{record.machine_code}</td>
+                  <td className="border border-[#ddd] p-2">
+                    <span className={`
+                      px-2 py-1 rounded-[4px]
+                      ${record.status === "completed" ? "bg-[#d4edda] text-[#155724]" :
+                        record.status === "rejected" ? "bg-[#f8d7da] text-[#721c24]" :
+                        record.status === "in-progress" ? "bg-[#fff3cd] text-[#856404]" :
+                        "bg-[#e2e3e5] text-[#383d41]"}
+                    `}>
                       {record.status}
                     </span>
                   </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.worker_name}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.item_description}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.quantity_no}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>{record.client_name}</td>
+                  <td className="border border-[#ddd] p-2">{record.worker_name}</td>
+                  <td className="border border-[#ddd] p-2">{record.item_description}</td>
+                  <td className="border border-[#ddd] p-2">{record.quantity_no}</td>
+                  <td className="border border-[#ddd] p-2">{record.client_name}</td>
                  </tr>
               ))}
             </tbody>

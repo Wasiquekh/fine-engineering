@@ -249,102 +249,86 @@ export default function Home() {
 
             {/* ----------------Table----------------------- */}
             <div className="relative overflow-x-auto overflow-y-auto sm:rounded-lg max-h-[500px] border border-tableBorder">
-              <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-[#999999] [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-gray-50">
+              <table className="w-full text-sm text-left rtl:text-right text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50 [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-gray-50">
                   <tr className="border border-tableBorder">
-                    <th scope="col" className="p-3 border border-tableBorder">
+                    <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
+                        <div className="font-semibold">
                           J/O Number
                         </div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">Job No</div>
+                        <div className="font-semibold">Job No</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job Type
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold">Job Type</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Job Category
-                        </div>
+                        <div className="font-semibold">Job Category</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item Description
-                        </div>
+                        <div className="font-semibold">Item Description</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Item No
-                        </div>
+                        <div className="font-semibold">Item No</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Quantity
-                        </div>
+                        <div className="font-semibold">Quantity</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          MOC
-                        </div>
+                        <div className="font-semibold">MOC</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder hidden sm:table-cell"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap hidden sm:table-cell"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Bin Location
-                        </div>
+                        <div className="font-semibold">Bin Location</div>
                       </div>
                     </th>
                     <th
                       scope="col"
-                      className="px-2 py-0 border border-tableBorder"
+                      className="px-4 py-4 border border-tableBorder whitespace-nowrap"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-firstBlack text-base leading-normal">
-                          Status
-                        </div>
+                        <div className="font-semibold">Status</div>
                       </div>
                     </th>
                   </tr>
@@ -367,7 +351,7 @@ export default function Home() {
                         className="border border-tableBorder bg-white hover:bg-primary-100"
                         key={item.id}
                       >
-                        <td className="px-2 py-2 border border-tableBorder">
+                        <td className="px-4 py-3 border border-tableBorder">
                           <p
                             onClick={() =>
                               router.push(
@@ -378,7 +362,7 @@ export default function Home() {
                                 )}`
                               )
                             }
-                            className={`text-base leading-normal cursor-pointer underline ${
+                            className={`text-sm font-medium leading-normal cursor-pointer underline ${
                               normalizeUrgent(item.urgent) === "Urgent"
                                 ? "text-red-600 hover:text-red-700"
                                 : "text-blue-600 hover:text-blue-800"
@@ -387,29 +371,29 @@ export default function Home() {
                             {item.jo_number || "N/A"}
                           </p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.job_no || "N/A"}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.job_no || "N/A"}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.job_type}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.job_type}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.job_category || "N/A"}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.job_category || "N/A"}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.item_description}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.item_description}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.item_no}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.item_no}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.qty}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.qty}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.moc}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.moc}</p>
                         </td>
-                        <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
-                          <p className="text-[#232323] text-base leading-normal">{item.bin_location}</p>
+                        <td className="px-4 py-3 border border-tableBorder hidden sm:table-cell">
+                          <p className="text-[#232323] text-sm leading-normal">{item.bin_location}</p>
                         </td>
                         <td className="px-2 py-2 border border-tableBorder">
                           <span
