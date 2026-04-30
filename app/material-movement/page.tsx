@@ -269,34 +269,17 @@ export default function MaterialMovementPage() {
     fetchData(1);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "not-ok":
-        return "bg-red-100 text-red-800";
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "in-progress":
-        return "bg-yellow-100 text-yellow-800";
-      case "rejected":
-        return "bg-gray-100 text-gray-800";
-      case "qc-welding":
-      case "qc-vendor":
-        return "bg-purple-100 text-purple-800";
-      case "machine":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-blue-100 text-blue-800";
-    }
-  };
-
-  const getDisplayStatus = (row: any) => {
-    const status = row.status || "-";
-    return status
-      .split("-")
-      .map((part: string) =>
-        part.length ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : part
-      )
-      .join(" ");
+  // Get status badge color based on status
+  const getStatusBadgeColor = (status: string) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes("completed")) return "bg-green-100 text-green-800";
+    if (statusLower.includes("not-ok")) return "bg-red-100 text-red-800";
+    if (statusLower.includes("in-progress")) return "bg-yellow-100 text-yellow-800";
+    if (statusLower.includes("vendor")) return "bg-orange-100 text-orange-800";
+    if (statusLower.includes("qc")) return "bg-purple-100 text-purple-800";
+    if (statusLower.includes("machine")) return "bg-blue-100 text-blue-800";
+    if (statusLower.includes("welding")) return "bg-indigo-100 text-indigo-800";
+    return "bg-gray-100 text-gray-800";
   };
 
   const isJobCompleted = (row: any) => {
@@ -521,7 +504,7 @@ export default function MaterialMovementPage() {
                       <td className="p-3 border">{getTextValue(r.machine_size)}</td>
                       <td className="p-3 border">{getTextValue(r.machine_code)}</td>
                       <td className="p-3 border">
-                        {getTextValue(r.assign_to) && (
+                        {getTextValue(r.assign_to) && getTextValue(r.assign_to) !== "-" && (
                           <span className="px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800 font-medium">
                             {getTextValue(r.assign_to)}
                           </span>
@@ -529,9 +512,9 @@ export default function MaterialMovementPage() {
                       </td>
                       <td className="p-3 border">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusBadge(r.status)}`}
+                          className={`px-2 py-1 rounded-full text-xs inline-block whitespace-nowrap ${getStatusBadgeColor(r.status)}`}
                         >
-                          {getDisplayStatus(r)}
+                          {getTextValue(r.status)}
                         </span>
                       </td>
                       <td className="p-3 border">{formatDate(r.job_order_date)}</td>
