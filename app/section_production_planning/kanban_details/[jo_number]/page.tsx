@@ -468,10 +468,14 @@ export default function JobDetailsPage() {
                               </td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_type : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? item.job_category : ""}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {!isChild ? <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.product_desc || "-"}</span> : ""}
+                              </td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || "N/A") : ""}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {(isChild || !hasMultiple) ? <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.item_description || "-"}</span> : ""}
+                              </td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (isRejected ? "true" : item.qty) : ""}</td>

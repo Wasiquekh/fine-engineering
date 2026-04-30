@@ -747,10 +747,12 @@ export default function JobDetailsPage() {
                                 )}
                               </td>
                               <td className="px-4 py-3 border border-tableBorder">{isFirst && <div className="flex items-center gap-2">{joNumber}{hasMultiple && <button title={`Toggle rows for ${joNumber}`} aria-label={`Toggle rows for ${joNumber}`} onClick={() => toggleJoNumberExpansion(joNumber)}><FaChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} /></button>}</div>}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_desc || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">
+                                {!isChild ? <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.product_desc || "-"}</span> : ""}
+                              </td>
                               <td className="px-4 py-3 border border-tableBorder">{!isChild ? (item.product_qty || "-") : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.serial_no || 'N/A') : ""}</td>
-                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.item_description || "-") : ""}</td>
+                              <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.item_description || "-"}</span> : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.item_no : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? item.moc : ""}</td>
                               <td className="px-4 py-3 border border-tableBorder">{(isChild || !hasMultiple) ? (item.qty_history ?? item.qty ?? "-") : ""}</td>
@@ -782,7 +784,7 @@ export default function JobDetailsPage() {
                                 )}
                               </td>
                               {canEdit && (
-                                <td className="px-4 py-3 border border-tableBorder">
+                                <td className="px-4 py-3 border border-tableBorder whitespace-nowrap min-w-[180px]">
                                   <div className="flex items-center gap-2">
                                     {showParentAssignControls && !isRejected && !isProcessed && (
                                       <button onClick={() => handleAssign(item.id)} disabled={isParentSelectionLocked} className={`px-3 py-1 rounded text-sm text-white ${isParentSelectionLocked ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>

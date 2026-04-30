@@ -823,7 +823,7 @@ export default function Home() {
                                   {item.jo_number}
                                 </p>
                               ) : activeFilter === "TSO_SERVICE" ? (
-                                <p onClick={() => router.push(`/section_production_planning/tso_details/${item.tso_no}`)} className={`text-sm cursor-pointer underline ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : isHold ? "text-amber-700 hover:text-amber-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
+                                <p onClick={() => router.push(`/section_production_planning/tso_details/${item.tso_no}`)} className={`text-sm cursor-pointer underline whitespace-nowrap ${isUrgent ? "text-red-600 hover:text-red-700 font-semibold" : isHold ? "text-amber-700 hover:text-amber-800 font-semibold" : "text-blue-600 hover:text-blue-800"}`}>
                                   {item.tso_no || "N/A"}
                                 </p>
                               ) : (
@@ -835,7 +835,9 @@ export default function Home() {
                             {activeFilter !== "KANBAN" && <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.jo_number || "N/A"}</td>}
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.job_type}</td>
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.job_category || "N/A"}</td>
-                            <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.item_description}</td>
+                            <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">
+                              <span className="inline-block max-w-[260px] whitespace-normal break-words">{item.item_description}</span>
+                            </td>
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.item_no}</td>
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.qty}</td>
                             <td className="px-2 py-2 border border-tableBorder hidden sm:table-cell">{item.moc}</td>
@@ -846,9 +848,11 @@ export default function Home() {
                               </span>
                             </td>
                             {canEdit && (
-                              <td className="px-2 py-2 border border-tableBorder">
-                                <button onClick={() => handleUrgent(activeFilter === "TSO_SERVICE" ? item.tso_no : activeFilter === "KANBAN" ? item.jo_number : item.job_no)} className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" title="Mark as Urgent"><HiLightningBolt className="w-4 h-4" /></button>
-                                <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 ml-2" title="Delete"><HiTrash className="w-4 h-4" /></button>
+                              <td className="px-2 py-2 border border-tableBorder whitespace-nowrap">
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => handleUrgent(activeFilter === "TSO_SERVICE" ? item.tso_no : activeFilter === "KANBAN" ? item.jo_number : item.job_no)} className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" title="Mark as Urgent"><HiLightningBolt className="w-4 h-4" /></button>
+                                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200" title="Delete"><HiTrash className="w-4 h-4" /></button>
+                                </div>
                               </td>
                             )}
                           </tr>
