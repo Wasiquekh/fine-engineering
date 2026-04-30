@@ -176,8 +176,17 @@ export default function JobDetailsPage() {
     if (!canEdit) return;
     const assignment = assignments[sourceId];
     const uniqueSelectedIds = Array.from(new Set(selectedJobIds));
+    const sourceJob = jobDetails.find((job) => job.id === sourceId);
+    const sourceJoNumber = sourceJob?.jo_number || "N/A";
+    const isSingleEntryJo =
+      !!sourceJob &&
+      jobDetails.filter((job) => (job.jo_number || "N/A") === sourceJoNumber).length === 1;
+    const effectiveSelectedIds =
+      uniqueSelectedIds.length === 0 && sourceJob && isSingleEntryJo && isJobSelectable(sourceJob)
+        ? [sourceId]
+        : uniqueSelectedIds;
 
-    if (uniqueSelectedIds.length === 0) {
+    if (effectiveSelectedIds.length === 0) {
       toast.error("Please select at least one checkbox");
       return;
     }
@@ -206,10 +215,10 @@ export default function JobDetailsPage() {
         assign_to: assignToName,
         assign_date: formattedDate,
       };
-      if (uniqueSelectedIds.length === 1) {
-        payload.id = uniqueSelectedIds[0];
+      if (effectiveSelectedIds.length === 1) {
+        payload.id = effectiveSelectedIds[0];
       } else {
-        payload.ids = uniqueSelectedIds;
+        payload.ids = effectiveSelectedIds;
       }
       if (updatedBy) payload.updated_by = updatedBy;
 
@@ -226,7 +235,7 @@ export default function JobDetailsPage() {
         toast.warn(`${notFoundIds.length} selected job(s) were not found`);
       }
 
-      const notifiedIds = updatedIds.length > 0 ? updatedIds : uniqueSelectedIds;
+      const notifiedIds = updatedIds.length > 0 ? updatedIds : effectiveSelectedIds;
       notifiedIds.forEach((jobId) => {
         const assignedJob = jobDetails.find((job) => job.id === jobId);
         if (!assignedJob) return;
@@ -244,7 +253,7 @@ export default function JobDetailsPage() {
 
       setJobDetails((prev) =>
         prev.map((job) =>
-          (updatedIds.length > 0 ? updatedIds.includes(job.id) : uniqueSelectedIds.includes(job.id))
+          (updatedIds.length > 0 ? updatedIds.includes(job.id) : effectiveSelectedIds.includes(job.id))
             ? { ...job, assign_to: assignToName, assign_date: formattedDate }
             : job
         )
@@ -252,7 +261,7 @@ export default function JobDetailsPage() {
       if (updatedIds.length > 0) {
         setSelectedJobIds((prev) => prev.filter((jobId) => !updatedIds.includes(jobId)));
       } else {
-        setSelectedJobIds([]);
+        setSelectedJobIds((prev) => prev.filter((jobId) => !effectiveSelectedIds.includes(jobId)));
       }
       setAssignments((prev) => ({
         ...prev,
@@ -404,6 +413,7 @@ export default function JobDetailsPage() {
                         const allGroupSelected =
                           groupSelectableIds.length > 0 && groupSelectableIds.every((id) => selectedJobIds.includes(id));
                         const isGroupSelectionDisabled = groupSelectableIds.length === 0;
+                        const areAllChildrenAssigned = hasMultiple && jobs.every((job) => !!job.assign_to);
 
                         const renderJobRow = (item: JobDetail, isFirst: boolean, isChild: boolean) => {
                           const isRejected = item.is_rejected || item.rejected;
@@ -432,7 +442,7 @@ export default function JobDetailsPage() {
                                     type="checkbox"
                                     title={`Select JO group ${joKey}`}
                                     aria-label={`Select JO group ${joKey}`}
-                                    checked={allGroupSelected}
+                                    checked={allGroupSelected || areAllChildrenAssigned}
                                     disabled={isGroupSelectionDisabled}
                                     onChange={() => toggleJoGroupSelection(joKey, jobs)}
                                   />
@@ -524,7 +534,7 @@ export default function JobDetailsPage() {
                               </td>
                               <td className="px-4 py-3 border border-tableBorder">
                                 {showAssignedTextOnly ? (
-                                  item.assign_date || "-"
+                                  <span className="whitespace-nowrap">{item.assign_date || "-"}</span>
                                 ) : showParentAssignControls ? (
                                   <input
                                     type="date"
@@ -536,7 +546,7 @@ export default function JobDetailsPage() {
                                     disabled={isParentSelectionLocked || !canEdit}
                                   />
                                 ) : (
-                                  item.assign_date || "-"
+                                  <span className="whitespace-nowrap">{item.assign_date || "-"}</span>
                                 )}
                               </td>
                               {canEdit && (
