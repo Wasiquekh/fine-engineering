@@ -223,7 +223,7 @@ export default function Home() {
         query += `&job_no=${encodeURIComponent(search)}`;
       }
 
-      const response = await axiosProvider.get(`/fineengg_erp/system/categories${query}`);
+      const response = await axiosProvider.get(`/fineengg_erp/system/categories${query}&status=all`);
       setData(response.data.data || []);
 
       if (response.data.meta) {

@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { FiFilter, FiSearch } from "react-icons/fi";
 import { IoCloseOutline } from "react-icons/io5";
-import { HiTrash, HiLightningBolt } from "react-icons/hi";
+import { HiTrash, HiLightningBolt, HiCheckCircle } from "react-icons/hi";
 import LeftSideBar from "../../component/LeftSideBar";
 import { FaPlus } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -455,39 +455,50 @@ export default function Home() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleComplete = async (id: string) => {
     if (!canEdit) {
-      toast.error("You don't have permission to delete");
+      toast.error("You don't have permission to complete this job");
       return;
     }
-    
+
     const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
+      title: "Mark as Complete",
+      input: "textarea",
+      inputLabel: "Completion Remark",
+      inputPlaceholder: "Enter remark for completion...",
+      inputValue: "",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
+      confirmButtonColor: "#10B981",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: "Mark Complete",
       cancelButtonText: "Cancel",
+      inputValidator: (value) => {
+        if (!value || !value.trim()) {
+          return "Remark is required and cannot be empty";
+        }
+      },
     });
 
     if (result.isConfirmed) {
       try {
-        const endpoint = currentDataset === "CATEGORIES" 
-          ? `/fineengg_erp/system/categories/${id}` 
-          : `/fineengg_erp/system/jobs/${id}`;
-        const response = await axiosProvider.delete(endpoint);
+        const updatedBy = storage.getUserId();
+        const response = await axiosProvider.post(
+          `/fineengg_erp/system/categories/${id}/complete`,
+          {
+            remark: result.value,
+            updated_by: updatedBy || "00000000-0000-0000-0000-000000000000",
+          }
+        );
 
-        if (response.data.success) {
-          toast.success("Job deleted successfully");
-          fetchData(currentDataset === "CATEGORIES" ? "/fineengg_erp/system/categories" : "/fineengg_erp/system/jobs");
+        if (response.status === 200 || response.data.success) {
+          toast.success("Marked as complete successfully");
+          fetchData();
         } else {
-          toast.error("Failed to delete job");
+          toast.error("Failed to mark as complete");
         }
       } catch (error: any) {
-        console.error("Error deleting job:", error);
-        toast.error("Failed to delete job");
+        console.error("Error completing job:", error);
+        toast.error(error?.response?.data?.message || "Failed to complete job");
       }
     }
   };
@@ -809,8 +820,14 @@ export default function Home() {
                             {canEdit && (
                               <td className="px-2 py-2 border border-tableBorder">
                                 <div className="flex items-center gap-2">
-                                  <button onClick={() => handleUrgent(item.job_no)} className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" title="Mark as Urgent"><HiLightningBolt className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200" title="Delete"><HiTrash className="w-4 h-4" /></button>
+                                  <button 
+                                    onClick={() => handleUrgent(item.job_no)} 
+                                    className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" 
+                                    title="Mark as Urgent"><HiLightningBolt className="w-4 h-4" /></button>
+                                  <button 
+                                    onClick={() => handleComplete(item.id)} 
+                                    className="p-1.5 bg-green-100 text-green-600 rounded hover:bg-green-200" 
+                                    title="Mark as Complete"><HiCheckCircle className="w-4 h-4" /></button>
                                 </div>
                               </td>
                             )}
@@ -850,8 +867,14 @@ export default function Home() {
                             {canEdit && (
                               <td className="px-2 py-2 border border-tableBorder whitespace-nowrap">
                                 <div className="flex items-center gap-2">
-                                  <button onClick={() => handleUrgent(activeFilter === "TSO_SERVICE" ? item.tso_no : activeFilter === "KANBAN" ? item.jo_number : item.job_no)} className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" title="Mark as Urgent"><HiLightningBolt className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDelete(item.id)} className="p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200" title="Delete"><HiTrash className="w-4 h-4" /></button>
+                                  <button 
+                                    onClick={() => handleUrgent(activeFilter === "TSO_SERVICE" ? item.tso_no : activeFilter === "KANBAN" ? item.jo_number : item.job_no)} 
+                                    className="p-1.5 bg-yellow-100 text-yellow-600 rounded hover:bg-yellow-200" 
+                                    title="Mark as Urgent"><HiLightningBolt className="w-4 h-4" /></button>
+                                  <button 
+                                    onClick={() => handleComplete(item.id)} 
+                                    className="p-1.5 bg-green-100 text-green-600 rounded hover:bg-green-200" 
+                                    title="Mark as Complete"><HiCheckCircle className="w-4 h-4" /></button>
                                 </div>
                               </td>
                             )}
