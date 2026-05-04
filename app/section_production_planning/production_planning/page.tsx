@@ -701,8 +701,8 @@ export default function Home() {
           <div className="rounded-3xl shadow-lastTransaction bg-white px-1 py-6 md:p-6 relative">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 w-full mx-auto">
               <div className="flex items-center gap-4 max-w-full min-w-0">
-                {activeFilter === "TSO_SERVICE" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+                {activeFilter === "TSO_SERVICE" && ( // This is the tab layout for TSO_SERVICE
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-2xl">
                     <button onClick={() => setTsoSubFilter("ALL")} className={`py-2 px-4 rounded-md text-sm font-medium ${tsoSubFilter === "ALL" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>All</button>
                     {tsoServiceCategory.map((cat) => (
                       <button key={cat.value} onClick={() => setTsoSubFilter(cat.value)} className={`py-2 px-4 rounded-md text-sm font-medium ${tsoSubFilter === cat.value ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{cat.label}</button>
@@ -710,8 +710,8 @@ export default function Home() {
                     <button onClick={() => setTsoSubFilter("URGENT_TAB")} className={`py-2 px-4 rounded-md text-sm font-medium whitespace-nowrap ${tsoSubFilter === "URGENT_TAB" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>Urgent</button>
                   </div>
                 )}
-                {activeFilter === "KANBAN" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+                {activeFilter === "KANBAN" && ( // This is the tab layout for KANBAN
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-2xl">
                     <button onClick={() => setKanbanSubFilter("ALL")} className={`py-2 px-4 rounded-md text-sm font-medium ${kanbanSubFilter === "ALL" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>All</button>
                     {kanbanCategory.map((cat) => (
                       <button key={cat.value} onClick={() => setKanbanSubFilter(cat.value)} className={`py-2 px-4 rounded-md text-sm font-medium ${kanbanSubFilter === cat.value ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{cat.label}</button>
@@ -719,8 +719,8 @@ export default function Home() {
                     <button onClick={() => setKanbanSubFilter("URGENT_TAB")} className={`py-2 px-4 rounded-md text-sm font-medium whitespace-nowrap ${kanbanSubFilter === "URGENT_TAB" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>Urgent</button>
                   </div>
                 )}
-                {activeFilter === "JOB_SERVICE" && (
-                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full">
+                {activeFilter === "JOB_SERVICE" && ( // This is the tab layout for JOB_SERVICE
+                  <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-2xl">
                     <button onClick={() => setJobServiceCategoryFilter("ALL")} className={`py-2 px-4 rounded-md text-sm font-medium whitespace-nowrap ${jobServiceCategoryFilter === "ALL" ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>All</button>
                     {categories.map((cat) => (
                       <button key={cat.value} onClick={() => setJobServiceCategoryFilter(cat.value)} className={`py-2 px-4 rounded-md text-sm font-medium whitespace-nowrap ${jobServiceCategoryFilter === cat.value ? "bg-primary-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}>{cat.label}</button>
@@ -731,7 +731,7 @@ export default function Home() {
               </div>
 
               <div className="flex flex-wrap justify-start xl:justify-end items-center gap-3 w-full xl:w-auto">
-                <div className="flex items-center w-full sm:w-[300px] rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
+                <div className="flex items-center w-full sm:w-[200px] rounded-lg border border-gray-200 bg-white focus-within:ring-1 focus-within:ring-primary-600">
                   <input
                     type="text"
                     placeholder={searchPlaceholder}
