@@ -694,7 +694,7 @@ export default function JobDetailsPage() {
                 <table className="w-full text-sm text-left min-w-[1100px] border-separate border-spacing-0">
                   <thead className="text-xs text-gray-700 uppercase font-semibold bg-gray-50 sticky top-0 z-20">
                     <tr className="border border-tableBorder">
-                      <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Select</th>
+                      <th className="px-4 py-4 border border-tableBorder sticky top-0 left-0 bg-gray-50 z-30">Select</th>
                       <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">J/O No</th>
                       <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Product Desc</th>
                       <th className="px-4 py-4 border border-tableBorder sticky top-0 bg-gray-50 z-20">Product Qty</th>
@@ -734,8 +734,8 @@ export default function JobDetailsPage() {
                             return !!job.assign_to || !!jobRejected || jobProcessed;
                           });
                           return (
-                            <tr key={item.id + (isChild ? '-child' : '-header')} className={`border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
-                              <td className="px-4 py-3 border border-tableBorder">
+                            <tr key={item.id + (isChild ? '-child' : '-header')} className={`group border border-tableBorder bg-white hover:bg-primary-100 ${isChild ? "bg-gray-50" : ""}`}>
+                              <td className={`px-4 py-3 border border-tableBorder sticky left-0 z-10 ${isChild ? "bg-gray-50" : "bg-white"} group-hover:bg-primary-100`}>
                                 {isFirst && hasMultiple ? (
                                   <input
                                     type="checkbox"
