@@ -545,7 +545,7 @@ export default function QcMainPage() {
           </div>
 
           {uniqueCategories.length > 0 && (
-            <div className="flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
+            <div className="inline-flex items-center gap-2 p-1 rounded-lg border border-gray-200 bg-white overflow-x-auto max-w-full mb-6">
               <button
                 onClick={() => {
                   if (filterParam === "JOB_SERVICE") setJobServiceCategoryFilter("ALL");
@@ -672,6 +672,11 @@ export default function QcMainPage() {
                         </th>
                         <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
                           <div className="flex items-center gap-2">
+                            <div className="font-semibold">Machine</div>
+                          </div>
+                        </th>
+                        <th scope="col" className="px-4 py-4 border border-tableBorder whitespace-nowrap">
+                          <div className="flex items-center gap-2">
                             <div className="font-semibold">Serial No</div>
                           </div>
                         </th>
@@ -688,7 +693,7 @@ export default function QcMainPage() {
                         if (items.length === 0) {
                           return (
                             <tr>
-                              <td colSpan={11} className="px-4 py-6 text-center border border-tableBorder">
+                              <td colSpan={12} className="px-4 py-6 text-center border border-tableBorder">
                                 <p className="text-[#666666] text-base">No data found</p>
                               </td>
                             </tr>
@@ -727,6 +732,9 @@ export default function QcMainPage() {
                             </td>
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{item.quantity_no ?? item.job?.qty ?? "-"}</p>
+                            </td>
+                            <td className="px-4 py-3 border border-tableBorder">
+                              <p className="text-[#232323] text-sm leading-normal">{item.machine_category || item.machine_code || "-"}</p>
                             </td>
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm font-mono leading-normal">{item.serial_no || "-"}</p>
