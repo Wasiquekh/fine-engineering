@@ -734,7 +734,7 @@ export default function QcMainPage() {
                               <p className="text-[#232323] text-sm font-semibold text-yellow-600 leading-normal">{item.quantity_no ?? item.job?.qty ?? "-"}</p>
                             </td>
                             <td className="px-4 py-3 border border-tableBorder">
-                              <p className="text-[#232323] text-sm leading-normal">{item.machine_category || item.machine_code || "-"}</p>
+                              <p className="text-[#232323] text-sm leading-normal">{item.machine_code || "-"}</p>
                             </td>
                             <td className="px-4 py-3 border border-tableBorder">
                               <p className="text-[#232323] text-sm font-mono leading-normal">{item.serial_no || "-"}</p>
